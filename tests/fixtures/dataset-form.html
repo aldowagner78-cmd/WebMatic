@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture: Dataset + Prompt + call_macro</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    h1   { font-size: 18px; color: #064e3b; }
+    h2   { font-size: 14px; color: #374151; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+    p    { font-size: 13px; color: #6b7280; }
+    code { background: #f0fdf4; border: 1px solid #a7f3d0; padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+    label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-top: 10px; }
+    input, select {
+      display: block; width: 100%; box-sizing: border-box;
+      border: 1px solid #d1d5db; border-radius: 6px;
+      padding: 6px 10px; font-size: 14px; margin-top: 3px;
+    }
+    .btn {
+      margin-top: 14px; padding: 8px 18px; background: #059669;
+      color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;
+    }
+    .btn-sec { background: #0284c7; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px;
+    }
+    th { background: #f0fdf4; color: #064e3b; font-weight: 700; text-align: left; padding: 6px 10px; border: 1px solid #a7f3d0; }
+    td { padding: 5px 10px; border: 1px solid #e5e7eb; }
+    tr:nth-child(even) td { background: #f9fafb; }
+    #log { margin-top: 16px; padding: 10px; background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 8px; font-size: 13px; min-height: 30px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; background: #dcfce7; color: #064e3b; }
+  </style>
+</head>
+<body>
+  <h1>Dataset · Prompt · call_macro — Fixture WebMatic</h1>
+
+  <!-- ── Sección for_each_row ─────────────────────────────────── -->
+  <h2>for_each_row — Registro de pacientes</h2>
+  <p>
+    Graba una macro con <code>for_each_row</code> que rellene este formulario para cada fila del dataset
+    y presione Guardar. Las columnas deben llamarse <code>NOMBRE</code>, <code>RUT</code>, <code>EMAIL</code>.
+  </p>
+
+  <form id="form-paciente">
+    <label for="nombre">Nombre</label>
+    <input type="text" id="nombre" autocomplete="off" placeholder="{{!NOMBRE}}" />
+
+    <label for="rut">RUT</label>
+    <input type="text" id="rut" autocomplete="off" placeholder="{{!RUT}}" />
+
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="off" placeholder="{{!EMAIL}}" />
+
+    <button type="submit" id="btn-guardar" class="btn">Guardar paciente</button>
+  </form>
+
+  <h2>Registros guardados <span id="contador" class="badge">0</span></h2>
+  <table id="tabla-registros">
+    <thead><tr><th>#</th><th>Nombre</th><th>RUT</th><th>Email</th></tr></thead>
+    <tbody id="tbody-registros"></tbody>
+  </table>
+
+  <!-- ── Sección prompt ───────────────────────────────────────── -->
+  <h2>prompt — Código de autorización</h2>
+  <p>
+    Graba una macro que use <code>prompt</code> con <code>variable: "COD"</code>
+    para pedir el código, luego lo escribe en el campo de abajo y presiona Validar.
+  </p>
+
+  <form id="form-codigo">
+    <label for="codigo">Código ingresado por el usuario</label>
+    <input type="text" id="codigo" autocomplete="off" placeholder="El prompt lo llenará aquí" />
+    <button type="submit" id="btn-validar" class="btn btn-sec">Validar código</button>
+  </form>
+
+  <div id="log">Esperando acciones...</div>
+
+  <script>
+    let contadorReg = 0;
+
+    // ── Formulario paciente ──────────────────────────────────────
+    document.getElementById("form-paciente").addEventListener("submit", function(e) {
+      e.preventDefault();
+      contadorReg++;
+      const nombre = document.getElementById("nombre").value;
+      const rut    = document.getElementById("rut").value;
+      const email  = document.getElementById("email").value;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${contadorReg}</td><td>${nombre}</td><td>${rut}</td><td>${email}</td>`;
+      document.getElementById("tbody-registros").appendChild(tr);
+      document.getElementById("contador").textContent = contadorReg;
+
+      // Limpiar para siguiente iteración
+      document.getElementById("nombre").value = "";
+      document.getElementById("rut").value    = "";
+      document.getElementById("email").value  = "";
+
+      log(`✓ Fila ${contadorReg} guardada: ${nombre}`);
+    });
+
+    // ── Formulario código ────────────────────────────────────────
+    document.getElementById("form-codigo").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const cod = document.getElementById("codigo").value.trim();
+      if (cod) {
+        log(`✓ Código validado: "${cod}" — prompt funcionó correctamente`);
+      } else {
+        log("⚠ No se ingresó ningún código");
+      }
+    });
+
+    function log(msg) {
+      document.getElementById("log").textContent = msg;
+    }
+  </script>
+</body>
+</html>

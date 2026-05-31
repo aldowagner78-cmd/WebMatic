@@ -1,0 +1,15 @@
+{
+  "name": "webmatic",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebMatic V1 scaffold modular para Firefox Windows",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.js",
+    "test:watch": "node --test --watch tests/unit/*.test.js",
+    "test:e2e": "node tests/e2e/run.js"
+  },
+  "devDependencies": {
+    "happy-dom": "^20.9.0",
+    "playwright": "^1.60.0"
+  }
+}

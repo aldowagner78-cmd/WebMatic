@@ -1,0 +1,1443 @@
+#webmatic-panel-root {
+  /* === Option C: Sage — CSS Variable System === */
+  --webmatic-accent: #059669;
+  --webmatic-accent-fg: #ffffff;
+  --webmatic-surface: #f0fdf4;
+  --webmatic-surface-2: #dcfce7;
+  --webmatic-btn-bg: #ecfdf5;
+  --webmatic-btn-hover: #d1fae5;
+  --webmatic-border: #a7f3d0;
+  --webmatic-swatch-border: #6ee7b7;
+  --webmatic-text: #064e3b;
+  --webmatic-text-muted: #065f46;
+  --webmatic-card-bg: #ffffff;
+  --webmatic-scrollbar: #6ee7b7;
+  --webmatic-record: #dc2626;
+  --webmatic-header-from: #065f46;
+  --webmatic-header-to: #10b981;
+  --webmatic-header-text: #ffffff;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 260px;
+  background: var(--webmatic-surface);
+  color: var(--webmatic-text);
+  border-right: 1px solid var(--webmatic-border);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  z-index: 2147483647;
+  display: none;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+#webmatic-panel-root.webmatic-dark {
+  --webmatic-accent: #34d399;
+  --webmatic-accent-fg: #022c22;
+  --webmatic-surface: #022c22;
+  --webmatic-surface-2: #064e3b;
+  --webmatic-btn-bg: #065f46;
+  --webmatic-btn-hover: #047857;
+  --webmatic-border: #047857;
+  --webmatic-swatch-border: #059669;
+  --webmatic-text: #d1fae5;
+  --webmatic-text-muted: #6ee7b7;
+  --webmatic-card-bg: #064e3b;
+  --webmatic-scrollbar: #047857;
+  --webmatic-header-from: #022c22;
+  --webmatic-header-to: #065f46;
+  --webmatic-header-text: #a7f3d0;
+}
+
+.webmatic-floating-recorder {
+  display: none;
+  position: fixed;
+  top: 0;
+  right: 80px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgba(220, 38, 38, 0.30);
+  border-top: none;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  color: var(--webmatic-record);
+  border-radius: 0 0 10px 10px;
+  padding: 5px 13px 7px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: inherit;
+  letter-spacing: 0.2px;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  transition: box-shadow 0.15s, background 0.15s;
+  z-index: 2147483647;
+}
+
+.webmatic-floating-recorder:hover {
+  background: rgba(255, 255, 255, 1);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.25), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.webmatic-floating-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--webmatic-record);
+  animation: webmatic-pulse 1s infinite;
+}
+
+@keyframes webmatic-pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+#webmatic-panel-root.webmatic-right {
+  right: 0;
+  left: auto;
+  border-left: 1px solid var(--webmatic-border);
+  border-right: none;
+}
+
+#webmatic-panel-root.webmatic-left {
+  left: 0;
+  right: auto;
+}
+
+.webmatic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  border-bottom: 1px solid var(--webmatic-border);
+  background: linear-gradient(135deg, var(--webmatic-header-from), var(--webmatic-header-to));
+}
+
+.webmatic-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  color: var(--webmatic-header-text);
+}
+
+.webmatic-close-btn {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  line-height: 1;
+  font-family: inherit;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, background 0.12s;
+}
+
+.webmatic-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.webmatic-segment {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 6px 8px 0 8px;
+  border-bottom: 2px solid var(--webmatic-border);
+  background: var(--webmatic-surface);
+}
+
+.webmatic-mode-btn {
+  border: 1px solid var(--webmatic-border);
+  background: var(--webmatic-btn-bg);
+  color: var(--webmatic-text);
+  padding: 6px 4px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.1;
+  min-height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.1px;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.webmatic-mode-btn.active {
+  background: var(--webmatic-accent);
+  color: var(--webmatic-accent-fg);
+  border-color: var(--webmatic-accent);
+}
+
+/* ===  Pestañas de modo (Reproducir / Configurar) === */
+.webmatic-mode-btn:not(.webmatic-record-tab) {
+  flex: 1;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 4px 7px;
+  background: var(--webmatic-surface-2);
+  color: var(--webmatic-text-muted);
+  font-weight: 600;
+  border: 1px solid var(--webmatic-swatch-border);
+  border-bottom: none;
+  position: relative;
+  bottom: -2px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.webmatic-mode-btn:not(.webmatic-record-tab):hover {
+  background: var(--webmatic-btn-hover);
+  color: var(--webmatic-text);
+}
+
+.webmatic-mode-btn:not(.webmatic-record-tab).active {
+  background: var(--webmatic-surface) !important;
+  color: var(--webmatic-accent) !important;
+  font-weight: 700;
+  border-color: var(--webmatic-accent) !important;
+  border-top-width: 2px !important;
+  border-bottom: 2px solid var(--webmatic-surface) !important;
+}
+
+.webmatic-record-tab {
+  background: #dc2626;
+  color: #fff;
+  border-color: #dc2626;
+  flex-shrink: 0;
+  margin-bottom: 5px;
+}
+
+.webmatic-record-tab:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.webmatic-record-tab[data-recording] {
+  background: #7f1d1d;
+  border-color: #7f1d1d;
+  animation: webmatic-pulse-rec 1.2s ease-in-out infinite;
+}
+
+@keyframes webmatic-pulse-rec {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.65; }
+}
+
+.webmatic-content {
+  height: calc(100% - 102px);
+  overflow: auto;
+  padding: 10px;
+  background: var(--webmatic-surface);
+  scrollbar-width: thin;
+  scrollbar-color: var(--webmatic-scrollbar) transparent;
+  position: relative;
+}
+
+.webmatic-content::-webkit-scrollbar {
+  width: 7px;
+}
+
+.webmatic-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.webmatic-content::-webkit-scrollbar-thumb {
+  background: var(--webmatic-scrollbar);
+  border-radius: 999px;
+}
+
+.webmatic-view {
+  display: none;
+}
+
+.webmatic-view.active {
+  display: block;
+}
+
+.webmatic-actions {
+  display: grid;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.webmatic-actions-inline {
+  grid-template-columns: 1fr 1fr;
+}
+
+.webmatic-settings-card {
+  border: 1px solid var(--webmatic-border);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--webmatic-surface-2);
+  margin-top: 10px;
+}
+
+.webmatic-settings-card h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--webmatic-text);
+}
+
+.webmatic-subtitle {
+  margin-top: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--webmatic-text-muted);
+}
+
+.webmatic-field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.webmatic-field-control {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 8px;
+  padding: 8px;
+  color: var(--webmatic-text);
+  background: var(--webmatic-card-bg);
+  font-family: inherit;
+}
+
+.webmatic-toggle-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.webmatic-toggle-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--webmatic-accent);
+}
+
+.webmatic-swatch-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.webmatic-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 2px solid var(--webmatic-swatch-border);
+  cursor: pointer;
+  justify-self: center;
+}
+
+.webmatic-swatch.active {
+  border-color: var(--webmatic-text);
+  transform: scale(1.08);
+}
+
+.webmatic-action-btn {
+  border: 1px solid var(--webmatic-border);
+  background: var(--webmatic-btn-bg);
+  color: var(--webmatic-text);
+  padding: 7px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.1;
+  min-height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.webmatic-action-btn:hover:not(:disabled) {
+  background: var(--webmatic-btn-hover);
+}
+
+.webmatic-action-btn:disabled,
+.webmatic-btn-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.webmatic-btn-record {
+  background: var(--webmatic-record);
+  color: #ffffff;
+  border-color: var(--webmatic-record);
+  text-align: center;
+}
+
+.webmatic-btn-record:hover:not(:disabled) {
+  opacity: 0.88;
+  background: var(--webmatic-record);
+}
+
+.webmatic-actions-inline .webmatic-action-btn {
+  text-align: center;
+  border-radius: 999px;
+  padding: 7px 4px;
+}
+
+.webmatic-recorded-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.webmatic-step-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 8px;
+  background: var(--webmatic-card-bg);
+  animation: webmatic-step-in 0.22s ease;
+}
+
+.webmatic-step-item--new {
+  border-color: var(--webmatic-accent);
+  animation: webmatic-step-flash 0.35s ease;
+}
+
+@keyframes webmatic-step-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes webmatic-step-flash {
+  0%   { background: var(--webmatic-accent); opacity: 0.7; transform: scaleY(0.9); }
+  60%  { background: var(--webmatic-card-bg); opacity: 1; transform: scaleY(1); }
+  100% { background: var(--webmatic-card-bg); }
+}
+
+.webmatic-step-num {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--webmatic-accent);
+  color: var(--webmatic-accent-fg);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.webmatic-step-icon {
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.webmatic-step-body {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--webmatic-text);
+}
+
+.webmatic-step-detail {
+  color: var(--webmatic-text-muted);
+  font-weight: 400;
+  word-break: break-all;
+}
+
+.webmatic-recording-hint {
+  padding: 10px;
+  border: 1.5px dashed var(--webmatic-accent);
+  border-radius: 10px;
+  color: var(--webmatic-accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  animation: webmatic-pulse 1s infinite;
+}
+
+.webmatic-btn-record[data-recording] {
+  background: var(--webmatic-record) !important;
+  color: #fff !important;
+  border-color: var(--webmatic-record) !important;
+}
+
+.webmatic-empty-state {
+  padding: 10px;
+  border: 1px dashed var(--webmatic-border);
+  border-radius: 10px;
+  color: var(--webmatic-text-muted);
+}
+
+#webmatic-panel-root.webmatic-floating-mode {
+  width: auto !important;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  overflow: visible;
+  top: 0;
+  bottom: auto;
+  left: auto;
+  right: auto;
+}
+
+#webmatic-panel-root.webmatic-floating-mode .webmatic-header,
+#webmatic-panel-root.webmatic-floating-mode .webmatic-segment,
+#webmatic-panel-root.webmatic-floating-mode .webmatic-content {
+  display: none;
+}
+
+#webmatic-panel-root.webmatic-floating-mode .webmatic-floating-recorder {
+  display: inline-flex;
+}
+
+.webmatic-action-btn.active {
+  background: var(--webmatic-accent);
+  border-color: var(--webmatic-accent);
+  color: var(--webmatic-accent-fg);
+}
+
+/* === Library / Reproducir view === */
+
+.webmatic-search-row {
+  margin-bottom: 8px;
+}
+
+.webmatic-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--webmatic-card-bg);
+  color: var(--webmatic-text);
+}
+
+.webmatic-search-input::placeholder {
+  color: var(--webmatic-text-muted);
+}
+
+.webmatic-search-input:focus {
+  outline: none;
+  border-color: var(--webmatic-accent);
+}
+
+.webmatic-macro-list {
+  border: 1px solid var(--webmatic-border);
+  border-radius: 10px;
+  overflow-y: auto;
+  max-height: 210px;
+  min-height: 30px;
+  background: var(--webmatic-card-bg);
+  margin-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--webmatic-scrollbar) transparent;
+}
+
+.webmatic-macro-item {
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 1px solid var(--webmatic-border);
+  color: var(--webmatic-text);
+  transition: background 0.1s;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.webmatic-macro-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.webmatic-macro-count {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--webmatic-text-muted, #64748b);
+  background: var(--webmatic-surface-2, #dcfce7);
+  border-radius: 4px;
+  padding: 1px 5px;
+  opacity: 0.7;
+}
+
+.webmatic-macro-edit-btn {
+  all: unset;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.webmatic-macro-item:hover .webmatic-macro-edit-btn {
+  opacity: 0.7;
+}
+
+.webmatic-macro-edit-btn:hover {
+  opacity: 1 !important;
+  background: var(--webmatic-btn-hover);
+}
+
+.webmatic-macro-item:last-child {
+  border-bottom: none;
+}
+
+.webmatic-macro-item:hover {
+  background: var(--webmatic-btn-bg);
+}
+
+.webmatic-macro-item.selected {
+  background: color-mix(in srgb, var(--webmatic-accent) 14%, var(--webmatic-card-bg) 86%);
+  color: var(--webmatic-accent);
+  font-weight: 700;
+  border-left: 3px solid var(--webmatic-accent);
+  padding-left: 8px;
+}
+
+.webmatic-macro-empty {
+  padding: 14px 10px;
+  font-size: 11px;
+  color: var(--webmatic-text-muted);
+  text-align: center;
+  font-style: italic;
+}
+
+.webmatic-macro-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.webmatic-loop-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--webmatic-border);
+  padding-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* ── Step progress during playback ─────────────────────────────────── */
+.webmatic-step-progress {
+  margin-top: 10px;
+  border-top: 1px solid var(--webmatic-border);
+  padding-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.webmatic-step-item {
+  font-size: 10.5px;
+  padding: 3px 7px;
+  border-radius: 5px;
+  color: var(--webmatic-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  border-left: 2px solid transparent;
+}
+
+.webmatic-step-done {
+  opacity: 0.45;
+}
+
+.webmatic-step-current {
+  background: color-mix(in srgb, var(--webmatic-accent) 15%, var(--webmatic-card-bg) 85%);
+  color: var(--webmatic-accent);
+  border-left-color: var(--webmatic-accent);
+  font-weight: 700;
+  opacity: 1;
+}
+
+
+.webmatic-loop-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.webmatic-repeat-input {
+  width: 52px;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  background: var(--webmatic-card-bg);
+  color: var(--webmatic-text);
+  text-align: center;
+}
+
+[data-action="macro-play"] {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #16a34a !important;
+}
+
+[data-action="macro-play"]:hover:not(:disabled) {
+  background: #15803d !important;
+  border-color: #15803d !important;
+}
+
+.webmatic-btn-play-loop {
+  width: 100%;
+  text-align: center;
+  background: var(--webmatic-accent);
+  color: var(--webmatic-accent-fg);
+  border-color: var(--webmatic-accent);
+}
+
+.webmatic-btn-play-loop:hover:not(:disabled) {
+  opacity: 0.88;
+  background: var(--webmatic-accent);
+}
+
+/* === Save modal === */
+
+.webmatic-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  margin-bottom: 4px;
+}
+
+.webmatic-slider {
+  flex: 1;
+  accent-color: var(--webmatic-accent);
+  cursor: pointer;
+  height: 4px;
+}
+
+.webmatic-slider-label {
+  min-width: 36px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--webmatic-text-muted);
+  text-align: right;
+}
+
+/* === Save modal === */
+
+.webmatic-save-modal {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: var(--webmatic-surface);
+  padding: 16px 12px;
+  overflow-y: auto;
+  z-index: 1;
+}
+
+.webmatic-save-title {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--webmatic-text);
+}
+
+.webmatic-save-name {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  background: var(--webmatic-card-bg);
+  color: var(--webmatic-text);
+  margin-bottom: 10px;
+}
+
+.webmatic-save-name:focus {
+  outline: none;
+  border-color: var(--webmatic-accent);
+}
+
+.webmatic-save-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.webmatic-btn-ghost {
+  background: transparent;
+  border-color: var(--webmatic-border);
+  color: var(--webmatic-text-muted);
+}
+
+.webmatic-btn-stop {
+  background: color-mix(in srgb, var(--webmatic-record) 12%, var(--webmatic-btn-bg) 88%);
+  border-color: var(--webmatic-record);
+  color: var(--webmatic-record);
+}
+
+.webmatic-save-editor-btn {
+  width: 100%;
+  margin-bottom: 8px;
+  font-size: 11px;
+  text-align: center;
+}
+
+.webmatic-save-script {
+  display: none;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 8px;
+  padding: 8px;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  background: var(--webmatic-card-bg);
+  color: var(--webmatic-text);
+  resize: vertical;
+}
+
+/* ── Script Editor full-screen overlay ─────────────────────── */
+.webmatic-script-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2147483640;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.webmatic-script-dialog {
+  background: var(--webmatic-surface, #fff);
+  border: 1px solid var(--webmatic-border, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  width: min(820px, 96vw);
+  height: min(85vh, 700px);
+  overflow: hidden;
+}
+
+.webmatic-script-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid var(--webmatic-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.webmatic-script-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--webmatic-text, #1e293b);
+}
+
+.webmatic-script-close {
+  all: unset;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--webmatic-text-muted, #64748b);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.12s;
+}
+
+.webmatic-script-close:hover {
+  background: var(--webmatic-btn-hover, #f1f5f9);
+  color: var(--webmatic-text, #1e293b);
+}
+
+.webmatic-script-textarea {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 14px 18px;
+  font-family: "Cascadia Code", "Fira Mono", "Courier New", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  background: var(--webmatic-card-bg, #f8fafc);
+  color: var(--webmatic-text, #1e293b);
+  tab-size: 2;
+}
+
+.webmatic-script-footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--webmatic-border, #e2e8f0);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ── Generic wm-dialog (prompt / confirm / alert) ──────────────────── */
+.webmatic-wm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.50);
+  z-index: 2147483645;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.webmatic-wm-dialog {
+  background: var(--webmatic-surface, #fff);
+  border: 1px solid var(--webmatic-border, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.30);
+  padding: 22px 24px 18px;
+  width: min(380px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.webmatic-wm-message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--webmatic-text, #1e293b);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.webmatic-wm-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--webmatic-border, #e2e8f0);
+  border-radius: 7px;
+  background: var(--webmatic-card-bg, #fff);
+  color: var(--webmatic-text, #1e293b);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.webmatic-wm-input:focus {
+  border-color: var(--webmatic-accent, #059669);
+  box-shadow: 0 0 0 2px rgba(5,150,105,0.15);
+}
+
+.webmatic-wm-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ── Settings: export / backup ──────────────────────────────────────── */
+.webmatic-settings-hint {
+  font-size: 11px;
+  color: var(--webmatic-text-muted);
+  margin: 2px 0 10px;
+  line-height: 1.4;
+}
+
+.webmatic-btn-backup {
+  background: color-mix(in srgb, var(--webmatic-accent) 12%, var(--webmatic-card-bg) 88%);
+  border-color: var(--webmatic-accent);
+  color: var(--webmatic-accent);
+  width: 100%;
+  margin-top: 4px;
+}
+
+.webmatic-btn-backup:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--webmatic-accent) 22%, var(--webmatic-card-bg) 78%);
+}
+
+.webmatic-btn-addwait {
+  width: 100%;
+  margin-top: 6px;
+  background: color-mix(in srgb, #f59e0b 12%, var(--webmatic-card-bg) 88%);
+  border-color: #f59e0b;
+  color: #b45309;
+  font-size: 11px;
+}
+
+.webmatic-btn-addwait:hover:not(:disabled) {
+  background: color-mix(in srgb, #f59e0b 22%, var(--webmatic-card-bg) 78%);
+}
+
+/* ── Script editor: Visual / Script tabs ───────────────────────────── */
+.webmatic-script-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--webmatic-border, #e2e8f0);
+  flex-shrink: 0;
+  padding: 0 8px;
+}
+
+.webmatic-script-tab {
+  all: unset;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--webmatic-text-muted, #64748b);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.12s, border-color 0.12s;
+  user-select: none;
+}
+
+.webmatic-script-tab:hover {
+  color: var(--webmatic-text, #1e293b);
+}
+
+.webmatic-script-tab.active {
+  color: var(--webmatic-accent, #059669);
+  border-bottom-color: var(--webmatic-accent, #059669);
+}
+
+/* ── Visual step editor (.wm-sved-*) ────────────────────────────────── */
+.wm-sved-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 14px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  scrollbar-width: thin;
+  scrollbar-color: var(--webmatic-scrollbar, #6ee7b7) transparent;
+}
+
+.wm-sved-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--webmatic-text-muted, #64748b);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.wm-sved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 10px;
+}
+
+.wm-sved-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  border: 1px solid var(--webmatic-border, #e2e8f0);
+  background: var(--webmatic-card-bg, #fff);
+  transition: background 0.1s;
+}
+
+.wm-sved-row:hover {
+  background: var(--webmatic-btn-hover, #f1f5f9);
+}
+
+.wm-sved-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--webmatic-text-muted, #64748b);
+  min-width: 18px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.wm-sved-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+
+.wm-sved-type {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: "Cascadia Code", "Fira Mono", monospace;
+  background: color-mix(in srgb, var(--webmatic-accent) 14%, var(--webmatic-card-bg) 86%);
+  color: var(--webmatic-accent, #059669);
+  padding: 2px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.wm-sved-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--webmatic-text, #1e293b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: "Cascadia Code", "Fira Mono", monospace;
+}
+
+.wm-sved-ctrl {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.wm-sved-btn {
+  all: unset;
+  cursor: pointer;
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  color: var(--webmatic-text-muted, #64748b);
+  transition: background 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+
+.wm-sved-btn:hover:not(:disabled) {
+  background: var(--webmatic-surface-2, #dcfce7);
+  color: var(--webmatic-text, #1e293b);
+}
+
+.wm-sved-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.wm-sved-btn-del:hover:not(:disabled) {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.wm-sved-btn-edit:hover:not(:disabled) {
+  background: color-mix(in srgb, #6366f1 15%, var(--webmatic-card-bg) 85%);
+  color: #4f46e5;
+}
+
+.wm-sved-edit-form {
+  margin-bottom: 4px;
+  background: color-mix(in srgb, #6366f1 6%, var(--webmatic-card-bg) 94%);
+  border-color: color-mix(in srgb, #6366f1 30%, var(--webmatic-border) 70%);
+}
+
+.wm-sved-add-btn {
+  all: unset;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--webmatic-accent) 10%, var(--webmatic-card-bg) 90%);
+  color: var(--webmatic-accent, #059669);
+  border: 1px dashed var(--webmatic-accent, #059669);
+  margin-top: 4px;
+  transition: background 0.12s;
+}
+
+.wm-sved-add-btn:hover {
+  background: color-mix(in srgb, var(--webmatic-accent) 18%, var(--webmatic-card-bg) 82%);
+}
+
+.wm-sved-add-form {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--webmatic-border, #e2e8f0);
+  background: var(--webmatic-surface-2, #dcfce7);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wm-sved-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.wm-sved-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--webmatic-text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wm-sved-select,
+.wm-sved-field-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--webmatic-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--webmatic-card-bg, #fff);
+  color: var(--webmatic-text, #1e293b);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.wm-sved-select:focus,
+.wm-sved-field-input:focus {
+  border-color: var(--webmatic-accent, #059669);
+  box-shadow: 0 0 0 2px rgba(5,150,105,0.15);
+}
+
+.wm-sved-add-btns {
+  display: flex;
+  gap: 7px;
+}
+
+.wm-sved-confirm-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--webmatic-accent, #059669);
+  color: var(--webmatic-accent-fg, #fff);
+  transition: opacity 0.12s;
+}
+
+.wm-sved-confirm-btn:hover {
+  opacity: 0.88;
+}
+
+.wm-sved-cancel-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--webmatic-text-muted, #64748b);
+  background: transparent;
+  transition: background 0.12s;
+}
+
+.wm-sved-cancel-btn:hover {
+  background: var(--webmatic-btn-hover, #f1f5f9);
+  color: var(--webmatic-text, #1e293b);
+}
+
+/* ── Help button (¿) in sidebar header ─────────────────────────────── */
+.webmatic-help-btn {
+  border: none;
+  background: rgba(255, 255, 255, 0.20);
+  color: rgba(255, 255, 255, 0.88);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1;
+  font-family: inherit;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, background 0.12s;
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 6px;
+}
+
+.webmatic-help-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* ── Help manual overlay ────────────────────────────────────────────── */
+.webmatic-help-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--webmatic-surface);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.webmatic-help-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--webmatic-border);
+  background: linear-gradient(135deg, var(--webmatic-header-from), var(--webmatic-header-to));
+  flex-shrink: 0;
+}
+
+.webmatic-help-hdr-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--webmatic-header-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.webmatic-help-close {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 400;
+  cursor: pointer;
+  line-height: 1;
+  font-family: inherit;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.12s, background 0.12s;
+  flex-shrink: 0;
+}
+
+.webmatic-help-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.webmatic-help-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 14px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--webmatic-scrollbar) transparent;
+}
+
+.webmatic-help-section {
+  margin-bottom: 18px;
+}
+
+.webmatic-help-section h4 {
+  margin: 0 0 7px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--webmatic-accent);
+  letter-spacing: 0.01em;
+  border-bottom: 1px solid var(--webmatic-border);
+  padding-bottom: 4px;
+}
+
+.webmatic-help-section p {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--webmatic-text);
+  margin: 0 0 5px;
+}
+
+.webmatic-help-section ol,
+.webmatic-help-section ul {
+  margin: 0 0 6px;
+  padding-left: 18px;
+}
+
+.webmatic-help-section li {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--webmatic-text);
+  margin-bottom: 3px;
+}
+
+.webmatic-help-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 4px;
+}
+
+.webmatic-help-table td {
+  padding: 4px 7px;
+  border-bottom: 1px solid var(--webmatic-border);
+  vertical-align: top;
+  font-size: 11.5px;
+  color: var(--webmatic-text);
+  line-height: 1.4;
+}
+
+.webmatic-help-table td:first-child {
+  font-family: "Cascadia Code", "Fira Mono", "Courier New", monospace;
+  font-weight: 700;
+  font-size: 10.5px;
+  color: var(--webmatic-accent);
+  white-space: nowrap;
+  width: 32%;
+  background: color-mix(in srgb, var(--webmatic-accent) 8%, var(--webmatic-card-bg) 92%);
+}
+
+.webmatic-help-section code {
+  font-family: "Cascadia Code", "Fira Mono", "Courier New", monospace;
+  font-size: 11px;
+  background: color-mix(in srgb, var(--webmatic-accent) 10%, var(--webmatic-card-bg) 90%);
+  color: var(--webmatic-accent);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+}

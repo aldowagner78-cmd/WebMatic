@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture: Contenido dinámico — wait_for</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 500px; margin: 40px auto; padding: 0 20px; }
+    h1   { font-size: 18px; color: #064e3b; }
+    p    { font-size: 13px; color: #6b7280; }
+    button {
+      padding: 8px 18px; background: #059669; color: #fff;
+      border: none; border-radius: 6px; font-size: 14px; cursor: pointer;
+    }
+    #contenido-dinamico { display: none; }
+    #contenido-dinamico.visible {
+      display: block; margin-top: 16px; padding: 14px;
+      background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 8px;
+    }
+    #btn-resultado {
+      margin-top: 12px; padding: 8px 16px; background: #0284c7;
+      color: #fff; border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+    }
+    #estado { margin-top: 12px; font-size: 13px; color: #374151; }
+    .tick   { color: #059669; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Contenido dinámico — prueba <code>wait_for</code></h1>
+  <p>
+    Graba una macro que:<br>
+    1. Haga click en <strong>"Cargar datos"</strong><br>
+    2. Use <code>wait_for</code> con selector <code>#btn-resultado</code> (tarda 1.5 s en aparecer)<br>
+    3. Haga click en <code>#btn-resultado</code>
+  </p>
+
+  <button id="btn-cargar">Cargar datos</button>
+
+  <div id="contenido-dinamico">
+    <strong>✓ Datos cargados</strong>
+    <p>Nombre: <span id="dato-nombre">—</span></p>
+    <p>Código: <span id="dato-codigo">—</span></p>
+    <button id="btn-resultado">Confirmar resultado</button>
+  </div>
+
+  <div id="estado"></div>
+
+  <script>
+    document.getElementById("btn-cargar").addEventListener("click", function() {
+      document.getElementById("estado").textContent = "⏳ Cargando... (espera ~1.5 s)";
+      // Simula carga asíncrona con retraso de 1.5 segundos
+      setTimeout(() => {
+        document.getElementById("dato-nombre").textContent = "Juan García";
+        document.getElementById("dato-codigo").textContent = "COD-" + Date.now().toString().slice(-5);
+        document.getElementById("contenido-dinamico").classList.add("visible");
+        document.getElementById("estado").textContent = "";
+      }, 1500);
+    });
+
+    document.getElementById("btn-resultado").addEventListener("click", function() {
+      document.getElementById("estado").innerHTML =
+        '<span class="tick">✓ Resultado confirmado — wait_for funcionó correctamente</span>';
+    });
+  </script>
+</body>
+</html>

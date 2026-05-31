@@ -1,0 +1,15 @@
+# Dependencias
+node_modules/
+webmatic-desktop/node_modules/
+
+# Build / instaladores
+webmatic-desktop/dist-installer/
+webmatic-desktop/test-results/
+
+# Archivos de desarrollo interno (no van al repo)
+_dev-only/
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db

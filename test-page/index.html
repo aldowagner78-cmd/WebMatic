@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WebMatic — Página de Prueba</title>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --border: #d1d5db;
+      --accent: #059669;
+      --accent-dark: #047857;
+      --text: #111827;
+      --muted: #6b7280;
+      --error: #dc2626;
+      --success: #16a34a;
+      --warning: #d97706;
+      --radius: 8px;
+      --shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--accent);
+      color: #fff;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    }
+    header h1 { font-size: 18px; font-weight: 700; }
+    header span { font-size: 12px; opacity: .85; margin-left: auto; }
+
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+    }
+    nav a {
+      display: block;
+      padding: 10px 14px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+    }
+    nav a:hover, nav a.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    section > header {
+      background: #f9fafb;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      position: static;
+      box-shadow: none;
+    }
+    section > header h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+    }
+    section > header .badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      margin-left: 8px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .section-body { padding: 16px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .grid, .grid-3 { grid-template-columns: 1fr; } }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; font-weight: 600; color: var(--text); }
+    .field .hint { font-size: 11px; color: var(--muted); }
+
+    input[type=text], input[type=email], input[type=password],
+    input[type=number], input[type=date], input[type=tel],
+    input[type=search], input[type=url],
+    select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(5,150,105,.12);
+    }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .check-group { display: flex; flex-direction: column; gap: 8px; }
+    .check-row { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .check-row input[type=checkbox], .check-row input[type=radio] {
+      width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);
+    }
+    .check-row span { font-size: 13px; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      text-decoration: none;
+    }
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-secondary { background: #f3f4f6; color: var(--text); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: #e5e7eb; }
+    .btn-danger    { background: var(--error); color: #fff; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-warning   { background: var(--warning); color: #fff; }
+    .btn-warning:hover { background: #b45309; }
+    .btn-outline   { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+    .btn-outline:hover { background: rgba(5,150,105,.07); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1f2937;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      transition: transform .3s ease;
+      z-index: 999;
+      pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table.data-table th {
+      background: #f9fafb;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--muted);
+      border-bottom: 2px solid var(--border);
+    }
+    table.data-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    table.data-table tr:last-child td { border-bottom: none; }
+    table.data-table tr:hover td { background: #f9fafb; }
+    table.data-table .actions { display: flex; gap: 6px; }
+
+    .badge-status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-status.activo  { background: #d1fae5; color: #065f46; }
+    .badge-status.inactivo{ background: #fee2e2; color: #991b1b; }
+    .badge-status.pending { background: #fef3c7; color: #92400e; }
+
+    #drag-container { display: flex; gap: 16px; }
+    .drag-zone {
+      flex: 1;
+      min-height: 100px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .drag-zone.over { border-color: var(--accent); background: rgba(5,150,105,.04); }
+    .drag-zone h4 { font-size: 11px; text-transform: uppercase; color: var(--muted); font-weight: 700; margin-bottom: 4px; }
+    .drag-item {
+      background: #f3f4f6;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 12px;
+      font-size: 12px;
+      cursor: grab;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .drag-item:active { cursor: grabbing; opacity: .7; }
+
+    #dynamic-section { display: none; }
+    #dynamic-section.visible { display: block; }
+
+    /* Hover card */
+    .hover-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: #f0fdf4;
+      border: 1px solid #a7f3d0;
+      border-radius: 8px;
+      cursor: default;
+      font-size: 13px;
+      font-weight: 600;
+      color: #065f46;
+      position: relative;
+    }
+    .hover-card {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.12);
+      width: 240px;
+      font-size: 12px;
+      color: var(--text);
+      z-index: 50;
+      line-height: 1.6;
+    }
+    .hover-trigger:hover .hover-card,
+    .hover-trigger.hovered .hover-card { display: block; }
+
+    /* Contenteditable */
+    .ce-box {
+      min-height: 64px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .ce-box:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(5,150,105,.12);
+    }
+    .ce-box[data-placeholder]:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* Dblclick */
+    .dblclick-card {
+      padding: 18px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all .2s;
+      user-select: none;
+    }
+    .dblclick-card:hover { background: #f9fafb; }
+    .dblclick-card.dbl-active { border-color: var(--accent); background: #f0fdf4; }
+
+    .counter-display {
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent);
+      text-align: center;
+      padding: 16px 0;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+
+    .output-box {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+      font-family: monospace;
+      min-height: 40px;
+      color: var(--muted);
+    }
+
+    .tab-bar { display: flex; border-bottom: 1px solid var(--border); }
+    .tab-btn {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; padding: 16px; }
+    .tab-panel.active { display: block; }
+
+    .scroll-container {
+      height: 200px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px;
+      background: #f9fafb;
+    }
+    .scroll-item {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .scroll-item:last-child { border-bottom: none; }
+    .scroll-target {
+      background: #fef3c7;
+      border-radius: 6px;
+    }
+
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: #fff;
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2);
+    }
+    .modal-box h3 { font-size: 16px; margin-bottom: 12px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+    .result-area {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      display: none;
+    }
+    .result-area.success { display: block; background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+    .result-area.error   { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+    <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+  </svg>
+  <h1>WebMatic — Página de Prueba</h1>
+  <span>Graba y reproduce macros en esta página</span>
+</header>
+
+<!-- ═══════════════════════════ NAV ═══════════════════════════ -->
+<nav>
+  <a href="#formulario" class="active">Formulario</a>
+  <a href="#tablas">Tablas</a>
+  <a href="#dinamico">Dinámico</a>
+  <a href="#interactivo">Interactivo</a>
+  <a href="#drag">Drag &amp; Drop</a>
+  <a href="#tabs">Tabs</a>
+  <a href="#scroll">Scroll</a>
+  <a href="#modal">Modal</a>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<main>
+
+  <!-- ═══════════════ 1. FORMULARIO COMPLETO ═══════════════ -->
+  <section id="formulario">
+    <header><h2>Formulario de Registro <span class="badge">click · input · check · select · key</span></h2></header>
+    <div class="section-body">
+      <form id="form-registro" onsubmit="submitForm(event)">
+
+        <div class="grid" style="margin-bottom:14px">
+          <div class="field">
+            <label for="nombre">Nombre *</label>
+            <input type="text" id="nombre" name="nombre" placeholder="Ej: Juan García" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="apellido">Apellido *</label>
+            <input type="text" id="apellido" name="apellido" placeholder="Ej: Pérez" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="email">Correo electrónico</label>
+            <input type="email" id="email" name="email" placeholder="usuario@ejemplo.com" />
+          </div>
+          <div class="field">
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" name="telefono" placeholder="+54 9 342 0000000" />
+          </div>
+          <div class="field">
+            <label for="fecha-nac">Fecha de nacimiento</label>
+            <input type="date" id="fecha-nac" name="fechaNac" />
+          </div>
+          <div class="field">
+            <label for="edad">Edad</label>
+            <input type="number" id="edad" name="edad" min="0" max="120" placeholder="0" />
+          </div>
+          <div class="field">
+            <label for="url-web">Sitio web</label>
+            <input type="url" id="url-web" name="urlWeb" placeholder="https://..." />
+          </div>
+          <div class="field">
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" name="password" placeholder="••••••••" />
+          </div>
+        </div>
+
+        <div class="grid" style="margin-bottom:14px">
+          <div class="field">
+            <label for="pais">País</label>
+            <select id="pais" name="pais" onchange="updateProvincias()">
+              <option value="">— Seleccionar —</option>
+              <option value="AR">Argentina</option>
+              <option value="CL">Chile</option>
+              <option value="UY">Uruguay</option>
+              <option value="BR">Brasil</option>
+              <option value="MX">México</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="provincia">Provincia / Estado</label>
+            <select id="provincia" name="provincia">
+              <option value="">— Seleccionar país primero —</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="profesion">Profesión</label>
+            <select id="profesion" name="profesion">
+              <option value="">— Seleccionar —</option>
+              <option value="medico">Médico/a</option>
+              <option value="abogado">Abogado/a</option>
+              <option value="contador">Contador/a</option>
+              <option value="ingeniero">Ingeniero/a</option>
+              <option value="docente">Docente</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="busqueda">Buscar (Enter para confirmar)</label>
+            <input type="search" id="busqueda" name="busqueda" placeholder="Buscar..." onkeydown="handleSearch(event)" />
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:14px">
+          <label for="notas">Notas adicionales</label>
+          <textarea id="notas" name="notas" placeholder="Escribe cualquier información adicional aquí..."></textarea>
+        </div>
+
+        <hr class="divider" />
+
+        <div class="grid" style="margin-bottom:14px">
+          <div class="field">
+            <label>Géneros de interés</label>
+            <div class="check-group">
+              <label class="check-row">
+                <input type="checkbox" id="chk-tecnologia" name="generos" value="tecnologia" />
+                <span>Tecnología</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="chk-salud" name="generos" value="salud" checked />
+                <span>Salud</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="chk-educacion" name="generos" value="educacion" />
+                <span>Educación</span>
+              </label>
+              <label class="check-row">
+                <input type="checkbox" id="chk-finanzas" name="generos" value="finanzas" checked />
+                <span>Finanzas</span>
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Estado civil</label>
+            <div class="check-group">
+              <label class="check-row">
+                <input type="radio" id="rad-soltero" name="estadoCivil" value="soltero" checked />
+                <span>Soltero/a</span>
+              </label>
+              <label class="check-row">
+                <input type="radio" id="rad-casado" name="estadoCivil" value="casado" />
+                <span>Casado/a</span>
+              </label>
+              <label class="check-row">
+                <input type="radio" id="rad-divorciado" name="estadoCivil" value="divorciado" />
+                <span>Divorciado/a</span>
+              </label>
+              <label class="check-row">
+                <input type="radio" id="rad-viudo" name="estadoCivil" value="viudo" />
+                <span>Viudo/a</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-bottom:16px">
+          <label class="check-row">
+            <input type="checkbox" id="chk-terminos" name="terminos" />
+            <span>Acepto los <a href="#" onclick="return false;">términos y condiciones</a></span>
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button type="submit" class="btn btn-primary" id="btn-enviar">✓ Enviar registro</button>
+          <button type="reset" class="btn btn-secondary" onclick="clearResult()">↺ Limpiar</button>
+          <button type="button" class="btn btn-outline" onclick="fillDemo()">⚡ Llenar demo</button>
+        </div>
+
+        <div id="form-result" class="result-area"></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 2. TABLA DE DATOS ═══════════════ -->
+  <section id="tablas">
+    <header><h2>Tabla de Pacientes <span class="badge">click · extract · wait_for</span></h2></header>
+    <div class="section-body">
+      <div class="btn-row" style="margin-bottom:12px">
+        <button class="btn btn-primary" onclick="addRow()">+ Agregar fila</button>
+        <button class="btn btn-secondary" onclick="sortTable()">↕ Ordenar por nombre</button>
+        <input type="text" id="filtro-tabla" placeholder="Filtrar tabla..." style="width:200px" oninput="filterTable()" />
+      </div>
+      <table class="data-table" id="tabla-pacientes">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre</th>
+            <th>DNI</th>
+            <th>Estado</th>
+            <th>Fecha ingreso</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body">
+          <tr data-id="1">
+            <td>1</td>
+            <td id="td-nombre-1">García, Ana Lucía</td>
+            <td>28.453.219</td>
+            <td><span class="badge-status activo">Activo</span></td>
+            <td>12/03/2025</td>
+            <td class="actions">
+              <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRow(1)">Editar</button>
+              <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteRow(this)">Eliminar</button>
+            </td>
+          </tr>
+          <tr data-id="2">
+            <td>2</td>
+            <td id="td-nombre-2">López, Carlos M.</td>
+            <td>31.872.004</td>
+            <td><span class="badge-status pending">Pendiente</span></td>
+            <td>28/01/2025</td>
+            <td class="actions">
+              <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRow(2)">Editar</button>
+              <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteRow(this)">Eliminar</button>
+            </td>
+          </tr>
+          <tr data-id="3">
+            <td>3</td>
+            <td id="td-nombre-3">Martínez, Pedro</td>
+            <td>25.001.777</td>
+            <td><span class="badge-status inactivo">Inactivo</span></td>
+            <td>05/12/2024</td>
+            <td class="actions">
+              <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRow(3)">Editar</button>
+              <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteRow(this)">Eliminar</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <div id="output-tabla" class="output-box" style="margin-top:10px">Acción: —</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 3. ELEMENTOS DINÁMICOS ═══════════════ -->
+  <section id="dinamico">
+    <header><h2>Elementos Dinámicos <span class="badge">wait_for · if_exists · set_variable</span></h2></header>
+    <div class="section-body">
+
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        Estos elementos aparecen y desaparecen — ideales para probar <code>wait_for</code> e <code>if_exists</code>.
+      </p>
+
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-primary" id="btn-mostrar" onclick="mostrarDinamico()">Mostrar sección oculta</button>
+        <button class="btn btn-secondary" onclick="ocultarDinamico()">Ocultar</button>
+        <button class="btn btn-warning" id="btn-delay" onclick="mostrarConDelay()">Mostrar con 2s de delay</button>
+      </div>
+
+      <div id="dynamic-section" class="result-area success">
+        ✅ ¡Sección dinámica visible! <strong id="dynamic-label">Contenido cargado.</strong>
+        <br/><br/>
+        <div class="field">
+          <label for="dyn-input">Campo dinámico</label>
+          <input type="text" id="dyn-input" placeholder="Este campo solo aparece cuando la sección está visible" />
+        </div>
+        <br/>
+        <button class="btn btn-primary" id="btn-dyn-confirm" onclick="toast('¡Confirmado en sección dinámica!')">Confirmar</button>
+      </div>
+
+      <hr class="divider" />
+
+      <p style="font-size:12px;margin-bottom:10px;font-weight:600">Contador con botones:</p>
+      <div class="counter-display" id="counter-val">0</div>
+      <div style="max-width:240px;margin:0 auto">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+      <div class="btn-row" style="justify-content:center;margin-top:12px">
+        <button class="btn btn-danger"    id="btn-decrement" onclick="changeCounter(-1)">−</button>
+        <button class="btn btn-secondary" id="btn-reset-counter" onclick="resetCounter()">Reset</button>
+        <button class="btn btn-primary"   id="btn-increment" onclick="changeCounter(1)">+</button>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="field" style="margin-top:8px">
+        <label for="extract-target">Texto para extraer <span style="color:var(--muted);font-weight:400">(selecciona y copia con Ctrl+C)</span></label>
+        <div id="extract-target" class="output-box" style="cursor:text;user-select:all">
+          DNI: 28.453.219 — Nombre: García Ana Lucía — Afiliado: 0089-0001-00234567/00
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ 4. INTERACTIVO (dblclick · hover · contenteditable) ═══════════════ -->
+  <section id="interactivo">
+    <header><h2>Interacciones avanzadas <span class="badge">dblclick · hover · contenteditable</span></h2></header>
+    <div class="section-body">
+
+      <!-- Doble clic -->
+      <p style="font-size:12px;font-weight:700;margin-bottom:8px">Doble clic para editar</p>
+      <div class="grid-3" style="margin-bottom:18px">
+        <div class="dblclick-card" id="dbl-card-1" ondblclick="onDblCard(1)">
+          <div style="font-size:22px;margin-bottom:6px">📋</div>
+          <strong id="dbl-label-1">Expediente #001</strong>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Doble clic para seleccionar</div>
+        </div>
+        <div class="dblclick-card" id="dbl-card-2" ondblclick="onDblCard(2)">
+          <div style="font-size:22px;margin-bottom:6px">📋</div>
+          <strong id="dbl-label-2">Expediente #002</strong>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Doble clic para seleccionar</div>
+        </div>
+        <div class="dblclick-card" id="dbl-card-3" ondblclick="onDblCard(3)">
+          <div style="font-size:22px;margin-bottom:6px">📋</div>
+          <strong id="dbl-label-3">Expediente #003</strong>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">Doble clic para seleccionar</div>
+        </div>
+      </div>
+      <div id="output-dbl" class="output-box" style="margin-bottom:18px">Doble clic: —</div>
+
+      <hr class="divider" />
+
+      <!-- Hover -->
+      <p style="font-size:12px;font-weight:700;margin-bottom:10px">Hover para mostrar info</p>
+      <div class="btn-row" style="margin-bottom:18px;align-items:flex-start">
+        <div class="hover-trigger" id="hover-paciente"
+             onmouseenter="this.classList.add('hovered');document.getElementById('output-hover').textContent='Hover en: Paciente García'"
+             onmouseleave="this.classList.remove('hovered')">
+          👤 García, Ana Lucía
+          <div class="hover-card">
+            <strong>Ana Lucía García</strong><br/>
+            DNI: 28.453.219<br/>
+            Afiliado: 0089-0001-00234567/00<br/>
+            Obra social: IAPOS — Plan A<br/>
+            Último turno: 12/03/2025
+          </div>
+        </div>
+        <div class="hover-trigger" id="hover-medicamento"
+             onmouseenter="this.classList.add('hovered');document.getElementById('output-hover').textContent='Hover en: Ibuprofeno'"
+             onmouseleave="this.classList.remove('hovered')">
+          💊 Ibuprofeno 400mg
+          <div class="hover-card">
+            <strong>Ibuprofeno 400mg</strong><br/>
+            Laboratorio: Bayer<br/>
+            Stock: 48 unidades<br/>
+            Vencimiento: 01/2027<br/>
+            Precio: $1.240
+          </div>
+        </div>
+        <div class="hover-trigger" id="hover-turno"
+             onmouseenter="this.classList.add('hovered');document.getElementById('output-hover').textContent='Hover en: Turno 09:30'"
+             onmouseleave="this.classList.remove('hovered')">
+          🗓 Turno 09:30
+          <div class="hover-card">
+            <strong>Martes 03/06/2026 — 09:30</strong><br/>
+            Paciente: García, Ana Lucía<br/>
+            Médico: Dr. Rodríguez<br/>
+            Consultorio: 3B<br/>
+            Estado: Confirmado ✅
+          </div>
+        </div>
+      </div>
+      <div id="output-hover" class="output-box" style="margin-bottom:18px">Hover: —</div>
+
+      <hr class="divider" />
+
+      <!-- Contenteditable -->
+      <p style="font-size:12px;font-weight:700;margin-bottom:8px">Campos de texto enriquecido (contenteditable)</p>
+      <div class="grid" style="margin-bottom:10px">
+        <div class="field">
+          <label for="ce-diagnostico">Diagnóstico</label>
+          <div id="ce-diagnostico" class="ce-box" contenteditable="true"
+               data-placeholder="Escribe el diagnóstico aquí..."
+               oninput="document.getElementById('output-ce').textContent='Diagnóstico: '+this.innerText.trim().slice(0,60)">
+          </div>
+        </div>
+        <div class="field">
+          <label for="ce-observaciones">Observaciones</label>
+          <div id="ce-observaciones" class="ce-box" contenteditable="true"
+               data-placeholder="Observaciones clínicas..."
+               oninput="document.getElementById('output-ce').textContent='Observaciones: '+this.innerText.trim().slice(0,60)">
+          </div>
+        </div>
+      </div>
+      <div id="output-ce" class="output-box">Contenido editable: —</div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ 4b. DRAG & DROP ═══════════════ -->
+  <section id="drag">
+    <header><h2>Drag &amp; Drop <span class="badge">drag_drop</span></h2></header>
+    <div class="section-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        Arrastra items entre las dos listas para probar el paso <code>drag_drop</code>.
+      </p>
+      <div id="drag-container">
+        <div class="drag-zone" id="zone-a" ondragover="onDragOver(event)" ondrop="onDrop(event,'zone-a')" ondragleave="onDragLeave(event)">
+          <h4>Lista A (origen)</h4>
+          <div class="drag-item" id="drag-1" draggable="true" ondragstart="onDragStart(event,'drag-1')">📄 Documento 1</div>
+          <div class="drag-item" id="drag-2" draggable="true" ondragstart="onDragStart(event,'drag-2')">📄 Documento 2</div>
+          <div class="drag-item" id="drag-3" draggable="true" ondragstart="onDragStart(event,'drag-3')">📄 Documento 3</div>
+        </div>
+        <div class="drag-zone" id="zone-b" ondragover="onDragOver(event)" ondrop="onDrop(event,'zone-b')" ondragleave="onDragLeave(event)">
+          <h4>Lista B (destino)</h4>
+        </div>
+      </div>
+      <div id="output-drag" class="output-box" style="margin-top:10px">Drag: —</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 5. TABS ═══════════════ -->
+  <section id="tabs">
+    <header><h2>Tabs con contenido <span class="badge">click · input</span></h2></header>
+    <div class="section-body" style="padding:0">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tab-btn-1" onclick="switchTab(1)">Datos básicos</button>
+        <button class="tab-btn" id="tab-btn-2" onclick="switchTab(2)">Dirección</button>
+        <button class="tab-btn" id="tab-btn-3" onclick="switchTab(3)">Obra social</button>
+      </div>
+      <div class="tab-panel active" id="tab-1">
+        <div class="grid">
+          <div class="field"><label for="t1-dni">DNI</label><input type="text" id="t1-dni" placeholder="00.000.000" /></div>
+          <div class="field"><label for="t1-cuil">CUIL</label><input type="text" id="t1-cuil" placeholder="20-00000000-0" /></div>
+          <div class="field"><label for="t1-nombre">Nombre completo</label><input type="text" id="t1-nombre" placeholder="Apellido, Nombre" /></div>
+          <div class="field"><label for="t1-nacimiento">Fecha nacimiento</label><input type="date" id="t1-nacimiento" /></div>
+        </div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn btn-primary" onclick="switchTab(2);toast('Guardado — pasando a Dirección')">Siguiente →</button>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-2">
+        <div class="grid">
+          <div class="field"><label for="t2-calle">Calle</label><input type="text" id="t2-calle" placeholder="San Martín" /></div>
+          <div class="field"><label for="t2-numero">Número</label><input type="number" id="t2-numero" placeholder="1234" /></div>
+          <div class="field"><label for="t2-ciudad">Ciudad</label><input type="text" id="t2-ciudad" placeholder="Santa Fe" /></div>
+          <div class="field"><label for="t2-cp">Código Postal</label><input type="text" id="t2-cp" placeholder="3000" /></div>
+        </div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn btn-secondary" onclick="switchTab(1)">← Atrás</button>
+          <button class="btn btn-primary" onclick="switchTab(3);toast('Guardado — pasando a Obra social')">Siguiente →</button>
+        </div>
+      </div>
+      <div class="tab-panel" id="tab-3">
+        <div class="grid">
+          <div class="field">
+            <label for="t3-os">Obra social</label>
+            <select id="t3-os">
+              <option value="">— Seleccionar —</option>
+              <option value="iapos">IAPOS</option>
+              <option value="osde">OSDE</option>
+              <option value="swiss">Swiss Medical</option>
+              <option value="galeno">Galeno</option>
+              <option value="hominis">Hominis</option>
+              <option value="apres">APRES</option>
+            </select>
+          </div>
+          <div class="field"><label for="t3-nro">Número de afiliado</label><input type="text" id="t3-nro" placeholder="0089-0001-00234567/00" /></div>
+          <div class="field"><label for="t3-plan">Plan</label><input type="text" id="t3-plan" placeholder="Ej: Plan A" /></div>
+          <div class="field">
+            <label for="t3-venc">Vencimiento credencial</label>
+            <input type="date" id="t3-venc" />
+          </div>
+        </div>
+        <div class="btn-row" style="margin-top:12px">
+          <button class="btn btn-secondary" onclick="switchTab(2)">← Atrás</button>
+          <button class="btn btn-primary" onclick="toast('¡Ficha guardada correctamente!')">✓ Guardar ficha</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 6. SCROLL ═══════════════ -->
+  <section id="scroll">
+    <header><h2>Lista scrolleable <span class="badge">scroll_to · click · extract</span></h2></header>
+    <div class="section-body">
+      <div class="btn-row" style="margin-bottom:10px">
+        <button class="btn btn-secondary" onclick="scrollTo50()">Ir al ítem 50</button>
+        <button class="btn btn-secondary" onclick="scrollToTarget()">Ir al ítem marcado</button>
+      </div>
+      <div class="scroll-container" id="scroll-list"></div>
+      <div id="output-scroll" class="output-box" style="margin-top:10px">Click en ítem: —</div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 7. MODAL ═══════════════ -->
+  <section id="modal">
+    <header><h2>Modal / Confirmación <span class="badge">click · wait_for · if_exists</span></h2></header>
+    <div class="section-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        Abre el modal y confirma o cancela. El resultado aparece abajo.
+      </p>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-abrir-modal" onclick="openModal()">Abrir modal</button>
+        <button class="btn btn-warning" id="btn-modal-delay" onclick="openModalDelay()">Abrir modal (con 1.5s delay)</button>
+      </div>
+      <div id="modal-result" class="result-area"></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ═══════════════ MODAL ═══════════════ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box">
+    <h3>⚠️ Confirmar acción</h3>
+    <p style="font-size:13px;color:var(--muted)">¿Estás seguro de que deseas continuar con esta operación? Esta acción no se puede deshacer.</p>
+    <div class="field" style="margin-top:12px">
+      <label for="modal-motivo">Motivo (opcional)</label>
+      <input type="text" id="modal-motivo" placeholder="Ingresa el motivo..." />
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="btn-modal-cancelar" onclick="closeModal(false)">Cancelar</button>
+      <button class="btn btn-danger" id="btn-modal-confirmar" onclick="closeModal(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Toast ──────────────────────────────────────────────────────
+let _toastTimer;
+function toast(msg, duration = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ── Formulario ────────────────────────────────────────────────
+function submitForm(e) {
+  e.preventDefault();
+  const nombre = document.getElementById('nombre').value.trim();
+  const terminos = document.getElementById('chk-terminos').checked;
+  const res = document.getElementById('form-result');
+  if (!nombre) {
+    res.className = 'result-area error';
+    res.textContent = '✗ El campo Nombre es obligatorio.';
+    return;
+  }
+  if (!terminos) {
+    res.className = 'result-area error';
+    res.textContent = '✗ Debes aceptar los términos y condiciones.';
+    return;
+  }
+  res.className = 'result-area success';
+  res.textContent = '✓ Registro enviado correctamente para: ' + nombre;
+  toast('Formulario enviado');
+}
+
+function clearResult() {
+  const res = document.getElementById('form-result');
+  res.className = 'result-area';
+}
+
+function fillDemo() {
+  document.getElementById('nombre').value    = 'Juan';
+  document.getElementById('apellido').value  = 'García';
+  document.getElementById('email').value     = 'juan@ejemplo.com';
+  document.getElementById('telefono').value  = '+54 9 342 4000000';
+  document.getElementById('edad').value      = '35';
+  document.getElementById('pais').value      = 'AR';
+  updateProvincias();
+  setTimeout(() => { document.getElementById('provincia').value = 'SF'; }, 50);
+  document.getElementById('profesion').value = 'medico';
+  document.getElementById('notas').value     = 'Paciente de prueba generado por WebMatic.';
+  document.getElementById('chk-tecnologia').checked = true;
+  document.getElementById('rad-casado').checked = true;
+  toast('Datos de demo cargados');
+}
+
+const provincias = {
+  AR: [{v:'BA',t:'Buenos Aires'},{v:'CO',t:'Córdoba'},{v:'SF',t:'Santa Fe'},{v:'MZ',t:'Mendoza'},{v:'TU',t:'Tucumán'}],
+  CL: [{v:'RM',t:'Región Metropolitana'},{v:'VA',t:'Valparaíso'},{v:'BI',t:'Biobío'}],
+  UY: [{v:'MV',t:'Montevideo'},{v:'CA',t:'Canelones'},{v:'MA',t:'Maldonado'}],
+  BR: [{v:'SP',t:'São Paulo'},{v:'RJ',t:'Río de Janeiro'},{v:'MG',t:'Minas Gerais'}],
+  MX: [{v:'CDMX',t:'CDMX'},{v:'JAL',t:'Jalisco'},{v:'NL',t:'Nuevo León'}]
+};
+function updateProvincias() {
+  const pais = document.getElementById('pais').value;
+  const sel  = document.getElementById('provincia');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  (provincias[pais] || []).forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.v; o.textContent = p.t;
+    sel.appendChild(o);
+  });
+}
+
+function handleSearch(e) {
+  if (e.key === 'Enter') toast('Buscando: ' + e.target.value);
+}
+
+// ── Tabla ─────────────────────────────────────────────────────
+let rowCount = 3;
+function addRow() {
+  rowCount++;
+  const names = ['Rodríguez, María','Sánchez, Luis','Díaz, Marta','Torres, Carlos','Flores, Ana'];
+  const n = names[(rowCount - 1) % names.length];
+  const statuses = ['activo','inactivo','pending'];
+  const sl = statuses[rowCount % 3];
+  const labels = {activo:'Activo',inactivo:'Inactivo',pending:'Pendiente'};
+  const tbody = document.getElementById('tabla-body');
+  const tr = document.createElement('tr');
+  tr.dataset.id = rowCount;
+  tr.innerHTML = `
+    <td>${rowCount}</td>
+    <td id="td-nombre-${rowCount}">${n}</td>
+    <td>${Math.floor(10000000 + Math.random()*20000000).toLocaleString('es-AR')}</td>
+    <td><span class="badge-status ${sl}">${labels[sl]}</span></td>
+    <td>${new Date().toLocaleDateString('es-AR')}</td>
+    <td class="actions">
+      <button class="btn btn-secondary" style="padding:4px 10px;font-size:11px" onclick="editRow(${rowCount})">Editar</button>
+      <button class="btn btn-danger" style="padding:4px 10px;font-size:11px" onclick="deleteRow(this)">Eliminar</button>
+    </td>`;
+  tbody.appendChild(tr);
+  toast('Fila ' + rowCount + ' agregada');
+}
+
+function editRow(id) {
+  const nombre = document.getElementById('td-nombre-' + id);
+  document.getElementById('output-tabla').textContent = 'Editando: ' + (nombre ? nombre.textContent : 'ID ' + id);
+  toast('Editando fila ' + id);
+}
+
+function deleteRow(btn) {
+  const tr = btn.closest('tr');
+  document.getElementById('output-tabla').textContent = 'Eliminada fila ID: ' + tr.dataset.id;
+  tr.remove();
+  toast('Fila eliminada');
+}
+
+function sortTable() {
+  const tbody = document.getElementById('tabla-body');
+  const rows  = Array.from(tbody.querySelectorAll('tr'));
+  rows.sort((a,b) => {
+    const na = a.querySelector('td:nth-child(2)').textContent;
+    const nb = b.querySelector('td:nth-child(2)').textContent;
+    return na.localeCompare(nb, 'es');
+  });
+  rows.forEach(r => tbody.appendChild(r));
+  toast('Tabla ordenada');
+}
+
+function filterTable() {
+  const q = document.getElementById('filtro-tabla').value.toLowerCase();
+  document.querySelectorAll('#tabla-body tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── Dinámicos ─────────────────────────────────────────────────
+function mostrarDinamico() {
+  document.getElementById('dynamic-section').classList.add('visible');
+  toast('Sección dinámica visible');
+}
+function ocultarDinamico() {
+  document.getElementById('dynamic-section').classList.remove('visible');
+  toast('Sección dinámica oculta');
+}
+function mostrarConDelay() {
+  document.getElementById('btn-delay').disabled = true;
+  document.getElementById('btn-delay').textContent = 'Cargando…';
+  setTimeout(() => {
+    mostrarDinamico();
+    document.getElementById('btn-delay').disabled = false;
+    document.getElementById('btn-delay').textContent = 'Mostrar con 2s de delay';
+  }, 2000);
+}
+
+let counterVal = 0;
+function changeCounter(delta) {
+  counterVal = Math.max(0, Math.min(10, counterVal + delta));
+  document.getElementById('counter-val').textContent = counterVal;
+  document.getElementById('progress-fill').style.width = (counterVal * 10) + '%';
+  if (counterVal === 10) toast('¡Contador al máximo!');
+}
+function resetCounter() {
+  counterVal = 0;
+  changeCounter(0);
+  toast('Contador reseteado');
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────
+let _dragging = null;
+function onDragStart(e, id) { _dragging = id; e.dataTransfer.setData('text/plain', id); }
+function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('over'); }
+function onDragLeave(e) { e.currentTarget.classList.remove('over'); }
+function onDrop(e, zoneId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('over');
+  const id = e.dataTransfer.getData('text/plain') || _dragging;
+  const el = document.getElementById(id);
+  if (el) {
+    e.currentTarget.appendChild(el);
+    document.getElementById('output-drag').textContent = id + ' → ' + zoneId;
+    toast(id + ' movido a ' + zoneId);
+  }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+function switchTab(n) {
+  for (let i=1;i<=3;i++) {
+    document.getElementById('tab-'+i).classList.toggle('active', i===n);
+    document.getElementById('tab-btn-'+i).classList.toggle('active', i===n);
+  }
+}
+
+// ── Scroll list ───────────────────────────────────────────────
+(function buildScrollList() {
+  const c = document.getElementById('scroll-list');
+  for (let i = 1; i <= 80; i++) {
+    const d = document.createElement('div');
+    d.className = 'scroll-item' + (i === 50 ? ' scroll-target' : '');
+    d.id = 'scroll-item-' + i;
+    d.innerHTML = `<span>Ítem ${i}${i===50?' ⭐':''}</span>
+      <button class="btn btn-outline" style="padding:3px 10px;font-size:11px"
+        onclick="document.getElementById('output-scroll').textContent='Clic en ítem ${i}';toast('Ítem ${i} seleccionado')">
+        Seleccionar</button>`;
+    c.appendChild(d);
+  }
+})();
+
+function scrollTo50() {
+  document.getElementById('scroll-item-50').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function scrollToTarget() {
+  document.querySelector('.scroll-target').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  toast('Scroll al ítem marcado');
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.getElementById('modal-motivo').value = '';
+}
+function openModalDelay() {
+  document.getElementById('btn-modal-delay').disabled = true;
+  document.getElementById('btn-modal-delay').textContent = 'Abriendo…';
+  setTimeout(() => {
+    openModal();
+    document.getElementById('btn-modal-delay').disabled = false;
+    document.getElementById('btn-modal-delay').textContent = 'Abrir modal (con 1.5s delay)';
+  }, 1500);
+}
+function closeModal(confirmed) {
+  document.getElementById('modal-overlay').classList.remove('open');
+  const res = document.getElementById('modal-result');
+  const motivo = document.getElementById('modal-motivo').value.trim();
+  if (confirmed) {
+    res.className = 'result-area success';
+    res.textContent = '✓ Confirmado' + (motivo ? '. Motivo: ' + motivo : '.');
+    toast('Acción confirmada');
+  } else {
+    res.className = 'result-area error';
+    res.textContent = '✗ Operación cancelada.';
+    toast('Cancelado');
+  }
+}
+document.getElementById('modal-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal(false);
+});
+
+// ── Doble clic ────────────────────────────────────────────────
+let _dblSelected = null;
+function onDblCard(n) {
+  if (_dblSelected) document.getElementById('dbl-card-' + _dblSelected).classList.remove('dbl-active');
+  _dblSelected = n;
+  document.getElementById('dbl-card-' + n).classList.add('dbl-active');
+  document.getElementById('output-dbl').textContent = 'Seleccionado: Expediente #00' + n;
+  toast('Expediente #00' + n + ' abierto');
+}
+
+// ── Nav activo ────────────────────────────────────────────────
+document.querySelectorAll('nav a').forEach(a => {
+  a.addEventListener('click', function() {
+    document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

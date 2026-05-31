@@ -1,0 +1,69 @@
+{
+  "manifest_version": 2,
+  "name": "WebMatic",
+  "version": "0.1.0",
+  "description": "Automatizacion web modular — Chrome, Edge y Firefox, en Windows, macOS y Linux.",
+  "icons": {
+    "48": "logo48.png",
+    "128": "logo48.png"
+  },
+  "browser_action": {
+    "default_title": "WebMatic",
+    "default_icon": {
+      "16": "logo48.png",
+      "32": "logo48.png",
+      "48": "logo48.png"
+    }
+  },
+  "background": {
+    "scripts": [
+      "src/modules/storage/fs-handle.js",
+      "src/background/background.js"
+    ]
+  },
+  "permissions": [
+    "storage",
+    "downloads",
+    "activeTab",
+    "tabs",
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "all_frames": true,
+      "js": [
+        "src/core/contracts.js",
+        "src/core/store.js",
+        "src/core/utils.js",
+        "src/modules/docking/geometry-manager.js",
+        "src/modules/ui/ui-shell.js",
+        "src/modules/editor/step-editor.js",
+        "src/modules/recorder/recorder.js",
+        "src/modules/player/player.js",
+        "src/modules/storage/iim-adapter.js",
+        "src/modules/settings/settings-manager.js",
+        "src/content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    "logo48.png",
+    "src/modules/ui/ui-shell.css",
+    "src/help/help.html",
+    "src/help/help.js"
+  ],
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": false
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "webmatic@local.dev",
+      "strict_min_version": "128.0"
+    }
+  }
+}

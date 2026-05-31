@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture: Drag & Drop + scroll_to + set_variable</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    h1   { font-size: 18px; color: #064e3b; }
+    h2   { font-size: 14px; color: #374151; margin-top: 28px; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; }
+    p    { font-size: 13px; color: #6b7280; }
+
+    /* ── Drag & Drop ── */
+    .dnd-container { display: flex; gap: 16px; margin-top: 12px; }
+    .dnd-list {
+      flex: 1; min-height: 120px; padding: 10px;
+      border: 2px dashed #a7f3d0; border-radius: 8px; background: #f0fdf4;
+    }
+    .dnd-list h3 { font-size: 12px; color: #059669; margin: 0 0 8px; text-transform: uppercase; }
+    .dnd-item {
+      padding: 7px 10px; margin-bottom: 6px;
+      background: #fff; border: 1px solid #a7f3d0;
+      border-radius: 6px; font-size: 13px; cursor: grab;
+    }
+    .dnd-list.drag-over { border-color: #059669; background: #dcfce7; }
+
+    /* ── scroll_to ── */
+    .scroll-section {
+      height: 200px; overflow-y: auto;
+      border: 1px solid #d1d5db; border-radius: 8px;
+      padding: 10px; margin-top: 12px;
+    }
+    .scroll-target {
+      margin-top: 400px; padding: 12px;
+      background: #fef9c3; border: 1px solid #fde68a; border-radius: 8px;
+      font-size: 13px;
+    }
+
+    /* ── set_variable ── */
+    .calc-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .calc-row input {
+      width: 80px; padding: 6px 8px;
+      border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;
+    }
+    #btn-calcular {
+      padding: 7px 14px; background: #059669; color: #fff;
+      border: none; border-radius: 6px; font-size: 13px; cursor: pointer;
+    }
+    #resultado-calc { margin-top: 8px; font-size: 13px; color: #374151; }
+
+    /* ── log ── */
+    #log {
+      margin-top: 24px; padding: 12px;
+      background: #f0fdf4; border: 1px solid #a7f3d0; border-radius: 8px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Drag & Drop · scroll_to · set_variable</h1>
+
+  <!-- ── Drag & Drop ─────────────────────────────────────── -->
+  <h2>drag_drop</h2>
+  <p>
+    Macro: <code>drag_drop</code> con <code>from: "#item-a"</code> y <code>to: "#lista-destino"</code>
+  </p>
+  <div class="dnd-container">
+    <div class="dnd-list" id="lista-origen">
+      <h3>Origen</h3>
+      <div class="dnd-item" id="item-a" draggable="true">Tarea A</div>
+      <div class="dnd-item" id="item-b" draggable="true">Tarea B</div>
+      <div class="dnd-item" id="item-c" draggable="true">Tarea C</div>
+    </div>
+    <div class="dnd-list" id="lista-destino">
+      <h3>Destino</h3>
+    </div>
+  </div>
+
+  <!-- ── scroll_to ───────────────────────────────────────── -->
+  <h2>scroll_to</h2>
+  <p>
+    Macro: <code>scroll_to</code> con <code>selector: "#elemento-fondo"</code>
+  </p>
+  <div class="scroll-section" id="scroll-container">
+    <div style="font-size:12px;color:#9ca3af">↓ Scroll hacia abajo dentro de este contenedor...</div>
+    <div class="scroll-target" id="elemento-fondo">
+      ✓ Elemento encontrado al fondo — scroll_to funcionó
+    </div>
+  </div>
+
+  <!-- ── set_variable ─────────────────────────────────────── -->
+  <h2>set_variable (simulado manualmente)</h2>
+  <p>
+    La macro usa <code>set_variable</code> para calcular TOTAL = PRECIO × CANTIDAD,
+    luego escribe el resultado en el campo.
+  </p>
+  <div class="calc-row">
+    <label style="font-size:13px">Precio: <input type="number" id="precio" value="150" /></label>
+    <label style="font-size:13px">Cantidad: <input type="number" id="cantidad" value="3" /></label>
+    <button id="btn-calcular">Calcular</button>
+  </div>
+  <div id="resultado-calc"></div>
+  <div class="calc-row" style="margin-top:8px">
+    <label style="font-size:13px">Total (macro lo escribe aquí):
+      <input type="number" id="total-calculado" placeholder="0" />
+    </label>
+  </div>
+
+  <!-- ── log ─────────────────────────────────────────────── -->
+  <div id="log">Esperando acciones...</div>
+
+  <script>
+    // ── Drag & Drop ──────────────────────────────────────────
+    let dragging = null;
+
+    document.querySelectorAll(".dnd-item").forEach(item => {
+      item.addEventListener("dragstart", e => {
+        dragging = e.target;
+        e.dataTransfer.effectAllowed = "move";
+        log("dragstart en: " + e.target.id);
+      });
+      item.addEventListener("dragend", () => { dragging = null; });
+    });
+
+    document.querySelectorAll(".dnd-list").forEach(list => {
+      list.addEventListener("dragover",  e => { e.preventDefault(); list.classList.add("drag-over"); });
+      list.addEventListener("dragleave", () => list.classList.remove("drag-over"));
+      list.addEventListener("drop", e => {
+        e.preventDefault();
+        list.classList.remove("drag-over");
+        if (dragging) {
+          list.appendChild(dragging);
+          log("✓ drop en: " + list.id + " — item: " + dragging.id);
+        }
+      });
+    });
+
+    // ── Calcular ─────────────────────────────────────────────
+    document.getElementById("btn-calcular").addEventListener("click", () => {
+      const p = parseFloat(document.getElementById("precio").value) || 0;
+      const c = parseFloat(document.getElementById("cantidad").value) || 0;
+      const t = p * c;
+      document.getElementById("resultado-calc").textContent = `TOTAL = ${p} × ${c} = ${t}`;
+      document.getElementById("total-calculado").value = t;
+      log("✓ Calculado: " + t);
+    });
+
+    // ── Helpers ──────────────────────────────────────────────
+    function log(msg) {
+      document.getElementById("log").textContent = msg;
+    }
+  </script>
+</body>
+</html>

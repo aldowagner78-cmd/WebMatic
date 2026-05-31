@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebMatic</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 12px;
+        width: 220px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #f8fafc;
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      .row {
+        display: grid;
+        gap: 8px;
+      }
+
+      button {
+        padding: 8px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        background: #ffffff;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WebMatic</h1>
+    <div class="row">
+      <button id="togglePanel">Abrir/Cerrar panel</button>
+      <button id="dockLeft">Dock Left</button>
+      <button id="dockRight">Dock Right</button>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

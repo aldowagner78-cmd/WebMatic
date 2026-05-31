@@ -1,0 +1,821 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual de Ayuda — WebMatic</title>
+
+  <!--
+    Los colores se inyectan en :root desde JS (chrome.storage.local → webmaticHelpTheme)
+    para coincidir exactamente con el tema activo en la extensión.
+    Estos valores son los defaults (light / verde) mientras carga.
+  -->
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:      #059669;
+      --accent-fg:   #ffffff;
+      --accent-dark: #047857;
+      --accent-bg:   #ecfdf5;
+      --accent-mid:  #d1fae5;
+      --surface:     #f0fdf4;
+      --surface-2:   #dcfce7;
+      --card:        #ffffff;
+      --border:      #a7f3d0;
+      --text:        #064e3b;
+      --text-muted:  #065f46;
+      --hdr-from:    #065f46;
+      --hdr-to:      #10b981;
+      --hdr-text:    #ffffff;
+      --sidebar-w:   230px;
+      --header-h:    56px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: var(--surface);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background .25s, color .25s;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────── */
+    #wm-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h);
+      background: linear-gradient(135deg, var(--hdr-from), var(--hdr-to));
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 24px;
+      z-index: 100;
+      box-shadow: 0 2px 14px rgba(0,0,0,.18);
+    }
+
+    #wm-header .logo {
+      width: 30px;
+      height: 30px;
+      background: rgba(255,255,255,.18);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--hdr-text);
+      letter-spacing: -1px;
+      flex-shrink: 0;
+    }
+
+    #wm-header h1 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--hdr-text);
+      letter-spacing: .2px;
+    }
+
+    #wm-header .subtitle {
+      font-size: 12px;
+      color: rgba(255,255,255,.7);
+      margin-left: 2px;
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────────── */
+    #wm-body {
+      display: flex;
+      margin-top: var(--header-h);
+      min-height: calc(100vh - var(--header-h));
+    }
+
+    /* ── SIDEBAR ─────────────────────────────────────────── */
+    #wm-sidebar {
+      position: fixed;
+      top: var(--header-h);
+      left: 0;
+      width: var(--sidebar-w);
+      height: calc(100vh - var(--header-h));
+      overflow-y: auto;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 18px 0 32px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    #wm-sidebar .nav-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0 18px 8px;
+    }
+
+    #wm-sidebar a {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: background .12s, color .12s, border-color .12s;
+      line-height: 1.3;
+    }
+
+    #wm-sidebar a .nav-icon {
+      width: 20px;
+      text-align: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    #wm-sidebar a:hover {
+      background: var(--accent-bg);
+      color: var(--accent-dark);
+    }
+
+    #wm-sidebar a.active {
+      background: var(--accent-mid);
+      color: var(--accent-dark);
+      border-left-color: var(--accent);
+      font-weight: 700;
+    }
+
+    #wm-sidebar .nav-sep {
+      height: 1px;
+      background: var(--border);
+      margin: 10px 18px;
+    }
+
+    /* ── CONTENT ─────────────────────────────────────────── */
+    #wm-content {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      padding: 36px 48px 80px;
+      max-width: 860px;
+    }
+
+    .wm-section {
+      margin-bottom: 56px;
+      scroll-margin-top: calc(var(--header-h) + 20px);
+    }
+
+    .wm-section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .wm-section-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--hdr-from), var(--hdr-to));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    .wm-section-title {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent-dark);
+    }
+
+    /* Cards */
+    .wm-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+    }
+
+    .wm-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent-dark);
+      margin-bottom: 6px;
+    }
+
+    .wm-card p, .wm-card li {
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+
+    .wm-card ol, .wm-card ul {
+      padding-left: 18px;
+      margin-top: 6px;
+    }
+
+    .wm-card li { margin-bottom: 4px; }
+
+    /* Tip box */
+    .wm-tip {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+    }
+
+    .wm-tip-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--accent-dark);
+      margin-bottom: 4px;
+    }
+
+    .wm-tip p {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    /* Step grid */
+    .wm-step-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 680px) {
+      .wm-step-grid { grid-template-columns: 1fr; }
+      #wm-content { padding: 24px 18px 60px; }
+    }
+
+    .wm-step-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 12px 14px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      transition: border-color .15s, box-shadow .15s;
+      cursor: default;
+    }
+
+    .wm-step-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 2px 10px rgba(0,0,0,.1);
+    }
+
+    .wm-step-badge {
+      font-family: "Cascadia Code", "Fira Mono", "Courier New", monospace;
+      font-size: 10px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--hdr-from), var(--hdr-to));
+      color: var(--hdr-text);
+      padding: 3px 7px;
+      border-radius: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .wm-step-info strong {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .wm-step-info span {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Flow control cards */
+    .wm-flow-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--accent);
+    }
+
+    .wm-flow-card h4 {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--accent-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .wm-flow-card h4 code {
+      font-family: "Cascadia Code", "Fira Mono", "Courier New", monospace;
+      font-size: 11px;
+      background: var(--accent-bg);
+      color: var(--accent-dark);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .wm-flow-card p {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    /* Inline code */
+    code {
+      font-family: "Cascadia Code", "Fira Mono", "Courier New", monospace;
+      font-size: 11.5px;
+      background: var(--accent-bg);
+      color: var(--accent-dark);
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    p { font-size: 13px; line-height: 1.7; color: var(--text); margin-bottom: 10px; }
+
+    strong { color: var(--text); }
+
+    /* Steps list */
+    .wm-steps-list {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+      margin-bottom: 14px;
+    }
+
+    .wm-steps-list li {
+      counter-increment: step;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .wm-steps-list li:last-child { border-bottom: none; }
+
+    .wm-steps-list li::before {
+      content: counter(step);
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--hdr-from), var(--hdr-to));
+      color: var(--hdr-text);
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* Var rows */
+    .wm-var-row {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 11px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .wm-var-row:last-child { border-bottom: none; }
+
+    .wm-var-badge {
+      font-family: "Cascadia Code", "Fira Mono", "Courier New", monospace;
+      font-size: 10.5px;
+      font-weight: 700;
+      background: var(--accent-bg);
+      color: var(--accent-dark);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      border-radius: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 105px;
+      text-align: center;
+    }
+
+    .wm-var-desc {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    /* Tips list */
+    .wm-tips-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .wm-tips-list li {
+      display: flex;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .wm-tips-list li:last-child { border-bottom: none; }
+
+    .wm-tips-list li .tip-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* Var container */
+    .wm-var-container {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 6px 18px 6px;
+      margin-bottom: 14px;
+    }
+
+    /* Back-to-top */
+    #wm-top-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--hdr-from), var(--hdr-to));
+      color: var(--hdr-text);
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(0,0,0,.2);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+      z-index: 90;
+    }
+
+    #wm-top-btn.visible { opacity: 1; pointer-events: auto; }
+    #wm-top-btn:hover   { opacity: .85; }
+
+    /* Loading splash (visible hasta que JS aplique el tema) */
+    body.wm-loading { opacity: 0; }
+    body.wm-ready   { opacity: 1; transition: opacity .15s; }
+  </style>
+</head>
+<body class="wm-loading">
+
+<!-- HEADER -->
+<header id="wm-header">
+  <div class="logo">W</div>
+  <div>
+    <h1>WebMatic</h1>
+    <div class="subtitle">Manual de ayuda completo</div>
+  </div>
+</header>
+
+<!-- BODY -->
+<div id="wm-body">
+
+  <!-- SIDEBAR NAV -->
+  <nav id="wm-sidebar" aria-label="Secciones del manual">
+    <div class="nav-label">Contenido</div>
+    <a href="#sec-intro"  data-sec="sec-intro"> <span class="nav-icon">🤖</span> ¿Qué es WebMatic?</a>
+    <a href="#sec-record" data-sec="sec-record"><span class="nav-icon">⏺</span> Grabar una macro</a>
+    <a href="#sec-play"   data-sec="sec-play">  <span class="nav-icon">▶</span> Reproducir y controles</a>
+    <div class="nav-sep"></div>
+    <a href="#sec-steps"  data-sec="sec-steps"> <span class="nav-icon">📋</span> Tipos de pasos</a>
+    <a href="#sec-flow"   data-sec="sec-flow">  <span class="nav-icon">⚙</span> Control de flujo</a>
+    <a href="#sec-vars"   data-sec="sec-vars">  <span class="nav-icon">📦</span> Variables</a>
+    <div class="nav-sep"></div>
+    <a href="#sec-editor" data-sec="sec-editor"><span class="nav-icon">✏</span> Editor visual</a>
+    <a href="#sec-export" data-sec="sec-export"><span class="nav-icon">💾</span> Exportar / Importar</a>
+    <a href="#sec-tips"   data-sec="sec-tips">  <span class="nav-icon">💡</span> Consejos y atajos</a>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main id="wm-content">
+
+    <!-- 1 — QUÉ ES -->
+    <section class="wm-section" id="sec-intro">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">🤖</div>
+        <h2 class="wm-section-title">¿Qué es WebMatic?</h2>
+      </div>
+      <p><strong>WebMatic</strong> es una extensión de navegador que graba y reproduce macros web: automatiza clics, escritura, navegación entre páginas y extracción de datos en cualquier sitio web, sin escribir código.</p>
+      <p>Compatible con <strong>Chrome</strong>, <strong>Edge</strong> y <strong>Firefox</strong>, en Windows, macOS y Linux.</p>
+      <div class="wm-card">
+        <h4>¿Para qué sirve?</h4>
+        <ul>
+          <li>Rellenar formularios repetitivos de forma automática.</li>
+          <li>Extraer datos de páginas web a variables.</li>
+          <li>Navegar y hacer clic en secuencias complejas con lógica condicional.</li>
+          <li>Ejecutar la misma secuencia N veces con el modo bucle.</li>
+          <li>Reutilizar macros desde otras macros con <code>call_macro</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2 — GRABAR -->
+    <section class="wm-section" id="sec-record">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">⏺</div>
+        <h2 class="wm-section-title">Grabar una macro</h2>
+      </div>
+      <ol class="wm-steps-list">
+        <li>Abre la extensión haciendo clic en el icono <strong>WebMatic</strong> en la barra del navegador.</li>
+        <li>Pulsa el botón <strong>⏺ Grabar</strong> en la pestaña superior del panel lateral.</li>
+        <li>El panel se minimiza y aparece una barra roja en la parte superior. Ahora <strong>todo lo que hagas queda grabado</strong>: navegación, clics, escritura, scroll, etc.</li>
+        <li>Cuando termines, pulsa <strong>⏹ Detener</strong> en la barra flotante.</li>
+        <li>Escribe un nombre para la macro y pulsa <strong>Guardar</strong>.</li>
+      </ol>
+      <div class="wm-tip">
+        <div class="wm-tip-label">💡 Consejo</div>
+        <p>El grabador registra pausas como pasos <code>wait</code>. Si una pausa dura más del <em>umbral configurado</em> (por defecto 3 s), se inserta un paso de espera. Ajústalo en <strong>Configurar → Umbral de pausa</strong>.</p>
+      </div>
+      <div class="wm-card">
+        <h4>¿Qué se graba automáticamente?</h4>
+        <ul>
+          <li>Clics y dobles clics en cualquier elemento.</li>
+          <li>Texto escrito en campos de entrada, textareas y elementos editables.</li>
+          <li>Navegación a otras URLs.</li>
+          <li>Marcado / desmarcado de checkboxes y radio buttons.</li>
+          <li>Scroll hacia elementos (cuando supera un umbral de desplazamiento).</li>
+          <li>Hover sobre elementos con tooltips.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3 — REPRODUCIR -->
+    <section class="wm-section" id="sec-play">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">▶</div>
+        <h2 class="wm-section-title">Reproducir y controles</h2>
+      </div>
+      <ol class="wm-steps-list">
+        <li>Selecciona una macro de la lista en la pestaña <strong>Reproducir</strong>.</li>
+        <li>Pulsa <strong>▶ Reproducir</strong> para ejecutarla una vez.</li>
+        <li>Para repetirla varias veces, configura el número de repeticiones y pulsa <strong>▶▶ Bucle</strong>.</li>
+        <li>Mientras se ejecuta, un panel flotante muestra el paso actual y el progreso.</li>
+        <li>Pulsa <strong>⏹ Detener</strong> en cualquier momento para cancelarla.</li>
+      </ol>
+      <div class="wm-card">
+        <h4>Controles de velocidad</h4>
+        <p>En <strong>Configurar → Velocidad de reproducción</strong> ajusta el multiplicador de velocidad entre <code>0.5×</code> (más lento) y <code>3×</code> (más rápido). A velocidad 1× se respetan los tiempos originales grabados.</p>
+      </div>
+      <div class="wm-card">
+        <h4>Botón +1s aquí</h4>
+        <p>Si la reproducción se atasca en un paso concreto (por ejemplo, la página carga lento), pulsa el botón flotante <strong>⏱ +1s aquí</strong> para agregar 1 segundo de espera extra antes de ese paso en la macro guardada.</p>
+      </div>
+      <div class="wm-tip">
+        <div class="wm-tip-label">💡 Consejo</div>
+        <p>Si la macro contiene un paso <code>navigate</code>, la reproducción se reanuda automáticamente en la nueva página después de cargarla.</p>
+      </div>
+    </section>
+
+    <!-- 4 — TIPOS DE PASOS -->
+    <section class="wm-section" id="sec-steps">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">📋</div>
+        <h2 class="wm-section-title">Tipos de pasos</h2>
+      </div>
+      <p>Cada paso de una macro representa una acción específica. Puedes ver y editar los pasos desde el <strong>Editor visual</strong>.</p>
+
+      <div class="wm-step-grid">
+        <div class="wm-step-card">
+          <div class="wm-step-badge">navigate</div>
+          <div class="wm-step-info"><strong>Navegar a URL</strong><span>Carga una URL en el navegador. Soporta variables <code>{{URL}}</code>.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">click</div>
+          <div class="wm-step-info"><strong>Clic</strong><span>Hace clic en el elemento identificado por el selector CSS.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">dblclick</div>
+          <div class="wm-step-info"><strong>Doble clic</strong><span>Dispara un evento de doble clic sobre el elemento.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">input</div>
+          <div class="wm-step-info"><strong>Escribir texto</strong><span>Rellena un campo con el valor indicado. Admite <code>{{VARIABLE}}</code>.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">check</div>
+          <div class="wm-step-info"><strong>Marcar / desmarcar</strong><span>Activa o desactiva un checkbox o selecciona un radio button.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">key</div>
+          <div class="wm-step-info"><strong>Presionar tecla</strong><span>Simula pulsar una tecla: <code>Enter</code>, <code>Tab</code>, <code>Escape</code>, <code>ArrowDown</code>, etc.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">wait</div>
+          <div class="wm-step-info"><strong>Esperar N ms</strong><span>Pausa la ejecución durante el tiempo indicado en milisegundos.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">wait_for</div>
+          <div class="wm-step-info"><strong>Esperar elemento</strong><span>Detiene la ejecución hasta que el selector aparezca en la página.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">extract</div>
+          <div class="wm-step-info"><strong>Extraer texto</strong><span>Captura el texto de un elemento y lo guarda en una variable.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">scroll_to</div>
+          <div class="wm-step-info"><strong>Hacer scroll</strong><span>Desplaza la página hasta que el elemento quede visible.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">hover</div>
+          <div class="wm-step-info"><strong>Pasar el cursor</strong><span>Simula el evento <code>mouseover</code> para revelar tooltips o menús.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">drag_drop</div>
+          <div class="wm-step-info"><strong>Arrastrar y soltar</strong><span>Arrastra un elemento desde su posición hasta otro destino.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">set_variable</div>
+          <div class="wm-step-info"><strong>Asignar variable</strong><span>Guarda un valor fijo en una variable para usarlo después.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">prompt</div>
+          <div class="wm-step-info"><strong>Pedir valor al usuario</strong><span>Muestra un cuadro de diálogo para pedir un valor antes de continuar.</span></div>
+        </div>
+        <div class="wm-step-card">
+          <div class="wm-step-badge">call_macro</div>
+          <div class="wm-step-info"><strong>Llamar a otra macro</strong><span>Ejecuta otra macro guardada por su nombre. Permite reutilizar secuencias.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5 — CONTROL DE FLUJO -->
+    <section class="wm-section" id="sec-flow">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">⚙</div>
+        <h2 class="wm-section-title">Control de flujo</h2>
+      </div>
+      <p>Estos pasos especiales permiten tomar decisiones, repetir acciones e iterar sobre datos. Se agregan desde el <strong>Editor visual → Agregar paso</strong>.</p>
+
+      <div class="wm-flow-card">
+        <h4>⊙ <code>if_exists</code> — Si existe</h4>
+        <p>Ejecuta un bloque de pasos <strong>then</strong> si el selector existe en la página, o un bloque <strong>else</strong> si no existe. Útil para manejar elementos opcionales como modales, banners de cookies o mensajes de error.</p>
+      </div>
+      <div class="wm-flow-card">
+        <h4>↺ <code>loop_until</code> — Repetir hasta</h4>
+        <p>Repite un bloque de pasos mientras un selector <strong>no existe</strong> (o sí existe, según configures). Ideal para esperar a que un spinner desaparezca o a que aparezca un botón "Siguiente". Configura el máximo de iteraciones para evitar bucles infinitos.</p>
+      </div>
+      <div class="wm-flow-card">
+        <h4>⚡ <code>try_fallback</code> — Intentar / Alternativa</h4>
+        <p>Intenta ejecutar un bloque de pasos (<strong>try</strong>). Si algún paso falla, ejecuta el bloque alternativo (<strong>fallback</strong>) en lugar de detener la macro. Perfecto para manejar variaciones de UI entre sesiones.</p>
+      </div>
+      <div class="wm-flow-card">
+        <h4>▦ <code>for_each_row</code> — Por cada fila</h4>
+        <p>Itera sobre las filas de una tabla HTML. En cada iteración, los valores de las columnas indicadas se cargan como variables <code>{{COL1}}</code>, <code>{{COL2}}</code>, etc., y se ejecutan los pasos del bloque.</p>
+      </div>
+
+      <div class="wm-tip">
+        <div class="wm-tip-label">💡 Consejo</div>
+        <p>Los bloques de control de flujo pueden anidarse: puedes tener un <code>if_exists</code> dentro de un <code>loop_until</code>, o un <code>for_each_row</code> que llame a otra macro con <code>call_macro</code>.</p>
+      </div>
+    </section>
+
+    <!-- 6 — VARIABLES -->
+    <section class="wm-section" id="sec-vars">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">📦</div>
+        <h2 class="wm-section-title">Variables</h2>
+      </div>
+      <p>Las variables almacenan valores que puedes reutilizar en cualquier campo de texto usando la sintaxis <code>{{NOMBRE_VARIABLE}}</code>.</p>
+      <div class="wm-card" style="margin-bottom:16px;">
+        <h4>¿Cómo usar una variable?</h4>
+        <p>Escribe <code>{{NOMBRE}}</code> en cualquier campo de un paso. Al reproducir la macro, el valor se sustituye automáticamente. Ejemplo: en un paso <code>input</code>, pon el valor <code>Hola {{NOMBRE}}, tu código es {{CODIGO}}</code>.</p>
+      </div>
+      <div class="wm-var-container">
+        <div class="wm-var-row">
+          <div class="wm-var-badge">extract</div>
+          <div class="wm-var-desc">Captura el <strong>texto visible</strong> de un elemento de la página y lo guarda en la variable que indiques.</div>
+        </div>
+        <div class="wm-var-row">
+          <div class="wm-var-badge">set_variable</div>
+          <div class="wm-var-desc">Asigna un <strong>valor fijo</strong> a una variable en tiempo de grabación. Útil para constantes o valores calculados.</div>
+        </div>
+        <div class="wm-var-row">
+          <div class="wm-var-badge">prompt</div>
+          <div class="wm-var-desc">Muestra un <strong>cuadro de diálogo</strong> al usuario durante la reproducción y guarda lo que escriba en una variable.</div>
+        </div>
+        <div class="wm-var-row">
+          <div class="wm-var-badge">for_each_row</div>
+          <div class="wm-var-desc">Carga las columnas de cada fila como variables. Si defines columnas <code>NOMBRE, EMAIL</code>, tendrás <code>{{NOMBRE}}</code> y <code>{{EMAIL}}</code> disponibles en los pasos del bloque.</div>
+        </div>
+      </div>
+      <div class="wm-tip">
+        <div class="wm-tip-label">💡 Ejemplo práctico</div>
+        <p>Graba una macro que haga <code>extract</code> del nombre de un usuario en <code>{{USUARIO}}</code>, luego usa <code>input</code> con valor <code>Bienvenido, {{USUARIO}}</code> para rellenar un campo de saludo automáticamente.</p>
+      </div>
+    </section>
+
+    <!-- 7 — EDITOR VISUAL -->
+    <section class="wm-section" id="sec-editor">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">✏</div>
+        <h2 class="wm-section-title">Editor visual de pasos</h2>
+      </div>
+      <p>El editor visual te permite ver, agregar, reordenar y eliminar los pasos de cualquier macro sin tocar el script IIM.</p>
+      <ol class="wm-steps-list">
+        <li>Selecciona una macro de la lista y pulsa el icono de <strong>edición (✎)</strong> que aparece al lado.</li>
+        <li>Se abre el <strong>Script Editor</strong> con dos pestañas: <em>Visual</em> y <em>Script IIM</em>.</li>
+        <li>En la pestaña <strong>Visual</strong>, cada paso aparece como una tarjeta con su tipo, selector y descripción.</li>
+        <li>Usa los botones <strong>↑ ↓</strong> para reordenar pasos, <strong>✎</strong> para editar y <strong>🗑</strong> para eliminar.</li>
+        <li>Pulsa <strong>+ Agregar paso</strong> para insertar un nuevo paso al final.</li>
+        <li>Cuando termines, pulsa <strong>💾 Guardar</strong> para persistir los cambios.</li>
+      </ol>
+      <div class="wm-card">
+        <h4>Pestaña Script IIM</h4>
+        <p>Cambia a la pestaña <strong>Script IIM</strong> para editar el script de texto directamente. El formato es compatible con iMacros. Puedes pegar scripts externos, editarlos y guardarlos. Los cambios en Script IIM se reflejan en la vista Visual al guardar.</p>
+      </div>
+      <div class="wm-tip">
+        <div class="wm-tip-label">💡 Consejo</div>
+        <p>Usa <strong>Guardar como…</strong> para crear una copia de la macro con un nombre diferente, manteniendo la original intacta.</p>
+      </div>
+    </section>
+
+    <!-- 8 — EXPORTAR / IMPORTAR -->
+    <section class="wm-section" id="sec-export">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">💾</div>
+        <h2 class="wm-section-title">Exportar / Importar</h2>
+      </div>
+      <p>Accede a todas las opciones de exportación en la pestaña <strong>Configurar → Exportación y respaldo</strong>.</p>
+      <div class="wm-card">
+        <h4>⬇ Exportar macro como .iim</h4>
+        <p>Selecciona una macro y pulsa <strong>⬇ Exportar seleccionada (.iim)</strong>. Se descarga un archivo de texto compatible con el formato iMacros, que puedes compartir o importar en otros navegadores.</p>
+      </div>
+      <div class="wm-card">
+        <h4>💿 Backup de todas las macros</h4>
+        <p>Pulsa <strong>Backup de todas las macros</strong> para descargar un archivo <code>.json</code> con todas tus macros. Guárdalo como copia de seguridad.</p>
+      </div>
+      <div class="wm-card">
+        <h4>📥 Importar backup (.json)</h4>
+        <p>Pulsa <strong>Importar backup (.json)</strong> y selecciona el archivo de backup. Las macros se cargarán y fusionarán con las existentes.</p>
+      </div>
+      <div class="wm-tip">
+        <div class="wm-tip-label">⚠ Importante</div>
+        <p>Las macros se guardan en el <strong>almacenamiento local del navegador</strong>. Si desinstales la extensión o limpias los datos del sitio, las macros se perderán. Haz backups regularmente.</p>
+      </div>
+    </section>
+
+    <!-- 9 — CONSEJOS -->
+    <section class="wm-section" id="sec-tips">
+      <div class="wm-section-header">
+        <div class="wm-section-icon">💡</div>
+        <h2 class="wm-section-title">Consejos y atajos</h2>
+      </div>
+      <ul class="wm-tips-list">
+        <li><span class="tip-icon">⚡</span><span><strong>Velocidad óptima:</strong> para sitios lentos usa <code>0.5×</code> o <code>0.75×</code>. Para formularios rápidos usa <code>2×</code> o <code>3×</code>.</span></li>
+        <li><span class="tip-icon">🔄</span><span><strong>Modo bucle:</strong> configura el número de repeticiones con el campo numérico antes de pulsar <strong>▶▶ Bucle</strong>. Se puede cambiar entre reproducciones.</span></li>
+        <li><span class="tip-icon">🎯</span><span><strong>Selectores robustos:</strong> el grabador genera selectores CSS automáticamente, pero si una página cambia su estructura, edita el selector en el editor visual para que sea más estable (usa <code>id</code> en lugar de clases genéricas).</span></li>
+        <li><span class="tip-icon">🧩</span><span><strong>Macros modulares:</strong> crea macros pequeñas y reutilizables, y combínalas con <code>call_macro</code>. Por ejemplo: una macro "Login" y otra "Procesar pedido" que llama a "Login" primero.</span></li>
+        <li><span class="tip-icon">🔍</span><span><strong>Buscar macro:</strong> usa la barra de búsqueda en la pestaña Reproducir para filtrar macros por nombre. La búsqueda es instantánea.</span></li>
+        <li><span class="tip-icon">📐</span><span><strong>Panel izquierda / derecha:</strong> cambia el lado del panel en <strong>Configurar → Visualización</strong> según la distribución de la página que estés automatizando.</span></li>
+        <li><span class="tip-icon">🌙</span><span><strong>Modo oscuro y temas:</strong> activa el modo oscuro y elige entre 4 variantes de color en <strong>Configurar → Temas</strong>. La preferencia se guarda automáticamente.</span></li>
+        <li><span class="tip-icon">⏱</span><span><strong>Umbral de pausa:</strong> si no quieres que las pausas naturales al grabar generen pasos <code>wait</code> innecesarios, sube el umbral a 5–8 s en <strong>Configurar → Umbral de pausa</strong>.</span></li>
+        <li><span class="tip-icon">🔁</span><span><strong>Reintentos con try_fallback:</strong> usa <code>try_fallback</code> para que la macro no se detenga ante pequeñas variaciones de la UI, como un botón que a veces aparece con texto diferente.</span></li>
+        <li><span class="tip-icon">📊</span><span><strong>Iterar tablas:</strong> usa <code>for_each_row</code> para procesar todas las filas de una tabla HTML automáticamente, sin grabar un paso por cada fila.</span></li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<button id="wm-top-btn" title="Volver arriba" aria-label="Volver arriba">↑</button>
+
+<script src="help.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WebMatic - Configuracion</title>
+    <style>
+      :root {
+        --accent:       #059669;
+        --accent-fg:    #ffffff;
+        --surface:      #f0fdf4;
+        --surface-2:    #dcfce7;
+        --btn-bg:       #ecfdf5;
+        --btn-hover:    #d1fae5;
+        --border:       #a7f3d0;
+        --text:         #064e3b;
+        --muted:        #065f46;
+        --card-bg:      #ffffff;
+        --header-from:  #065f46;
+        --header-to:    #10b981;
+        --header-text:  #ffffff;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        padding: 30px;
+        background: linear-gradient(135deg, var(--surface-2) 0%, var(--surface) 100%);
+        color: var(--text);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        min-height: 100vh;
+      }
+
+      .card {
+        max-width: 540px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(5, 150, 105, 0.10), 0 1px 4px rgba(0,0,0,0.06);
+      }
+
+      .card-header {
+        background: linear-gradient(135deg, var(--header-from), var(--header-to));
+        padding: 18px 22px;
+      }
+
+      .card-header h1 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--header-text);
+        letter-spacing: 0.2px;
+      }
+
+      .card-body {
+        padding: 20px 22px;
+      }
+
+      .field {
+        margin-bottom: 18px;
+      }
+
+      label {
+        display: block;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .row-two {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        max-width: 300px;
+      }
+
+      .ghost {
+        border: 1px solid var(--border);
+        background: var(--btn-bg);
+        color: var(--text);
+        transition: background 0.15s, border-color 0.15s, transform 0.12s;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        min-height: 34px;
+        padding: 7px 8px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+
+      .ghost.active {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-fg);
+      }
+
+      .ghost:not(.active):hover {
+        background: var(--btn-hover);
+        transform: translateY(-1px);
+      }
+
+      .toggle-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .toggle-row input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+      }
+
+      .swatch-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        max-width: 180px;
+      }
+
+      .swatch {
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        border: 2px solid var(--border);
+        cursor: pointer;
+        justify-self: center;
+        transition: transform 0.12s, border-color 0.12s;
+      }
+
+      .swatch.active {
+        border-color: var(--text);
+        transform: scale(1.12);
+      }
+
+      .divider {
+        height: 1px;
+        background: var(--border);
+        margin: 20px 0;
+      }
+
+      .save-btn {
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: var(--accent-fg);
+        border-radius: 10px;
+        padding: 9px 20px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        font-family: inherit;
+        transition: opacity 0.15s;
+      }
+
+      .save-btn:hover {
+        opacity: 0.88;
+      }
+
+      .status {
+        margin-top: 10px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+
+      .slider-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .slider-row input[type="range"] {
+        flex: 1;
+        accent-color: var(--accent);
+        cursor: pointer;
+        max-width: 260px;
+      }
+
+      .folder-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      .folder-text-input {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+
+      .folder-text-input:focus {
+        border-color: var(--accent);
+      }
+
+      .folder-text-input::placeholder {
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      .folder-hint {
+        margin: 6px 0 0 0;
+        font-size: 11px;
+        color: var(--muted);
+        font-weight: 400;
+      }
+
+      .folder-clear-btn {
+        flex-shrink: 0;
+        border: 1px solid var(--border);
+        background: var(--btn-bg);
+        border-radius: 10px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        color: var(--muted);
+        transition: background 0.15s;
+        font-family: inherit;
+      }
+
+      .folder-clear-btn:hover {
+        background: #fee2e2;
+        border-color: #dc2626;
+        color: #dc2626;
+      }
+
+      .folder-clear-btn[hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="card-header">
+        <h1>WebMatic &mdash; Configuracion</h1>
+      </div>
+      <div class="card-body">
+        <div class="field">
+          <label>Posicion del panel</label>
+          <div class="row-two">
+            <button id="sideLeft" type="button" class="ghost active">Izquierda</button>
+            <button id="sideRight" type="button" class="ghost">Derecha</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <label>Tema</label>
+          <label class="toggle-row" for="themeModeDark">
+            <input id="themeModeDark" type="checkbox" />
+            <span>Modo oscuro</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label id="swatchLabel">Variante de color</label>
+          <div id="swatchRow" class="swatch-row"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <label for="speedSlider">Velocidad de reproduccion</label>
+          <div class="slider-row">
+            <input id="speedSlider" type="range" min="0.5" max="3" step="0.25" value="1" />
+            <span id="speedLabel">1&times;</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="opacitySlider">Opacidad del panel</label>
+          <div class="slider-row">
+            <input id="opacitySlider" type="range" min="0.7" max="1" step="0.05" value="1" />
+            <span id="opacityLabel">100%</span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="field">
+          <label for="folderInput">Subcarpeta de exportacion en Descargas</label>
+          <div class="folder-row">
+            <input
+              id="folderInput"
+              type="text"
+              class="folder-text-input"
+              placeholder="ej: mis-macros (dejar vacio para elegir al exportar)"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button id="folderClearBtn" type="button" class="folder-clear-btn" hidden>Quitar</button>
+          </div>
+          <p class="folder-hint">Los macros se guardan en <strong>Descargas / nombre-ingresado /</strong> de forma automatica.</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <button id="saveBtn" type="button" class="save-btn">Guardar configuracion</button>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+
+    <script src="../modules/storage/fs-handle.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

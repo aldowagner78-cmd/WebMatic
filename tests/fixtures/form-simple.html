@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture: Formulario simple</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 500px; margin: 40px auto; padding: 0 20px; }
+    h1   { font-size: 18px; color: #064e3b; }
+    label { display: block; margin-top: 14px; font-size: 13px; font-weight: 600; color: #374151; }
+    input, select, textarea {
+      display: block; width: 100%; box-sizing: border-box;
+      border: 1px solid #d1d5db; border-radius: 6px;
+      padding: 7px 10px; font-size: 14px; margin-top: 4px;
+    }
+    input[type="checkbox"] { width: auto; display: inline; }
+    button {
+      margin-top: 20px; padding: 9px 20px; background: #059669;
+      color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer;
+    }
+    #resultado {
+      margin-top: 20px; padding: 12px; background: #f0fdf4;
+      border: 1px solid #a7f3d0; border-radius: 8px; font-size: 13px; display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Formulario de prueba — WebMatic</h1>
+  <p style="font-size:12px;color:#6b7280">Graba una macro que rellene este formulario y presione Enviar.</p>
+
+  <form id="form-prueba">
+    <label for="nombre">Nombre</label>
+    <input type="text" id="nombre" name="nombre" placeholder="Ej: Juan García" autocomplete="off" />
+
+    <label for="email">Email</label>
+    <input type="email" id="email" name="email" placeholder="juan@ejemplo.com" autocomplete="off" />
+
+    <label for="ciudad">Ciudad</label>
+    <select id="ciudad" name="ciudad">
+      <option value="">-- Seleccionar --</option>
+      <option value="santiago">Santiago</option>
+      <option value="valparaiso">Valparaíso</option>
+      <option value="concepcion">Concepción</option>
+      <option value="temuco">Temuco</option>
+    </select>
+
+    <label for="mensaje">Mensaje</label>
+    <textarea id="mensaje" name="mensaje" rows="3" placeholder="Escribe aquí..."></textarea>
+
+    <label style="margin-top:14px">
+      <input type="checkbox" id="acepta" name="acepta" />
+      Acepto los términos y condiciones
+    </label>
+
+    <button type="submit" id="btn-enviar">Enviar formulario</button>
+  </form>
+
+  <div id="resultado"></div>
+
+  <script>
+    document.getElementById("form-prueba").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const res = document.getElementById("resultado");
+      const nombre  = document.getElementById("nombre").value;
+      const email   = document.getElementById("email").value;
+      const ciudad  = document.getElementById("ciudad").value;
+      const acepta  = document.getElementById("acepta").checked;
+      res.style.display = "block";
+      res.innerHTML = `<strong>✓ Formulario enviado</strong><br>
+        Nombre: ${nombre}<br>Email: ${email}<br>Ciudad: ${ciudad}<br>
+        Términos: ${acepta ? "Aceptado" : "No aceptado"}`;
+    });
+  </script>
+</body>
+</html>
