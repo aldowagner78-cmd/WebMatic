@@ -6,7 +6,7 @@
   const wm = window.wmDesktop;
 
   // ── Refs ──────────────────────────────────────────────────────────
-  const webview        = $("#wm-webview");
+  let webview          = $("#wm-webview");
   const urlInput       = $("#wm-url-input");
   const btnBack        = $("#wm-back");
   const btnFwd         = $("#wm-fwd");
@@ -51,6 +51,10 @@
   const btnImportIim   = $("#wm-btn-import-iim");
   const btnBookmark      = $("#wm-btn-bookmark");
   const bookmarksBar     = $("#wm-bookmarks-bar");
+  // Scroll horizontal de la barra con la rueda del ratón
+  bookmarksBar.addEventListener("wheel", (e) => {
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); bookmarksBar.scrollLeft += e.deltaY * 0.8; }
+  }, { passive: false });
   const bmPopover        = $("#wm-bm-popover");
   const bmNameInput      = $("#wm-bm-name-input");
   const bmPopConfirm     = $("#wm-bm-pop-confirm");
@@ -64,6 +68,10 @@
   let allMacros     = [];
   let bookmarks     = [];      // favoritos guardados
   let bmIconsOnly   = false;   // modo solo-iconos en barra de favoritos
+  // ── Pestañas ──────────────────────────────────────────────
+  let tabs          = [];      // [{ id, title, url, wv, isLoading }]
+  let activeTabId   = null;
+  let _wmPreloadUrl = "";      // ruta al preload bridge (para nuevas pestañas)
   let recorderScript = null;
   let playerScript   = null;
   let playDoneTimer  = null;   // handle del timeout post-reproduccion
@@ -203,8 +211,8 @@
         }
         webview.src = bm.url;
         urlInput.value = bm.url;
-      });
-      bookmarksBar.appendChild(btn);
+      });      btn.addEventListener("contextmenu", (e) => { e.preventDefault(); openBmCtxMenu(e, i); });
+      btn.addEventListener("dblclick",    () => openBmEditPop(i));      bookmarksBar.appendChild(btn);
     });
   }
 
@@ -251,6 +259,10 @@
     if (!bmPopover.hasAttribute("hidden") && !bmPopover.contains(e.target) && e.target !== btnBookmark) {
       closeBmPopover();
     }
+    const _ctx = document.getElementById("wm-bm-ctx");
+    const _ep  = document.getElementById("wm-bm-edit-pop");
+    if (_ctx && !_ctx.hasAttribute("hidden") && !_ctx.contains(e.target)) _ctx.setAttribute("hidden", "");
+    if (_ep  && !_ep.hasAttribute("hidden")  && !_ep.contains(e.target))  { _ep.setAttribute("hidden", ""); }
   });
 
   // Importar favoritos desde Chrome / Edge / Brave (JSON Chromium)
@@ -289,7 +301,83 @@
     renderBookmarks();
     alert("Se importaron " + added.length + " favoritos nuevos (" + incoming.length + " en total).");
   }
+  // ── Menú contextual de favoritos ──────────────────────────────────
+  let _bmCtxIdx = -1;
 
+  function openBmCtxMenu(e, idx) {
+    _bmCtxIdx = idx;
+    const ctx = document.getElementById("wm-bm-ctx");
+    ctx.removeAttribute("hidden");
+    // Forzar layout para medir offsetWidth/offsetHeight
+    const x = Math.min(e.clientX, window.innerWidth  - (ctx.offsetWidth  || 200) - 4);
+    const y = Math.min(e.clientY, window.innerHeight - (ctx.offsetHeight || 180) - 4);
+    ctx.style.left = x + "px";
+    ctx.style.top  = y + "px";
+  }
+
+  document.getElementById("wm-bm-ctx").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const i  = _bmCtxIdx;
+    const bm = bookmarks[i];
+    document.getElementById("wm-bm-ctx").setAttribute("hidden", "");
+    _bmCtxIdx = -1;
+    if (!bm) return;
+    if (action === "edit")      { openBmEditPop(i); }
+    if (action === "newTab")    { if (!bm.isMacro) createTab(bm.url); }
+    if (action === "moveleft")  { if (i > 0)                      { [bookmarks[i-1], bookmarks[i]]   = [bookmarks[i], bookmarks[i-1]];   await wm.settings.set("bookmarks", bookmarks); renderBookmarks(); } }
+    if (action === "moveright") { if (i < bookmarks.length - 1)   { [bookmarks[i],   bookmarks[i+1]] = [bookmarks[i+1], bookmarks[i]];   await wm.settings.set("bookmarks", bookmarks); renderBookmarks(); } }
+    if (action === "delete")    { bookmarks.splice(i, 1); await wm.settings.set("bookmarks", bookmarks); renderBookmarks(); }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key === "t") { e.preventDefault(); createTab(); }
+    if (e.ctrlKey && e.key === "w") { e.preventDefault(); if (typeof closeTab === "function") closeTab(activeTabId); }
+    if (e.key === "Escape") {
+      const _ctx = document.getElementById("wm-bm-ctx");
+      const _ep  = document.getElementById("wm-bm-edit-pop");
+      if (_ctx && !_ctx.hasAttribute("hidden")) _ctx.setAttribute("hidden", "");
+      if (_ep  && !_ep.hasAttribute("hidden"))  { _ep.setAttribute("hidden", ""); _bmCtxIdx = -1; }
+    }
+  });
+
+  function openBmEditPop(idx) {
+    if (idx < 0 || idx >= bookmarks.length) return;
+    _bmCtxIdx = idx;
+    const bm = bookmarks[idx];
+    const ep = document.getElementById("wm-bm-edit-pop");
+    document.getElementById("wm-bm-ep-name").value    = bm.title || "";
+    document.getElementById("wm-bm-ep-url").value     = bm.url   || "";
+    document.getElementById("wm-bm-ep-url").disabled  = !!bm.isMacro;
+    ep.removeAttribute("hidden");
+    const rect = bookmarksBar.getBoundingClientRect();
+    ep.style.top  = (rect.bottom + 4) + "px";
+    ep.style.left = Math.max(4, Math.min(window.innerWidth - 306, rect.left + 80)) + "px";
+    setTimeout(() => document.getElementById("wm-bm-ep-name").focus(), 30);
+  }
+
+  async function confirmBmEditPop() {
+    if (_bmCtxIdx < 0 || _bmCtxIdx >= bookmarks.length) {
+      document.getElementById("wm-bm-edit-pop").setAttribute("hidden", "");
+      return;
+    }
+    const bm = bookmarks[_bmCtxIdx];
+    bm.title = document.getElementById("wm-bm-ep-name").value.trim() || bm.url;
+    if (!bm.isMacro) bm.url = document.getElementById("wm-bm-ep-url").value.trim() || bm.url;
+    await wm.settings.set("bookmarks", bookmarks);
+    renderBookmarks();
+    document.getElementById("wm-bm-edit-pop").setAttribute("hidden", "");
+    _bmCtxIdx = -1;
+  }
+
+  document.getElementById("wm-bm-ep-confirm").addEventListener("click", confirmBmEditPop);
+  document.getElementById("wm-bm-ep-cancel").addEventListener("click", () => {
+    document.getElementById("wm-bm-edit-pop").setAttribute("hidden", "");
+    _bmCtxIdx = -1;
+  });
+  document.getElementById("wm-bm-ep-name").addEventListener("keydown", (e) => { if (e.key === "Enter") confirmBmEditPop(); });
+  document.getElementById("wm-bm-ep-url").addEventListener("keydown",  (e) => { if (e.key === "Enter") confirmBmEditPop(); });
   // ── Controles ventana ─────────────────────────────────────────────
   btnMin.addEventListener("click",   () => wm.window.minimize());
   btnMax.addEventListener("click",   () => wm.window.maximizeToggle());
@@ -315,16 +403,129 @@
   btnFwd.addEventListener("click",    () => { try { if (webview.canGoForward()) webview.goForward(); } catch (_) {} });
   btnReload.addEventListener("click", () => { try { webview.reload(); } catch (_) {} });
 
-  webview.addEventListener("did-navigate",         (e) => { urlInput.value = e.url; });
-  webview.addEventListener("did-navigate-in-page", (e) => { urlInput.value = e.url; });
-  webview.addEventListener("did-start-loading",    ()  => btnReload.classList.add("loading"));
-  webview.addEventListener("did-stop-loading",     ()  => {
-    btnReload.classList.remove("loading");
-    // Si estaba grabando y la pagina recargo, re-inyectar el recorder
-    if (isRecording && recorderScript) {
-      webview.executeJavaScript(recorderScript).catch(() => {});
+  // ── PESTAÑAS ──────────────────────────────────────────────────────────────
+  function setupWebviewListeners(wv) {
+    wv.addEventListener("did-navigate", (e) => {
+      const tab = tabs.find(t => t.wv === wv);
+      if (tab) tab.url = e.url;
+      if (wv === webview) urlInput.value = e.url;
+      renderTabBar();
+    });
+    wv.addEventListener("did-navigate-in-page", (e) => {
+      const tab = tabs.find(t => t.wv === wv);
+      if (tab) tab.url = e.url;
+      if (wv === webview) urlInput.value = e.url;
+    });
+    wv.addEventListener("page-title-updated", (e) => {
+      const tab = tabs.find(t => t.wv === wv);
+      if (tab) { tab.title = e.title || tab.url || "Nueva pestaña"; renderTabBar(); }
+    });
+    wv.addEventListener("did-start-loading", () => {
+      const tab = tabs.find(t => t.wv === wv);
+      if (tab) { tab.isLoading = true; renderTabBar(); }
+      if (wv === webview) btnReload.classList.add("loading");
+    });
+    wv.addEventListener("did-stop-loading", () => {
+      const tab = tabs.find(t => t.wv === wv);
+      if (tab) { tab.isLoading = false; renderTabBar(); }
+      if (wv === webview) {
+        btnReload.classList.remove("loading");
+        if (isRecording && recorderScript) wv.executeJavaScript(recorderScript).catch(() => {});
+      }
+    });
+    wv.addEventListener("new-window", (e) => {
+      e.preventDefault();
+      if (e.url && e.url !== "about:blank") createTab(e.url);
+    });
+  }
+
+  function renderTabBar() {
+    const list = document.getElementById("wm-tabs-list");
+    if (!list) return;
+    list.innerHTML = "";
+    tabs.forEach(tab => {
+      const el = document.createElement("div");
+      el.className = "wm-browser-tab" + (tab.id === activeTabId ? " active" : "");
+      el.title = tab.title || tab.url || "";
+
+      const spinner = document.createElement("span");
+      spinner.className = "wm-tab-spinner" + (tab.isLoading ? " spin" : "");
+      spinner.textContent = tab.isLoading ? "↻" : "";
+
+      const titleEl = document.createElement("span");
+      titleEl.className = "wm-tab-title";
+      titleEl.textContent = tab.title || "Nueva pestaña";
+
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "wm-tab-close";
+      closeBtn.textContent = "×";
+      closeBtn.title = "Cerrar pestaña (Ctrl+W)";
+      closeBtn.addEventListener("click", (e) => { e.stopPropagation(); closeTab(tab.id); });
+
+      el.appendChild(spinner);
+      el.appendChild(titleEl);
+      el.appendChild(closeBtn);
+      el.addEventListener("click", () => switchTab(tab.id));
+      list.appendChild(el);
+    });
+  }
+
+  function createTab(url, background) {
+    const id = "tab_" + Date.now() + "_" + Math.random().toString(36).slice(2, 5);
+    const wv = document.createElement("webview");
+    wv.setAttribute("partition", "persist:webmatic");
+    wv.setAttribute("allowpopups", "");
+    if (_wmPreloadUrl) wv.setAttribute("preload", _wmPreloadUrl);
+    document.getElementById("wm-webview-wrap").appendChild(wv);
+    setupWebviewListeners(wv);
+    const tab = { id, title: "Nueva pestaña", url: url || "about:blank", wv, isLoading: false };
+    tabs.push(tab);
+    if (!background) {
+      switchTab(id);
+      if (url && url !== "about:blank") wv.loadURL(url);
+      else { urlInput.value = ""; urlInput.focus(); }
+    } else {
+      renderTabBar();
+      if (url) wv.loadURL(url);
     }
-  });
+    return tab;
+  }
+
+  function closeTab(id) {
+    if (tabs.length <= 1) return;
+    const idx = tabs.findIndex(t => t.id === id);
+    if (idx === -1) return;
+    tabs[idx].wv.remove();
+    tabs.splice(idx, 1);
+    if (activeTabId === id) switchTab(tabs[Math.min(idx, tabs.length - 1)].id);
+    else renderTabBar();
+  }
+
+  function switchTab(id) {
+    const tab = tabs.find(t => t.id === id);
+    if (!tab) return;
+    tabs.forEach(t => { t.wv.style.display = "none"; });
+    tab.wv.style.display = "";
+    activeTabId = id;
+    webview = tab.wv;
+    try {
+      const u = tab.wv.getURL ? tab.wv.getURL() : (tab.url || "");
+      urlInput.value = (u && u !== "about:blank") ? u : "";
+    } catch (_) {}
+    btnReload.classList.toggle("loading", tab.isLoading);
+    renderTabBar();
+  }
+
+  function initTabs(startUrl) {
+    webview.style.cssText = "position:absolute;inset:0;width:100%;height:100%;";
+    const initTab = { id: "tab_0", title: "Nueva pestaña", url: startUrl, wv: webview, isLoading: false };
+    tabs.push(initTab);
+    activeTabId = "tab_0";
+    setupWebviewListeners(webview);
+    renderTabBar();
+    document.getElementById("wm-tab-new").addEventListener("click", () => createTab());
+    webview.loadURL(startUrl);
+  }
 
   // ── Config: sesion / startup URL ──────────────────────────────────
   btnSetStart.addEventListener("click", async () => {
@@ -837,6 +1038,7 @@
 
     // Establece el preload del webview (bridge para IPC)
     const fileUrl = "file:///" + wvPreloadPath.replace(/\\/g, "/");
+    _wmPreloadUrl = fileUrl;
     webview.setAttribute("preload", fileUrl);
 
     settings  = await wm.settings.getAll();
@@ -852,8 +1054,8 @@
     applyTheme();
     renderMacroLibrary();
 
-    // loadURL garantiza que el preload bridge se inyecte incluso si startupUrl="about:blank"
-    webview.loadURL(settings.startupUrl || "about:blank");
+    // Inicializar sistema de pestañas
+    initTabs(settings.startupUrl || "about:blank");
 
     // Helper de reset para tests E2E: limpia estado y recarga el webview.
     // Acepta una URL de destino (pasar testServer.url garantiza que el preload se inyecte).

@@ -26,6 +26,7 @@
 
   --wm-titlebar-h:  44px;
   --wm-bookmarks-h: 30px;
+  --wm-tabbar-h:    36px;
   --wm-sidebar-w:   290px;
 }
 
@@ -219,7 +220,7 @@ html, body {
 /* ── LAYOUT ────────────────────────────────────────────────────────── */
 #wm-main {
   display: flex;
-  height: calc(100% - var(--wm-titlebar-h) - var(--wm-bookmarks-h));
+  height: calc(100% - var(--wm-titlebar-h) - var(--wm-tabbar-h) - var(--wm-bookmarks-h));
   background: var(--wm-surface);
 }
 
@@ -505,6 +506,104 @@ html, body {
 .wm-roadmap li::before { content: "•"; color: var(--wm-accent); margin-right: 6px; font-weight: 700; }
 .wm-roadmap strong { color: var(--wm-text); }
 
-/* ── WEBVIEW ───────────────────────────────────────────────────────── */
+/* ── WEBVIEW (multi-tab) ─────────────────────────────────────────── */
 #wm-webview-wrap { flex: 1; background: #fff; position: relative; overflow: hidden; }
-#wm-webview { width: 100%; height: 100%; display: inline-flex; border: none; }
+#wm-webview-wrap > webview {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  border: none; display: none;
+}
+
+/* ── TAB BAR ─────────────────────────────────────────────────────── */
+#wm-tab-bar {
+  height: var(--wm-tabbar-h);
+  display: flex; align-items: flex-end;
+  padding: 4px 4px 0 6px;
+  background: var(--wm-surface);
+  border-bottom: 1px solid var(--wm-border);
+  flex-shrink: 0; -webkit-app-region: no-drag;
+}
+#wm-tabs-list {
+  display: flex; align-items: flex-end; gap: 2px;
+  flex: 1; min-width: 0; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+}
+#wm-tabs-list::-webkit-scrollbar { display: none; }
+.wm-browser-tab {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-width: 90px; max-width: 200px; height: 28px;
+  padding: 0 6px 0 10px;
+  background: var(--wm-surface-2); border: 1px solid var(--wm-border);
+  border-bottom: none; border-radius: 6px 6px 0 0;
+  color: var(--wm-text-muted); font-size: 11.5px;
+  cursor: pointer; flex-shrink: 0; user-select: none;
+  transition: background .1s, color .1s;
+}
+.wm-browser-tab:hover { background: var(--wm-btn-bg); color: var(--wm-text); }
+.wm-browser-tab.active {
+  background: var(--wm-surface); color: var(--wm-text);
+  border-color: var(--wm-border); border-bottom-color: var(--wm-surface);
+}
+.wm-tab-title {
+  flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.wm-tab-spinner { font-size: 11px; flex-shrink: 0; color: var(--wm-text-muted); }
+.wm-tab-spinner.spin { animation: wm-spin .8s linear infinite; display: inline-block; }
+.wm-tab-close {
+  background: transparent; border: none;
+  color: var(--wm-text-muted); font-size: 15px;
+  cursor: pointer; padding: 0; width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 3px; flex-shrink: 0; opacity: 0; line-height: 1;
+  transition: background .1s, opacity .1s;
+}
+.wm-browser-tab:hover .wm-tab-close,
+.wm-browser-tab.active .wm-tab-close { opacity: 1; }
+.wm-tab-close:hover { background: rgba(239,68,68,.3); color: #ef4444; }
+#wm-tab-new {
+  background: transparent; border: none;
+  color: var(--wm-text-muted); font-size: 20px; font-weight: 300;
+  cursor: pointer; padding: 0 10px; height: 28px; flex-shrink: 0;
+  border-radius: 5px; line-height: 1; align-self: center;
+  transition: background .1s, color .1s;
+}
+#wm-tab-new:hover { background: var(--wm-btn-bg); color: var(--wm-text); }
+
+/* ── BOOKMARKS CONTEXT MENU ──────────────────────────────────────── */
+#wm-bm-ctx {
+  position: fixed; z-index: 10000;
+  background: var(--wm-surface-2); border: 1px solid var(--wm-border);
+  border-radius: 8px; padding: 4px 0; min-width: 190px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  -webkit-app-region: no-drag;
+}
+.wm-bm-ctx-item {
+  display: block; width: 100%; text-align: left;
+  padding: 7px 16px; background: transparent; border: none;
+  color: var(--wm-text); font-size: 12.5px; cursor: pointer;
+  transition: background .1s;
+}
+.wm-bm-ctx-item:hover { background: var(--wm-btn-bg); }
+.wm-bm-ctx-sep { height: 1px; background: var(--wm-border); margin: 3px 0; }
+.wm-bm-ctx-danger { color: #f87171; }
+.wm-bm-ctx-danger:hover { background: rgba(239,68,68,.15) !important; }
+
+/* ── BOOKMARK EDIT POPOVER ───────────────────────────────────────── */
+#wm-bm-edit-pop {
+  position: fixed; z-index: 9999;
+  background: var(--wm-surface-2); border: 1px solid var(--wm-border);
+  border-radius: 9px; padding: 12px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.4); width: 300px;
+  display: flex; flex-direction: column; gap: 8px;
+  -webkit-app-region: no-drag;
+}
+#wm-bm-edit-pop .wm-ep-title {
+  font-size: 11px; font-weight: 700; color: var(--wm-text-muted);
+  text-transform: uppercase; letter-spacing: .06em;
+}
+#wm-bm-edit-pop input {
+  background: var(--wm-surface); border: 1px solid var(--wm-border);
+  color: var(--wm-text); font-size: 12.5px;
+  padding: 6px 10px; border-radius: 6px; outline: none; width: 100%;
+}
+#wm-bm-edit-pop input:focus { border-color: var(--wm-accent); }
+#wm-bm-edit-pop input:disabled { opacity: .45; cursor: default; }

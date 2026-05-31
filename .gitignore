@@ -4,6 +4,7 @@ webmatic-desktop/node_modules/
 
 # Build / instaladores
 webmatic-desktop/dist-installer/
+webmatic-desktop/dist-build/
 webmatic-desktop/test-results/
 
 # Archivos de desarrollo interno (no van al repo)

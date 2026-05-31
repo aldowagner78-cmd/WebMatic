@@ -42,6 +42,34 @@
     </div>
   </div>
 
+  <!-- ── BOOKMARK EDIT POPOVER ───────────────────────────────────── -->
+  <div id="wm-bm-edit-pop" hidden>
+    <div class="wm-ep-title">Editar favorito</div>
+    <input id="wm-bm-ep-name" type="text" placeholder="Nombre..." autocomplete="off" />
+    <input id="wm-bm-ep-url"  type="text" placeholder="URL..."    autocomplete="off" />
+    <div class="wm-bm-pop-row">
+      <button id="wm-bm-ep-confirm" class="wm-bm-pop-btn wm-bm-pop-ok">Guardar</button>
+      <button id="wm-bm-ep-cancel"  class="wm-bm-pop-btn">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- ── BOOKMARKS CONTEXT MENU ───────────────────────────────────── -->
+  <div id="wm-bm-ctx" hidden>
+    <button class="wm-bm-ctx-item" data-action="edit">&#9998; Editar</button>
+    <button class="wm-bm-ctx-item" data-action="newTab">&#8853; Abrir en nueva pesta&#241;a</button>
+    <div class="wm-bm-ctx-sep"></div>
+    <button class="wm-bm-ctx-item" data-action="moveleft">&#8592; Mover izquierda</button>
+    <button class="wm-bm-ctx-item" data-action="moveright">Mover derecha &#8594;</button>
+    <div class="wm-bm-ctx-sep"></div>
+    <button class="wm-bm-ctx-item wm-bm-ctx-danger" data-action="delete">&#10005; Eliminar</button>
+  </div>
+
+  <!-- ── TAB BAR ──────────────────────────────────────────────────── -->
+  <div id="wm-tab-bar">
+    <div id="wm-tabs-list"></div>
+    <button id="wm-tab-new" title="Nueva pesta&#241;a (Ctrl+T)">+</button>
+  </div>
+
   <!-- ── BOOKMARKS BAR ────────────────────────────────────────── -->
   <div id="wm-bookmarks-bar" aria-label="Favoritos"></div>
 
