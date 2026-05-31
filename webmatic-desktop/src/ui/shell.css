@@ -140,6 +140,25 @@ html, body {
 .wm-bm-btn span  { overflow: hidden; text-overflow: ellipsis; max-width: 120px; display: inline-block; }
 .wm-bm-icon { width: 14px; height: 14px; flex-shrink: 0; }
 
+/* Modo solo-iconos */
+#wm-bookmarks-bar.wm-bm-icons-only .wm-bm-btn span { display: none; }
+#wm-bookmarks-bar.wm-bm-icons-only .wm-bm-btn { padding: 2px 5px; max-width: 28px; }
+
+/* Separador entre controles y favoritos */
+.wm-bm-sep { width: 1px; height: 16px; background: var(--wm-border); flex-shrink: 0; margin: 0 3px; }
+
+/* Botones de control de la barra (import/export/toggle) */
+.wm-bm-ctrl-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 5px; flex-shrink: 0;
+  background: transparent; border: none;
+  color: var(--wm-text-muted); font-size: 13px;
+  cursor: pointer; padding: 0;
+  transition: background .12s, color .12s;
+}
+.wm-bm-ctrl-btn:hover { background: var(--wm-btn-bg); color: var(--wm-text); }
+.wm-bm-ctrl-btn.active { color: var(--wm-accent); }
+
 .wm-bm-del {
   display: none;
   background: transparent; border: none;

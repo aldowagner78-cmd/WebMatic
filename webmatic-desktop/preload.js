@@ -39,6 +39,8 @@ contextBridge.exposeInMainWorld("wmDesktop", {
     importFile: ()                => ipcRenderer.invoke("macro:import-file")
   },
   bookmarks: {
-    importBrowser: () => ipcRenderer.invoke("bookmarks:import-browser")
+    importBrowser: () => ipcRenderer.invoke("bookmarks:import-browser"),
+    importHtml:    () => ipcRenderer.invoke("bookmarks:import-html"),
+    exportHtml:    (bms) => ipcRenderer.invoke("bookmarks:export-html", bms)
   }
 });

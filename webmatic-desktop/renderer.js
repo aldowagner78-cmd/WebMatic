@@ -55,7 +55,6 @@
   const bmNameInput      = $("#wm-bm-name-input");
   const bmPopConfirm     = $("#wm-bm-pop-confirm");
   const bmPopCancel      = $("#wm-bm-pop-cancel");
-  const btnImportBm      = $("#wm-btn-import-bookmarks");
 
   // ── Estado ────────────────────────────────────────────────────────
   let settings      = { themeMode: "dark", themeVariant: 1, startupUrl: "https://www.google.com/" };
@@ -64,6 +63,7 @@
   let isPlaying     = false;
   let allMacros     = [];
   let bookmarks     = [];      // favoritos guardados
+  let bmIconsOnly   = false;   // modo solo-iconos en barra de favoritos
   let recorderScript = null;
   let playerScript   = null;
   let playDoneTimer  = null;   // handle del timeout post-reproduccion
@@ -114,15 +114,52 @@
 
   // ── Favoritos (barra de bookmarks) ───────────────────────────────
   function renderBookmarks() {
-    // Mantener el boton de importar al inicio
     bookmarksBar.innerHTML = "";
+    bookmarksBar.classList.toggle("wm-bm-icons-only", bmIconsOnly);
+
+    // Botón toggle solo-iconos
+    const iconsBtn = document.createElement("button");
+    iconsBtn.className = "wm-bm-ctrl-btn" + (bmIconsOnly ? " active" : "");
+    iconsBtn.title = bmIconsOnly ? "Mostrar nombres" : "Solo iconos";
+    iconsBtn.textContent = bmIconsOnly ? "\uFF41" : "\u22EF"; // ａ / ⋯
+    iconsBtn.addEventListener("click", async () => {
+      bmIconsOnly = !bmIconsOnly;
+      await wm.settings.set("bmIconsOnly", bmIconsOnly);
+      renderBookmarks();
+    });
+    bookmarksBar.appendChild(iconsBtn);
+
+    // Botón importar desde navegador
     const importBtn = document.createElement("button");
     importBtn.id = "wm-btn-import-bookmarks";
-    importBtn.className = "wm-bm-import-btn";
+    importBtn.className = "wm-bm-ctrl-btn";
     importBtn.title = "Importar favoritos desde Chrome / Edge / Brave";
-    importBtn.textContent = "\uD83D\uDCC2 Importar";
+    importBtn.textContent = "\u2197";
     importBtn.addEventListener("click", importBrowserBookmarks);
     bookmarksBar.appendChild(importBtn);
+
+    // Botón importar desde HTML (Firefox / exportado)
+    const importHtmlBtn = document.createElement("button");
+    importHtmlBtn.className = "wm-bm-ctrl-btn";
+    importHtmlBtn.title = "Importar desde archivo HTML (.html exportado de Firefox/Chrome)";
+    importHtmlBtn.textContent = "\uD83D\uDCC2";
+    importHtmlBtn.addEventListener("click", importHtmlBookmarks);
+    bookmarksBar.appendChild(importHtmlBtn);
+
+    // Botón exportar a HTML
+    const exportBtn = document.createElement("button");
+    exportBtn.className = "wm-bm-ctrl-btn";
+    exportBtn.title = "Exportar favoritos a archivo HTML";
+    exportBtn.textContent = "\u2913";
+    exportBtn.addEventListener("click", exportBookmarks);
+    bookmarksBar.appendChild(exportBtn);
+
+    // Separador
+    if (bookmarks.length) {
+      const sep = document.createElement("span");
+      sep.className = "wm-bm-sep";
+      bookmarksBar.appendChild(sep);
+    }
 
     bookmarks.forEach((bm, i) => {
       const btn = document.createElement("button");
@@ -205,16 +242,35 @@
     }
   });
 
-  // Importar favoritos desde Chrome / Edge / Brave
+  // Importar favoritos desde Chrome / Edge / Brave (JSON Chromium)
   async function importBrowserBookmarks() {
     const result = await wm.bookmarks.importBrowser();
     if (!result.ok) {
       if (result.error !== "cancelado") alert(result.error);
       return;
     }
-    const incoming = result.bookmarks || [];
+    await _mergeBookmarks(result.bookmarks || []);
+  }
+
+  // Importar favoritos desde archivo HTML (Firefox / cualquier navegador)
+  async function importHtmlBookmarks() {
+    const result = await wm.bookmarks.importHtml();
+    if (!result.ok) {
+      if (result.error !== "cancelado") alert(result.error);
+      return;
+    }
+    await _mergeBookmarks(result.bookmarks || []);
+  }
+
+  // Exportar favoritos a archivo HTML
+  async function exportBookmarks() {
+    if (!bookmarks.length) { alert("No hay favoritos para exportar."); return; }
+    const result = await wm.bookmarks.exportHtml(bookmarks);
+    if (!result.ok && result.error !== "cancelado") alert(result.error);
+  }
+
+  async function _mergeBookmarks(incoming) {
     if (!incoming.length) { alert("No se encontraron favoritos en ese archivo."); return; }
-    // Merge: evitar duplicados por URL
     const existing = new Set(bookmarks.map(b => b.url));
     const added = incoming.filter(b => !existing.has(b.url));
     bookmarks.push(...added);
@@ -775,6 +831,7 @@
     settings  = await wm.settings.getAll();
     allMacros = await wm.macros.getAll();
     bookmarks  = Array.isArray(settings.bookmarks) ? settings.bookmarks : [];
+    bmIconsOnly = settings.bmIconsOnly === true;
     renderBookmarks();
 
     // Aplicar settings de reproduccion a los inputs de Config

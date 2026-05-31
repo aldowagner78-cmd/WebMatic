@@ -234,3 +234,52 @@ ipcMain.handle("bookmarks:import-browser", async () => {
   ];
   return { ok: true, bookmarks: all };
 });
+
+// ── Importar favoritos desde archivo HTML Netscape (Firefox/Chrome export) ──
+ipcMain.handle("bookmarks:import-html", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Selecciona el archivo de favoritos exportado (.html)",
+    filters: [{ name: "Favoritos HTML", extensions: ["html", "htm"] }],
+    properties: ["openFile"]
+  });
+  if (result.canceled || !result.filePaths.length) return { ok: false, error: "cancelado" };
+  let html;
+  try { html = fs.readFileSync(result.filePaths[0], "utf8"); }
+  catch (e) { return { ok: false, error: "No se pudo leer el archivo: " + e.message }; }
+  // Parsear formato Netscape Bookmark: <A HREF="...">título</A>
+  const bms = [];
+  const re = /<A[^>]+HREF=["']([^"']+)["'][^>]*>([^<]*)<\/A>/gi;
+  let m;
+  while ((m = re.exec(html)) !== null) {
+    const url = m[1].trim();
+    const title = m[2].trim() || url;
+    if (/^https?:\/\//i.test(url)) bms.push({ title, url });
+  }
+  return { ok: true, bookmarks: bms };
+});
+
+// ── Exportar favoritos a archivo HTML Netscape ───────────────────────────────
+ipcMain.handle("bookmarks:export-html", async (_, bms) => {
+  const result = await dialog.showSaveDialog(mainWindow, {
+    title: "Exportar favoritos",
+    defaultPath: "favoritos-webmatic.html",
+    filters: [{ name: "Favoritos HTML", extensions: ["html"] }]
+  });
+  if (result.canceled || !result.filePath) return { ok: false, error: "cancelado" };
+  const lines = [
+    "<!DOCTYPE NETSCAPE-Bookmark-file-1>",
+    "<!-- This is an automatically generated file. -->",
+    "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">",
+    "<TITLE>Favoritos WebMatic</TITLE>",
+    "<H1>Favoritos WebMatic</H1>",
+    "<DL><p>"
+  ];
+  for (const bm of (bms || [])) {
+    const safe = (bm.title || bm.url).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    lines.push(`    <DT><A HREF="${bm.url}">${safe}</A>`);
+  }
+  lines.push("</DL><p>");
+  try { fs.writeFileSync(result.filePath, lines.join("\n"), "utf8"); }
+  catch (e) { return { ok: false, error: "No se pudo guardar: " + e.message }; }
+  return { ok: true };
+});
