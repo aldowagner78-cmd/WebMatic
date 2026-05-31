@@ -166,11 +166,18 @@
       btn.className = "wm-bm-btn";
       btn.title = bm.url;
 
-      const icon = document.createElement("img");
+      const icon = document.createElement(bm.isMacro ? "span" : "img");
       icon.className = "wm-bm-icon";
-      const host = (() => { try { return new URL(bm.url).hostname; } catch (_) { return ""; } })();
-      if (host) icon.src = "https://www.google.com/s2/favicons?domain=" + host + "&sz=16";
-      icon.onerror = () => { icon.style.display = "none"; };
+      if (bm.isMacro) {
+        icon.textContent = "⚡";
+        icon.style.cssText = "font-size:12px;display:inline-flex;align-items:center;";
+        btn.classList.add("wm-bm-macro");
+        btn.title = bm.title + "\n(Macro iMacros — no ejecutable en WebMatic)";
+      } else {
+        const host = (() => { try { return new URL(bm.url).hostname; } catch (_) { return ""; } })();
+        if (host) icon.src = "https://www.google.com/s2/favicons?domain=" + host + "&sz=16";
+        icon.onerror = () => { icon.style.display = "none"; };
+      }
 
       const label = document.createElement("span");
       label.textContent = bm.title;
@@ -190,6 +197,10 @@
       btn.appendChild(label);
       btn.appendChild(del);
       btn.addEventListener("click", () => {
+        if (bm.isMacro) {
+          alert('Macro iMacros: "' + bm.title + '"\n\nEsta macro fue creada con iMacros y no puede ejecutarse directamente en WebMatic.\nUsa WebMatic para grabar tu propia versión automatizada.');
+          return;
+        }
         webview.src = bm.url;
         urlInput.value = bm.url;
       });

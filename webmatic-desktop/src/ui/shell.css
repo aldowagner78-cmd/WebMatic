@@ -168,6 +168,8 @@ html, body {
 }
 .wm-bm-btn:hover .wm-bm-del { display: inline-flex; align-items: center; }
 .wm-bm-del:hover { background: rgba(239,68,68,.3); color: #ef4444; }
+.wm-bm-macro { opacity: .75; }
+.wm-bm-macro:hover { opacity: 1; }
 
 .wm-bookmark-add { background: rgba(255,255,255,.14); font-size: 16px; }
 .wm-bookmark-add:hover { background: rgba(255,200,0,.3); color: #fbbf24; }

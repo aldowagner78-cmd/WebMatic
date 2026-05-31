@@ -253,7 +253,18 @@ ipcMain.handle("bookmarks:import-html", async () => {
   while ((m = re.exec(html)) !== null) {
     const url = m[1].trim();
     const title = m[2].trim() || url;
-    if (/^https?:\/\//i.test(url)) bms.push({ title, url });
+    if (/^https?:\/\//i.test(url)) {
+      bms.push({ title, url });
+    } else if (/^javascript:/i.test(url)) {
+      // Intentar extraer nombre de macro iMacros desde n64 (base64 URL-encoded)
+      const imaMatch = /n64\s*=\s*%22([A-Za-z0-9+/=]+)%22/.exec(url);
+      if (imaMatch) {
+        try {
+          const macroName = decodeURIComponent(Buffer.from(imaMatch[1], 'base64').toString('utf8'));
+          bms.push({ title: macroName, url, isMacro: true });
+        } catch (_) { /* bookmarklet no decodificable, ignorar */ }
+      }
+    }
   }
   return { ok: true, bookmarks: bms };
 });
