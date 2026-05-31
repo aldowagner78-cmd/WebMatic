@@ -18,7 +18,7 @@
     "productName": "WebMatic Desktop",
     "copyright": "Copyright © 2026 WebMatic",
     "directories": {
-      "output": "dist-installer"
+      "output": "dist-build"
     },
     "files": [
       "main.js",
