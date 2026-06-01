@@ -476,6 +476,7 @@
     wv.setAttribute("partition", "persist:webmatic");
     wv.setAttribute("allowpopups", "");
     if (_wmPreloadUrl) wv.setAttribute("preload", _wmPreloadUrl);
+    wv.style.display = "none";   // ocultar hasta que sea la pestaña activa
     document.getElementById("wm-webview-wrap").appendChild(wv);
     setupWebviewListeners(wv);
     const tab = { id, title: "Nueva pestaña", url: url || "about:blank", wv, isLoading: false };
@@ -505,7 +506,7 @@
     const tab = tabs.find(t => t.id === id);
     if (!tab) return;
     tabs.forEach(t => { t.wv.style.display = "none"; });
-    tab.wv.style.display = "";
+    tab.wv.style.display = "inline-flex";
     activeTabId = id;
     webview = tab.wv;
     try {
@@ -517,7 +518,8 @@
   }
 
   function initTabs(startUrl) {
-    webview.style.cssText = "position:absolute;inset:0;width:100%;height:100%;";
+    // El webview inicial ya es visible por CSS; solo aseguramos posicionamiento absoluto
+    webview.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:none;";
     const initTab = { id: "tab_0", title: "Nueva pestaña", url: startUrl, wv: webview, isLoading: false };
     tabs.push(initTab);
     activeTabId = "tab_0";
