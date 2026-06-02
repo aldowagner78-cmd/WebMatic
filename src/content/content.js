@@ -1020,6 +1020,253 @@
     }
   }
 
+  const INLINE_REC_PANEL_ID = "webmatic-inline-rec-panel";
+
+  /**
+   * Starts a lightweight recording session isolated from the main draft.
+   * Captures events into a local buffer and calls onDone(filteredSteps) when stopped.
+   * Shows a small floating panel to stop the recording.
+   */
+  function startInlineRecording(onDone) {
+    // Remove any leftover panel
+    const oldPanel = document.getElementById(INLINE_REC_PANEL_ID);
+    if (oldPanel && oldPanel.parentNode) oldPanel.parentNode.removeChild(oldPanel);
+
+    // Ocultar el panel para liberar la página durante la grabación
+    const _wasVisible = store.getState().ui.panelVisible;
+    if (_wasVisible) {
+      store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
+    }
+
+    const buffer = [];
+    let _ceTimer = null;
+    let _hoverEl = null, _hoverObs = null, _hoverSeen = false, _hoverTimer = null;
+    let _scrollTimer = null;
+    let lastCopiedText = null, lastCopiedVar = null, varCounter = 0;
+
+    function addStep(step) {
+      buffer.push(Object.assign({ _ts: Date.now() }, step));
+      // Update count in panel
+      const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
+      if (countEl) countEl.textContent = buffer.length + (buffer.length === 1 ? " paso" : " pasos");
+    }
+
+    // ── Event handlers (same logic as startRecorderSession but writing to buffer) ──
+    const _onClick = (e) => {
+      let t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
+          t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      const tag = t.tagName.toLowerCase();
+      if (tag === "img" || (tag === "input" && t.type === "image" && !t.id)) {
+        const anchor = t.closest("a[href]"); if (anchor) t = anchor;
+      }
+      flashElement(t);
+      addStep({ type: "click", selector: buildSelector(t) });
+    };
+
+    const _onChange = (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) && !(t instanceof HTMLTextAreaElement) && !(t instanceof HTMLSelectElement)) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
+      if (t.readOnly || t.disabled) return;
+      flashElement(t);
+      if (t instanceof HTMLInputElement && t.type === "checkbox") { addStep({ type: "check", selector: buildSelector(t), checked: t.checked }); return; }
+      if (t instanceof HTMLInputElement && t.type === "radio")    { addStep({ type: "check", selector: buildSelector(t), checked: true }); return; }
+      const raw = t.value;
+      const val = (lastCopiedText !== null && lastCopiedVar !== null && raw.trim() === lastCopiedText)
+        ? `{{!${lastCopiedVar}}}` : raw;
+      addStep({ type: "input", selector: buildSelector(t), value: val });
+    };
+
+    const _onKeydown = (e) => {
+      const t = e.target;
+      if (t instanceof Element && (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID))) return;
+      if (["Enter", "Tab", "Escape"].includes(e.key)) {
+        if (t instanceof Element) flashElement(t);
+        addStep({ type: "key", key: e.key }); return;
+      }
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        const sel = t instanceof Element ? buildSelector(t) : "";
+        const last = buffer[buffer.length - 1];
+        if (last && last.type === "text" && last.selector === sel) {
+          last.value = (last.value || "") + e.key; // merge text
+          const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
+          if (countEl) countEl.textContent = buffer.length + (buffer.length === 1 ? " paso" : " pasos");
+        } else {
+          addStep({ type: "text", selector: sel, value: e.key });
+        }
+      }
+    };
+
+    const _onDblClick = (e) => {
+      let t = e.target;
+      if (!(t instanceof Element) || t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
+      const tag = t.tagName.toLowerCase();
+      if (tag === "img" || (tag === "input" && t.type === "image" && !t.id)) {
+        const anchor = t.closest("a[href]"); if (anchor) t = anchor;
+      }
+      flashElement(t); addStep({ type: "dblclick", selector: buildSelector(t) });
+    };
+
+    const _onCopy = (e) => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+      const txt = sel.toString().trim(); if (!txt) return;
+      const INLINE = /^(A|ABBR|B|CITE|CODE|EM|I|KBD|MARK|Q|S|SAMP|SMALL|SPAN|STRONG|SUB|SUP|U|VAR)$/;
+      const BLOCK  = /^(TD|TH|LI|P|DIV|BLOCKQUOTE|PRE|H[1-6]|DT|DD|ARTICLE|SECTION|ASIDE|HEADER|FOOTER|MAIN)$/;
+      const BAD    = /^(TABLE|TBODY|THEAD|TFOOT|TR|UL|OL|DL|FORM|BODY|HTML)$/;
+      let el = sel.anchorNode && sel.anchorNode.nodeType === Node.TEXT_NODE ? sel.anchorNode.parentElement : sel.anchorNode;
+      while (el && el.tagName) {
+        const tag = el.tagName.toUpperCase();
+        if (BAD.test(tag)) { el = null; break; }
+        if (BLOCK.test(tag) || !INLINE.test(tag)) break;
+        el = el.parentElement;
+      }
+      if (!el || !(el instanceof Element) || el.closest("#webmatic-panel-root")) return;
+      varCounter++; const vn = `VAR${varCounter}`;
+      lastCopiedText = txt; lastCopiedVar = vn;
+      flashElement(el); addStep({ type: "extract", selector: buildSelector(el), variable: vn });
+    };
+
+    const _onCeInput = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element) || !t.isContentEditable) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
+      clearTimeout(_ceTimer);
+      _ceTimer = setTimeout(() => {
+        const val = (t.innerText || t.textContent || "").trim();
+        flashElement(t); addStep({ type: "input", selector: buildSelector(t), value: val });
+      }, 400);
+    };
+
+    const _onMouseOver = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element) || t === _hoverEl) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
+      clearTimeout(_hoverTimer);
+      if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
+      _hoverSeen = false; _hoverEl = t;
+      try {
+        _hoverObs = new MutationObserver((muts) => {
+          if (_hoverSeen) return;
+          for (const m of muts) {
+            if (m.type === "childList") {
+              for (const n of m.addedNodes) {
+                if (n instanceof Element && n.offsetWidth > 0 && n.offsetHeight > 0) { _hoverSeen = true; return; }
+              }
+            } else if (m.attributeName === "aria-expanded" && m.target.getAttribute("aria-expanded") === "true") {
+              _hoverSeen = true; return;
+            }
+          }
+        });
+        _hoverObs.observe(document.body || document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-expanded"] });
+      } catch (_) {}
+      _hoverTimer = setTimeout(() => {
+        if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
+        if (_hoverEl !== t || !_hoverSeen) return;
+        flashElement(t); addStep({ type: "hover", selector: buildSelector(t) });
+      }, 800);
+    };
+
+    const _onScroll = (e) => {
+      const scrollEl = e.target instanceof Element ? e.target : null;
+      if (!scrollEl) return;
+      const role = (scrollEl.getAttribute("role") || "").toLowerCase();
+      const isMenu = scrollEl.tagName.toLowerCase() === "select" ||
+        ["listbox","menu","combobox","tree"].includes(role) ||
+        scrollEl.closest("[role='listbox'],[role='menu'],[role='combobox'],[role='tree']");
+      if (!isMenu) return;
+      if (scrollEl.closest("#webmatic-panel-root") || scrollEl.closest("#" + INLINE_REC_PANEL_ID)) return;
+      clearTimeout(_scrollTimer);
+      _scrollTimer = setTimeout(() => { addStep({ type: "scroll_to", selector: buildSelector(scrollEl) }); }, 900);
+    };
+
+    document.addEventListener("click",     _onClick,    true);
+    document.addEventListener("change",    _onChange,   true);
+    document.addEventListener("keydown",   _onKeydown,  true);
+    document.addEventListener("dblclick",  _onDblClick, true);
+    document.addEventListener("copy",      _onCopy,     true);
+    document.addEventListener("input",     _onCeInput,  true);
+    document.addEventListener("mouseover", _onMouseOver,true);
+    document.addEventListener("scroll",    _onScroll,   true);
+
+    // ── Cleanup ──
+    function _cleanup() {
+      document.removeEventListener("click",     _onClick,    true);
+      document.removeEventListener("change",    _onChange,   true);
+      document.removeEventListener("keydown",   _onKeydown,  true);
+      document.removeEventListener("dblclick",  _onDblClick, true);
+      document.removeEventListener("copy",      _onCopy,     true);
+      document.removeEventListener("input",     _onCeInput,  true);
+      document.removeEventListener("mouseover", _onMouseOver,true);
+      document.removeEventListener("scroll",    _onScroll,   true);
+      clearTimeout(_ceTimer); clearTimeout(_hoverTimer); clearTimeout(_scrollTimer);
+      if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
+      const p = document.getElementById(INLINE_REC_PANEL_ID);
+      if (p && p.parentNode) p.parentNode.removeChild(p);
+    }
+
+    function _stop() {
+      _cleanup();
+      // Restaurar el panel si estaba visible antes de grabar
+      if (_wasVisible && !store.getState().ui.panelVisible) {
+        store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
+      }
+      const filtered = _cleanupSteps(buffer);
+      if (typeof onDone === "function") onDone(filtered);
+    }
+
+    // ── Floating stop panel ──
+    const panel = document.createElement("div");
+    panel.id = INLINE_REC_PANEL_ID;
+    panel.style.cssText = [
+      "all:initial", "position:fixed", "bottom:16px", "right:16px", "z-index:2147483647",
+      "display:flex", "align-items:center", "gap:8px",
+      "background:rgba(239,68,68,0.95)", "color:#fff",
+      "border-radius:10px", "padding:10px 14px",
+      "font-family:system-ui,sans-serif", "font-size:13px", "font-weight:600",
+      "box-shadow:0 4px 20px rgba(239,68,68,0.4)",
+      "cursor:default", "user-select:none"
+    ].join(";");
+
+    if (!document.getElementById("webmatic-floating-keyframes")) {
+      const style = document.createElement("style");
+      style.id = "webmatic-floating-keyframes";
+      style.textContent = "@keyframes webmatic-pulse{0%,100%{opacity:1}50%{opacity:0.35}}";
+      document.head.appendChild(style);
+    }
+
+    const dot = document.createElement("span");
+    dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:50%;background:#fff;animation:webmatic-pulse 0.8s infinite;flex-shrink:0";
+    panel.appendChild(dot);
+
+    const lbl = document.createElement("span");
+    lbl.textContent = "Grabando pasos nuevos";
+    panel.appendChild(lbl);
+
+    const countEl = document.createElement("span");
+    countEl.id = INLINE_REC_PANEL_ID + "-count";
+    countEl.style.cssText = "font-size:11px;opacity:0.85;margin-left:2px";
+    countEl.textContent = "0 pasos";
+    panel.appendChild(countEl);
+
+    const stopBtn = document.createElement("button");
+    stopBtn.style.cssText = [
+      "all:initial", "display:inline-flex", "align-items:center", "gap:4px",
+      "background:#fff", "color:#dc2626", "border-radius:6px",
+      "padding:4px 10px", "font-size:12px", "font-weight:700",
+      "font-family:system-ui,sans-serif", "cursor:pointer",
+      "margin-left:6px", "white-space:nowrap"
+    ].join(";");
+    stopBtn.textContent = "⏹ Detener";
+    stopBtn.title = "Detener grabaci\u00f3n e insertar pasos en el editor";
+    stopBtn.addEventListener("click", (e) => { e.stopPropagation(); _stop(); });
+    panel.appendChild(stopBtn);
+
+    document.documentElement.appendChild(panel);
+  }
+
   /**
    * Cleans up recorded steps before saving:
    * 1. Removes "focus clicks" — CLICK(X) immediately before TYPE/CHECK(X) on same selector
@@ -1122,9 +1369,41 @@
         }
       }
     }
+    // Pass 4b: auto-inject wait_for after click steps that open modals/dialogs
+    // When a click is followed by check/input on a DIFFERENT selector, the click
+    // likely opened new content (modal, panel, dynamic form). Inject wait_for so
+    // the macro waits for that element to appear instead of failing on timing.
+    const pass4b = [];
+    for (let i = 0; i < pass4.length; i++) {
+      pass4b.push(pass4[i]);
+      const cur = pass4[i];
+      if (cur.type === "click" && cur.selector) {
+        // Find next non-wait step
+        let nextStep = null;
+        for (let j = i + 1; j < pass4.length; j++) {
+          if (pass4[j].type === "wait" || pass4[j].type === "wait_for") continue;
+          nextStep = pass4[j];
+          break;
+        }
+        // Inject wait_for if: next step is check/input on a DIFFERENT selector
+        // AND not already followed immediately by a wait_for
+        if (
+          nextStep &&
+          (nextStep.type === "check" || nextStep.type === "input") &&
+          nextStep.selector &&
+          nextStep.selector !== cur.selector
+        ) {
+          const immNext = pass4[i + 1];
+          if (!immNext || immNext.type !== "wait_for") {
+            pass4b.push({ type: "wait_for", selector: nextStep.selector, timeout: 10000 });
+          }
+        }
+      }
+    }
+
     // Pass 5: deduplicate consecutive navigate steps with the same URL
     // (SPA nav patch or manual re-triggers can emit duplicate navigates)
-    const pass5 = pass4.filter((step, i, arr) => {
+    const pass5 = pass4b.filter((step, i, arr) => {
       if (step.type !== "navigate" || !step.url) return true;
       // Remove if the immediately preceding non-wait step is also a navigate to the same URL
       for (let j = i - 1; j >= 0; j--) {
@@ -1627,6 +1906,9 @@
           // Script → Visual: parse current textarea into step editor
           const parsed = iimAdapter.importFromIim(area.value);
           seEditor.setSteps((parsed && parsed.steps) || []);
+          if (!seEditor._onRecordRequest) {
+            seEditor.setRecordRequestHandler((onDone) => { startInlineRecording(onDone); });
+          }
           _applyScriptTab(overlay, "visual");
           if (container) seEditor.mount(container, () => {});
         } else if (tab === "script" && seEditor && iimAdapter && area) {
@@ -1858,7 +2140,12 @@
       const overlay = panel && panel.querySelector("[data-script-editor]");
       const container = overlay && overlay.querySelector("[data-step-visual-container]");
       if (container && globalScope.WebMaticStepEditor) {
-        if (!seEditor) seEditor = new globalScope.WebMaticStepEditor();
+        if (!seEditor) {
+          seEditor = new globalScope.WebMaticStepEditor();
+          seEditor.setRecordRequestHandler((onDone) => {
+            startInlineRecording(onDone);
+          });
+        }
         const seState = state.ui.scriptEditor;
         const steps = seState.draftSteps && seState.draftSteps.length > 0
           ? seState.draftSteps

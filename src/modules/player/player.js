@@ -31,6 +31,32 @@
    * 3. tag[text="..."] — searches by visible text content
    * Returns null if not found.
    */
+  /**
+   * Recursively searches for a CSS selector inside a document (including all
+   * accessible nested iframes). Returns the first match or null.
+   */
+  function findInDocument(doc, selector) {
+    if (!doc) return null;
+    try {
+      // Shadow DOM search within this document
+      const direct = findInShadow(doc, selector);
+      if (direct) return direct;
+    } catch (e) { /* cross-origin iframe will throw */ }
+    // Recurse into same-origin iframes
+    try {
+      const frames = doc.querySelectorAll("iframe, frame");
+      for (const frame of frames) {
+        try {
+          const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+          if (!innerDoc) continue;
+          const found = findInDocument(innerDoc, selector);
+          if (found) return found;
+        } catch (e) { /* cross-origin — skip */ }
+      }
+    } catch (e) { /* ignore */ }
+    return null;
+  }
+
   function findElement(selector) {
     if (!selector) return null;
 
@@ -47,23 +73,38 @@
       }
     }
 
-    // tag[text="..."] — text-based search
+    // tag[text="..."] — text-based search (also searches iframes)
     const textMatch = /^(\w+)\[text="([^"]+)"\]$/.exec(selector);
     if (textMatch) {
       const [, tagName, text] = textMatch;
       const escText = utils ? utils.escapeTextContent(text) : text.trim();
-      const candidates = document.querySelectorAll(tagName);
-      for (const el of candidates) {
-        const elText = utils
-          ? utils.escapeTextContent(el.textContent)
-          : el.textContent.replace(/\s+/g, " ").trim();
-        if (elText === escText) return el;
+      // Search in main doc + all accessible iframes
+      const docsToSearch = [document];
+      try {
+        const frames = document.querySelectorAll("iframe, frame");
+        for (const frame of frames) {
+          try {
+            const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+            if (innerDoc) docsToSearch.push(innerDoc);
+          } catch (e) { /* cross-origin */ }
+        }
+      } catch (e) { /* ignore */ }
+      for (const d of docsToSearch) {
+        try {
+          const candidates = d.querySelectorAll(tagName);
+          for (const el of candidates) {
+            const elText = utils
+              ? utils.escapeTextContent(el.textContent)
+              : el.textContent.replace(/\s+/g, " ").trim();
+            if (elText === escText) return el;
+          }
+        } catch (e) { /* ignore */ }
       }
       return null;
     }
 
-    // Standard CSS selector — with Shadow DOM piercing fallback
-    return findInShadow(document, selector);
+    // Standard CSS selector — with Shadow DOM + iframe piercing
+    return findInDocument(document, selector);
   }
 
   /**
@@ -174,6 +215,13 @@
       const start = Date.now();
 
       function attempt() {
+        if (step.type === "reset_fields") {
+          const excl = step.exclude ? expandVariables(step.exclude, vars) : null;
+          _resetPageForms(excl);
+          resolve();
+          return;
+        }
+
         if (step.type === "navigate") {
           const url = expandVariables(step.url || "", vars);
           if (url && window.location.href !== url) {
@@ -395,28 +443,41 @@
    * Resets all form fields on the page to their default state.
    * Uses native form.reset() when possible; falls back to manual reset for loose fields.
    */
-  function _resetPageForms() {
-    const forms = document.querySelectorAll("form");
-    if (forms.length > 0) {
-      forms.forEach((f) => { try { f.reset(); } catch (e) { /* ignore */ } });
-    } else {
-      document.querySelectorAll("input, select, textarea").forEach((el) => {
+  function _clearInputsInDoc(doc, excludeSelector) {
+    try {
+      doc.querySelectorAll("input, select, textarea").forEach((el) => {
         try {
           if (el.closest && el.closest("#webmatic-panel-root")) return;
+          if (excludeSelector) {
+            try { if (el.matches(excludeSelector)) return; } catch (e) { /* ignore bad selector */ }
+          }
           const type = (el.type || "").toLowerCase();
           if (type === "submit" || type === "button" || type === "image" ||
               type === "file" || type === "reset" || type === "hidden") return;
           if (type === "checkbox" || type === "radio") {
             el.checked = el.defaultChecked;
+            el.dispatchEvent(new Event("change", { bubbles: true }));
           } else if (el.tagName.toLowerCase() === "select") {
             el.selectedIndex = 0;
             el.dispatchEvent(new Event("change", { bubbles: true }));
           } else {
-            el.value = el.defaultValue || "";
+            const proto = el.constructor.prototype || HTMLInputElement.prototype;
+            const desc = Object.getOwnPropertyDescriptor(proto, "value");
+            if (desc && desc.set) desc.set.call(el, ""); else el.value = "";
+            el.dispatchEvent(new Event("input",  { bubbles: true }));
+            el.dispatchEvent(new Event("change", { bubbles: true }));
           }
         } catch (e) { /* ignore */ }
       });
-    }
+      // Recurse into same-origin iframes
+      doc.querySelectorAll("iframe, frame").forEach((fr) => {
+        try { _clearInputsInDoc(fr.contentDocument || fr.contentWindow.document, excludeSelector); } catch (e) { /* cross-origin */ }
+      });
+    } catch (e) { /* ignore */ }
+  }
+
+  function _resetPageForms(excludeSelector) {
+    _clearInputsInDoc(document, excludeSelector || null);
   }
 
   // Timers activos de highlight — para cancelarlos todos al terminar la macro
@@ -515,8 +576,8 @@
       this._abort = false;
       this._speed = speed;
 
-      // Reset all form fields to their default state before replaying
-      if (startIndex === 0) _resetPageForms();
+      // Reset all form fields before replaying — unless the first step is reset_fields (which handles it with exclusions)
+      if (startIndex === 0 && (!steps[0] || steps[0].type !== "reset_fields")) _resetPageForms();
 
       try {
         for (let i = startIndex; i < steps.length; i++) {

@@ -18,6 +18,7 @@
     { value: "if_exists",    label: "\u2299 Si existe",         fields: [{ name: "selector", ph: "#elemento" }] },
     { value: "loop_until",   label: "\u21BA Repetir hasta",     fields: [{ name: "selector", ph: "#spinner" }, { name: "condition", ph: "not_exists", select: [["not_exists", "\u23F3 mientras NO existe"], ["exists", "\u23F3 mientras S\u00ED existe"]] }, { name: "max_iterations", ph: "50" }] },
     { value: "for_each_row", label: "\u25A6 Por cada fila",     fields: [{ name: "columns", ph: "COL1, COL2" }] },
+    { value: "reset_fields", label: "\uD83E\uDDF9 Limpiar campos", fields: [{ name: "exclude", ph: "#campo-a-conservar (opcional)" }] },
   ];
 
   const TYPE_ICONS = {
@@ -73,6 +74,13 @@
       this._onChange = null;
       this._addFormOpen = false;
       this._editIdx = null;   // index of the step being edited, or null
+      this._onRecordRequest = null; // callback(onDone) para grabar pasos inline
+      this._pendingRecord = false;  // true mientras la grabación inline está activa
+    }
+
+    /** Registra el handler que activa la grabación inline desde content.js */
+    setRecordRequestHandler(fn) {
+      this._onRecordRequest = fn;
     }
 
     setSteps(steps) {
@@ -167,9 +175,23 @@
 
       // Only show add controls when not in edit mode
       if (this._editIdx === null) {
-        if (this._addFormOpen) {
+        if (this._pendingRecord) {
+          // Grabación inline activa — mostrar indicador
+          const recBar = document.createElement("div");
+          recBar.className = "wm-sved-rec-bar";
+          recBar.style.cssText = "display:flex;align-items:center;gap:8px;padding:8px 10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:6px;font-size:12px;color:#dc2626;font-family:system-ui,sans-serif";
+          const dot = document.createElement("span");
+          dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;animation:webmatic-pulse 1s infinite;flex-shrink:0";
+          const lbl = document.createElement("span");
+          lbl.textContent = "Grabando pasos nuevos — interactúa con la página. Detén la grabación cuando termines.";
+          recBar.appendChild(dot);
+          recBar.appendChild(lbl);
+          c.appendChild(recBar);
+        } else if (this._addFormOpen) {
           c.appendChild(this._buildAddForm());
         } else {
+          const btnRow = document.createElement("div");
+          btnRow.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap";
           const addBtn = document.createElement("button");
           addBtn.className = "wm-sved-add-btn";
           addBtn.textContent = "+ Agregar paso";
@@ -177,7 +199,28 @@
             this._addFormOpen = true;
             this._render();
           });
-          c.appendChild(addBtn);
+          btnRow.appendChild(addBtn);
+          if (typeof this._onRecordRequest === "function") {
+            const recBtn = document.createElement("button");
+            recBtn.className = "wm-sved-add-btn wm-sved-rec-btn";
+            recBtn.style.cssText = "background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.4);color:#dc2626";
+            recBtn.textContent = "\u23FA Grabar interacci\u00f3n";
+            recBtn.title = "Interact\u00faa con la p\u00e1gina y los pasos se capturan autom\u00e1ticamente";
+            recBtn.addEventListener("click", () => {
+              this._pendingRecord = true;
+              this._render();
+              this._onRecordRequest((capturedSteps) => {
+                this._pendingRecord = false;
+                for (const s of capturedSteps) {
+                  this.steps.push(s);
+                }
+                this._render();
+                this._fire();
+              });
+            });
+            btnRow.appendChild(recBtn);
+          }
+          c.appendChild(btnRow);
         }
       }
     }
