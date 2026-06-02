@@ -1,6 +1,6 @@
 (function initUiShell(globalScope) {
   const PANEL_ID = "webmatic-panel-root";
-  const UI_VERSION = "2026-06-02-v11";
+  const UI_VERSION = "2026-06-02-v12";
   // Paletas completas: cada variante define TODOS los tokens de color
   const THEME_PALETTES = {
     light: [
@@ -71,46 +71,49 @@
           <div class="webmatic-search-row">
             <input class="webmatic-search-input" data-action-input="library-search" type="text" placeholder="Buscar macro..." autocomplete="off" />
           </div>
-          <div class="webmatic-play-data-box" aria-label="Dato de ejecucion">
-            <div class="webmatic-play-data-tag">Dato para autocompletar</div>
-            <label class="webmatic-toggle-row" for="webmatic-play-runtime-enabled">
-              <input id="webmatic-play-runtime-enabled" type="checkbox" data-action-change="play-runtime-enabled" />
-              <span>Usar dato en esta ejecucion</span>
-            </label>
-            <div class="webmatic-play-data-row">
-              <select class="webmatic-field-control" data-action-change="play-runtime-type" aria-label="Tipo de dato">
-                <option value="dni">DNI</option>
-                <option value="affiliate">N° de afiliado</option>
-                <option value="authorization">Autorizacion</option>
-                <option value="name">Nombre</option>
-                <option value="password">Contrasena</option>
-                <option value="generic">Otro</option>
-              </select>
-              <input
-                class="webmatic-field-control"
-                data-action-input="play-runtime-data"
-                type="text"
-                placeholder="Ingresa el dato"
-                autocomplete="off"
-              />
-            </div>
-            <div class="webmatic-play-data-actions">
-              <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-item-add" type="button">+ Agregar otro dato</button>
-            </div>
-            <div class="webmatic-runtime-item-list" data-runtime-item-list></div>
-            <div class="webmatic-runtime-template-box">
-              <div class="webmatic-runtime-template-row">
-                <select class="webmatic-field-control" data-action-change="play-runtime-template-select" aria-label="Plantilla de datos">
-                  <option value="">Sin plantilla</option>
+          <details class="webmatic-play-data-box" aria-label="Dato de ejecucion">
+            <summary class="webmatic-play-data-summary">Datos de autocompletado (opcional)</summary>
+            <div class="webmatic-play-data-content">
+              <div class="webmatic-play-data-tag">Dato para autocompletar</div>
+              <label class="webmatic-toggle-row" for="webmatic-play-runtime-enabled">
+                <input id="webmatic-play-runtime-enabled" type="checkbox" data-action-change="play-runtime-enabled" />
+                <span>Usar dato en esta ejecucion</span>
+              </label>
+              <div class="webmatic-play-data-row">
+                <select class="webmatic-field-control" data-action-change="play-runtime-type" aria-label="Tipo de dato">
+                  <option value="dni">DNI</option>
+                  <option value="affiliate">N° de afiliado</option>
+                  <option value="authorization">Autorizacion</option>
+                  <option value="name">Nombre</option>
+                  <option value="password">Contrasena</option>
+                  <option value="generic">Otro</option>
                 </select>
-                <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-apply" type="button">Aplicar</button>
+                <input
+                  class="webmatic-field-control"
+                  data-action-input="play-runtime-data"
+                  type="text"
+                  placeholder="Ingresa el dato"
+                  autocomplete="off"
+                />
               </div>
-              <div class="webmatic-runtime-template-actions">
-                <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-save" type="button">Guardar actual</button>
-                <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-delete" type="button">Quitar plantilla</button>
+              <div class="webmatic-play-data-actions">
+                <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-item-add" type="button">+ Agregar otro dato</button>
+              </div>
+              <div class="webmatic-runtime-item-list" data-runtime-item-list></div>
+              <div class="webmatic-runtime-template-box">
+                <div class="webmatic-runtime-template-row">
+                  <select class="webmatic-field-control" data-action-change="play-runtime-template-select" aria-label="Plantilla de datos">
+                    <option value="">Sin plantilla</option>
+                  </select>
+                  <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-apply" type="button">Aplicar</button>
+                </div>
+                <div class="webmatic-runtime-template-actions">
+                  <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-save" type="button">Guardar actual</button>
+                  <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-delete" type="button">Quitar plantilla</button>
+                </div>
               </div>
             </div>
-          </div>
+          </details>
           <div class="webmatic-macro-list" data-library-list></div>
           <div class="webmatic-macro-actions">
             <button class="webmatic-action-btn" data-action="macro-play" disabled>&#9654; Reproducir</button>
