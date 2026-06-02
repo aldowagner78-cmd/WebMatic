@@ -1,6 +1,6 @@
 (function initUiShell(globalScope) {
   const PANEL_ID = "webmatic-panel-root";
-  const UI_VERSION = "2026-05-30-v7";
+  const UI_VERSION = "2026-06-02-v11";
   // Paletas completas: cada variante define TODOS los tokens de color
   const THEME_PALETTES = {
     light: [
@@ -37,6 +37,15 @@
     document.head.appendChild(link);
   }
 
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
   function createPanel() {
     const panel = document.createElement("aside");
     panel.id = PANEL_ID;
@@ -61,6 +70,46 @@
         <div class="webmatic-view" data-view="play">
           <div class="webmatic-search-row">
             <input class="webmatic-search-input" data-action-input="library-search" type="text" placeholder="Buscar macro..." autocomplete="off" />
+          </div>
+          <div class="webmatic-play-data-box" aria-label="Dato de ejecucion">
+            <div class="webmatic-play-data-tag">Dato para autocompletar</div>
+            <label class="webmatic-toggle-row" for="webmatic-play-runtime-enabled">
+              <input id="webmatic-play-runtime-enabled" type="checkbox" data-action-change="play-runtime-enabled" />
+              <span>Usar dato en esta ejecucion</span>
+            </label>
+            <div class="webmatic-play-data-row">
+              <select class="webmatic-field-control" data-action-change="play-runtime-type" aria-label="Tipo de dato">
+                <option value="dni">DNI</option>
+                <option value="affiliate">N° de afiliado</option>
+                <option value="authorization">Autorizacion</option>
+                <option value="name">Nombre</option>
+                <option value="password">Contrasena</option>
+                <option value="generic">Otro</option>
+              </select>
+              <input
+                class="webmatic-field-control"
+                data-action-input="play-runtime-data"
+                type="text"
+                placeholder="Ingresa el dato"
+                autocomplete="off"
+              />
+            </div>
+            <div class="webmatic-play-data-actions">
+              <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-item-add" type="button">+ Agregar otro dato</button>
+            </div>
+            <div class="webmatic-runtime-item-list" data-runtime-item-list></div>
+            <div class="webmatic-runtime-template-box">
+              <div class="webmatic-runtime-template-row">
+                <select class="webmatic-field-control" data-action-change="play-runtime-template-select" aria-label="Plantilla de datos">
+                  <option value="">Sin plantilla</option>
+                </select>
+                <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-apply" type="button">Aplicar</button>
+              </div>
+              <div class="webmatic-runtime-template-actions">
+                <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-save" type="button">Guardar actual</button>
+                <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-template-delete" type="button">Quitar plantilla</button>
+              </div>
+            </div>
           </div>
           <div class="webmatic-macro-list" data-library-list></div>
           <div class="webmatic-macro-actions">
@@ -109,6 +158,18 @@
               <input class="webmatic-slider" data-action-input="settings-wait-threshold" type="range" min="1" max="10" step="0.5" value="3" />
               <span class="webmatic-slider-label" data-wait-threshold-label>3s</span>
             </div>
+            <div class="webmatic-subtitle">Ampliar datos a precargar</div>
+            <div class="webmatic-play-data-row">
+              <input
+                class="webmatic-field-control"
+                data-action-input="settings-custom-type-draft"
+                type="text"
+                placeholder="Ej: Numero de socio"
+                autocomplete="off"
+              />
+              <button class="webmatic-action-btn" data-action="settings-custom-type-add" type="button">Agregar</button>
+            </div>
+            <div class="webmatic-custom-type-list" data-custom-type-list></div>
           </section>
           <section class="webmatic-settings-card" aria-label="Exportacion">
             <h3>Exportacion y respaldo</h3>
@@ -495,6 +556,102 @@
       waitThresholdLabel.textContent = `${Number(state.settings.waitThreshold ?? 3)}s`;
     }
 
+    const playRuntimeEnabled = panel.querySelector("#webmatic-play-runtime-enabled");
+    if (playRuntimeEnabled) {
+      playRuntimeEnabled.checked = Boolean(state.settings.runtimeDataEnabled);
+    }
+
+    const playRuntimeType = panel.querySelector("[data-action-change='play-runtime-type']");
+    const baseOptions = [
+      { value: "dni", label: "DNI" },
+      { value: "affiliate", label: "N° de afiliado" },
+      { value: "authorization", label: "Autorizacion" },
+      { value: "name", label: "Nombre" },
+      { value: "password", label: "Contrasena" },
+      { value: "generic", label: "Otro" }
+    ];
+    const customTypes = Array.isArray(state.settings.runtimeCustomTypes) ? state.settings.runtimeCustomTypes : [];
+    const customOptions = customTypes
+      .filter((label) => typeof label === "string" && label.trim())
+      .map((label) => ({ value: `custom:${label.trim().toLowerCase()}`, label: label.trim() }));
+    const options = [...baseOptions, ...customOptions];
+    const optionHtml = options
+      .map((o) => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`)
+      .join("");
+
+    if (playRuntimeType) {
+      const currentValue = String(state.settings.runtimeDataType || "generic");
+      if (playRuntimeType.innerHTML !== optionHtml) {
+        playRuntimeType.innerHTML = optionHtml;
+      }
+      if (document.activeElement !== playRuntimeType) {
+        playRuntimeType.value = options.some((o) => o.value === currentValue) ? currentValue : "generic";
+      }
+    }
+
+    const playRuntimeData = panel.querySelector("[data-action-input='play-runtime-data']");
+    if (playRuntimeData && document.activeElement !== playRuntimeData) {
+      playRuntimeData.value = String(state.settings.runtimeData || "");
+    }
+
+    const runtimeItemList = panel.querySelector("[data-runtime-item-list]");
+    if (runtimeItemList) {
+      const items = Array.isArray(state.settings.runtimeDataItems) ? state.settings.runtimeDataItems : [];
+      if (items.length === 0) {
+        runtimeItemList.innerHTML = "";
+      } else {
+        runtimeItemList.innerHTML = items.map((item, index) => {
+          const selectedValue = String(item && item.type ? item.type : "generic");
+          const selectedOptionsHtml = options
+            .map((o) => `<option value="${escapeHtml(o.value)}"${o.value === selectedValue ? " selected" : ""}>${escapeHtml(o.label)}</option>`)
+            .join("");
+          const checked = item && item.enabled ? " checked" : "";
+          const value = escapeHtml(String(item && item.data ? item.data : ""));
+          return `
+            <div class="webmatic-runtime-item-row">
+              <label class="webmatic-runtime-item-toggle" title="Usar este dato">
+                <input type="checkbox" data-action-change="play-runtime-item-enabled" data-index="${index}"${checked} />
+              </label>
+              <select class="webmatic-field-control" data-action-change="play-runtime-item-type" data-index="${index}">${selectedOptionsHtml}</select>
+              <input class="webmatic-field-control" data-action-input="play-runtime-item-data" data-index="${index}" type="text" value="${value}" placeholder="Ingresa el dato" autocomplete="off" />
+              <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-item-remove" data-index="${index}" type="button">Quitar</button>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+
+    const runtimeTemplateSelect = panel.querySelector("[data-action-change='play-runtime-template-select']");
+    if (runtimeTemplateSelect) {
+      const templates = Array.isArray(state.settings.runtimeDataTemplates) ? state.settings.runtimeDataTemplates : [];
+      const selectedId = String(state.settings.runtimeTemplateSelectedId || "");
+      const tplHtml = [`<option value="">Sin plantilla</option>`]
+        .concat(templates.map((tpl) => {
+          const id = escapeHtml(String(tpl && tpl.id ? tpl.id : ""));
+          const name = escapeHtml(String(tpl && tpl.name ? tpl.name : "Plantilla"));
+          return `<option value="${id}">${name}</option>`;
+        }))
+        .join("");
+      if (runtimeTemplateSelect.innerHTML !== tplHtml) {
+        runtimeTemplateSelect.innerHTML = tplHtml;
+      }
+      if (document.activeElement !== runtimeTemplateSelect) {
+        runtimeTemplateSelect.value = templates.some((t) => String(t.id) === selectedId) ? selectedId : "";
+      }
+    }
+
+    const customTypeList = panel.querySelector("[data-custom-type-list]");
+    if (customTypeList) {
+      const customTypes = Array.isArray(state.settings.runtimeCustomTypes) ? state.settings.runtimeCustomTypes : [];
+      if (customTypes.length === 0) {
+        customTypeList.innerHTML = '<div class="webmatic-macro-empty">Sin tipos personalizados</div>';
+      } else {
+        customTypeList.innerHTML = customTypes
+          .map((label) => `<div class="webmatic-custom-type-item"><span>${escapeHtml(label)}</span><button class="webmatic-action-btn webmatic-btn-ghost" data-action="settings-custom-type-remove" data-custom-label="${escapeHtml(label)}" type="button">Quitar</button></div>`)
+          .join("");
+      }
+    }
+
     const folderDisplay = panel.querySelector("[data-folder-display]");
     if (folderDisplay) {
       const val = String(state.settings.downloadFolder || "");
@@ -625,6 +782,16 @@
         return;
       }
 
+      if (action === "settings-custom-type-add") {
+        const draftInput = panel.querySelector("[data-action-input='settings-custom-type-draft']");
+        if (typeof onActionClicked === "function") {
+          onActionClicked("settings-custom-type-add", {
+            value: draftInput ? String(draftInput.value || "").trim() : ""
+          });
+        }
+        return;
+      }
+
       if (action === "script-editor-tab") {
         if (typeof onActionClicked === "function") {
           onActionClicked("script-editor-tab", { tab: target.dataset.scriptTab || "visual" });
@@ -634,7 +801,9 @@
 
       if (action && typeof onActionClicked === "function") {
         onActionClicked(action, {
-          variant: target.dataset.variant ? Number(target.dataset.variant) : undefined
+          variant: target.dataset.variant ? Number(target.dataset.variant) : undefined,
+          customLabel: target.dataset.customLabel ? String(target.dataset.customLabel) : undefined,
+          index: typeof target.dataset.index !== "undefined" ? Number(target.dataset.index) : undefined
         });
       }
     });
@@ -649,7 +818,8 @@
       if (action && typeof onActionClicked === "function") {
         onActionClicked(action, {
           checked: "checked" in target ? target.checked : undefined,
-          value: target.value
+          value: target.value,
+          index: typeof target.dataset.index !== "undefined" ? Number(target.dataset.index) : undefined
         });
       }
     });
@@ -662,7 +832,10 @@
 
       const action = target.dataset.actionInput;
       if (action && typeof onActionClicked === "function") {
-        onActionClicked(action, { value: target.value });
+        onActionClicked(action, {
+          value: target.value,
+          index: typeof target.dataset.index !== "undefined" ? Number(target.dataset.index) : undefined
+        });
       }
     });
   }

@@ -12,6 +12,13 @@
     themeVariant: 1,
     accentColor: "#059669",
     surfaceColor: "#f0fdf4",
+    runtimeDataEnabled: false,
+    runtimeDataType: "generic",
+    runtimeCustomTypes: [],
+    runtimeData: "",
+    runtimeDataItems: [],
+    runtimeDataTemplates: [],
+    runtimeTemplateSelectedId: "",
     downloadFolder: ""
   });
 

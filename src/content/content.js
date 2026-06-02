@@ -324,6 +324,431 @@
   const FLOATING_BTN_ID = "webmatic-floating-recorder-global";
   const FLOATING_PLAYER_ID = "webmatic-floating-player-global";
 
+  function normalizeRuntimeDataType(type) {
+    const t = String(type || "generic").toLowerCase();
+    if (t === "dni") return "dni";
+    if (t === "affiliate") return "affiliate";
+    if (t === "authorization") return "authorization";
+    if (t === "name") return "name";
+    if (t === "password") return "password";
+    if (t.startsWith("custom:")) return t;
+    return "generic";
+  }
+
+  function normalizeRuntimeCustomTypes(list) {
+    if (!Array.isArray(list)) return [];
+    const seen = new Set();
+    const out = [];
+    list.forEach((raw) => {
+      const label = String(raw || "").trim();
+      if (!label) return;
+      const key = label.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(label);
+    });
+    return out;
+  }
+
+  function normalizeRuntimeDataItems(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+      .map((raw) => ({
+        enabled: raw && typeof raw.enabled !== "undefined" ? Boolean(raw.enabled) : true,
+        type: normalizeRuntimeDataType(raw && raw.type),
+        data: String(raw && raw.data ? raw.data : "")
+      }));
+  }
+
+  function normalizeRuntimeTemplate(template) {
+    if (!template || typeof template !== "object") return null;
+    const id = String(template.id || "").trim();
+    const name = String(template.name || "").trim();
+    if (!id || !name) return null;
+    return {
+      id,
+      name,
+      runtimeDataEnabled: typeof template.runtimeDataEnabled !== "undefined" ? Boolean(template.runtimeDataEnabled) : true,
+      runtimeDataType: normalizeRuntimeDataType(template.runtimeDataType),
+      runtimeData: String(template.runtimeData || ""),
+      runtimeDataItems: normalizeRuntimeDataItems(template.runtimeDataItems)
+    };
+  }
+
+  function normalizeRuntimeDataTemplates(list) {
+    if (!Array.isArray(list)) return [];
+    const seen = new Set();
+    const out = [];
+    list.forEach((raw) => {
+      const tpl = normalizeRuntimeTemplate(raw);
+      if (!tpl || seen.has(tpl.id)) return;
+      seen.add(tpl.id);
+      out.push(tpl);
+    });
+    return out;
+  }
+
+  function sanitizeRuntimeTemplateSelectedId(selectedId, templates) {
+    const id = String(selectedId || "");
+    if (!id) return "";
+    return templates.some((tpl) => String(tpl.id) === id) ? id : "";
+  }
+
+  function getActiveRuntimeDataEntries(settings) {
+    if (!isRuntimeDataEnabled(settings)) return [];
+
+    const out = [];
+    const primaryData = String((settings && settings.runtimeData) || "").trim();
+    if (primaryData) {
+      out.push({
+        type: normalizeRuntimeDataType(settings && settings.runtimeDataType),
+        data: primaryData
+      });
+    }
+
+    const extraItems = normalizeRuntimeDataItems(settings && settings.runtimeDataItems);
+    extraItems.forEach((item) => {
+      if (!item.enabled) return;
+      const data = String(item.data || "").trim();
+      if (!data) return;
+      out.push({ type: normalizeRuntimeDataType(item.type), data });
+    });
+
+    return out;
+  }
+
+  function isRuntimeDataEnabled(settings) {
+    return Boolean(settings && settings.runtimeDataEnabled);
+  }
+
+  function getRuntimeSelectorMatcher(type) {
+    if (type === "dni") {
+      return (selector) => /(dni|documento|document|nrodoc|numero.?doc|cuil|cuit|afiliado|nro.?afili)/i.test(selector);
+    }
+    if (type === "affiliate") {
+      return (selector) => /(afiliado|affiliate|nro.?afili|numero.?afili|socio|nro.?socio|numero.?socio)/i.test(selector);
+    }
+    if (type === "authorization") {
+      return (selector) => /(autoriz|autorizacion|authorization|nroaut|numero.?aut)/i.test(selector);
+    }
+    if (type === "name") {
+      return (selector) => /(nombre|name|apellido|afiliado|titular)/i.test(selector);
+    }
+    if (type === "password") {
+      return (selector) => /(password|pass|clave|contrasena|contrasenia)/i.test(selector);
+    }
+    return null;
+  }
+
+  function buildRuntimeVars(baseVars, settings) {
+    const merged = { ...(baseVars || {}) };
+    const entries = getActiveRuntimeDataEntries(settings);
+    if (entries.length === 0) return merged;
+
+    const applyRuntimeVars = (type, runtimeData) => {
+      if (type === "dni") {
+        merged.DNI = runtimeData;
+        merged.DOCUMENTO = runtimeData;
+        merged.AFFILIATE_DNI = runtimeData;
+        merged.AFILIADO = runtimeData;
+      } else if (type === "affiliate") {
+        merged.AFILIADO = runtimeData;
+        merged.AFFILIATE = runtimeData;
+        merged.NRO_AFILIADO = runtimeData;
+        merged.SOCIO = runtimeData;
+      } else if (type === "authorization") {
+        merged.AUTORIZACION = runtimeData;
+        merged.AUTHORIZATION = runtimeData;
+        merged.NRO_AUTORIZACION = runtimeData;
+      } else if (type === "name") {
+        merged.NOMBRE = runtimeData;
+        merged.NAME = runtimeData;
+      } else if (type === "password") {
+        merged.PASSWORD = runtimeData;
+        merged.CLAVE = runtimeData;
+      } else if (type.startsWith("custom:")) {
+        const customLabel = type.slice(7).trim();
+        if (customLabel) {
+          const customVar = customLabel
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^a-zA-Z0-9]+/g, "_")
+            .replace(/^_+|_+$/g, "")
+            .toUpperCase();
+          if (customVar) merged[customVar] = runtimeData;
+        }
+      }
+    };
+
+    entries.forEach((entry, index) => {
+      if (index === 0) {
+        merged.DATO = entry.data;
+      }
+      applyRuntimeVars(entry.type, entry.data);
+    });
+
+    return merged;
+  }
+
+  function applyRuntimeDataToSteps(steps, settings) {
+    if (!Array.isArray(steps) || steps.length === 0) return steps;
+    const entries = getActiveRuntimeDataEntries(settings);
+    if (entries.length === 0) return steps;
+
+    return steps.map((step) => {
+      if (!step || (step.type !== "input" && step.type !== "text")) return step;
+      const selector = String(step.selector || "");
+      if (!selector) return step;
+
+      for (const entry of entries) {
+        const matcher = getRuntimeSelectorMatcher(entry.type);
+        if (!matcher) continue;
+        if (matcher(selector)) {
+          return { ...step, value: entry.data };
+        }
+      }
+      return step;
+    });
+  }
+
+  function getRuntimeFieldKeywords(type) {
+    if (type === "dni") {
+      return ["dni", "documento", "doc", "cuil", "cuit", "afiliado", "nro afiliado", "numero afiliado", "nroafili"];
+    }
+    if (type === "affiliate") {
+      return ["afiliado", "affiliate", "nro afiliado", "numero afiliado", "nroafili", "socio", "nro socio", "numero socio"];
+    }
+    if (type === "authorization") {
+      return ["autoriz", "autorizacion", "authorization", "nro autoriz", "numero autoriz", "nroaut"];
+    }
+    if (type === "name") {
+      return ["nombre", "name", "apellido", "titular", "afiliado"];
+    }
+    if (type === "password") {
+      return ["password", "pass", "clave", "contrasena", "contrasenia"];
+    }
+    if (type.startsWith("custom:")) {
+      const label = type.slice(7).trim();
+      if (!label) return [];
+      const normalized = label
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      const tokens = normalized.split(/[^a-z0-9]+/).filter((t) => t.length >= 3);
+      return [normalized, ...tokens];
+    }
+    return [];
+  }
+
+  function normalizeRuntimeMatchText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\b(n[º°]\.?|nro\.?|nro|num\.?|n\.)\b/g, " numero ")
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function normalizeRuntimeKeywords(list) {
+    if (!Array.isArray(list)) return [];
+    const seen = new Set();
+    const out = [];
+    list.forEach((k) => {
+      const nk = normalizeRuntimeMatchText(k);
+      if (!nk || seen.has(nk)) return;
+      seen.add(nk);
+      out.push(nk);
+    });
+    return out;
+  }
+
+  function scoreRuntimeFieldContext(context, type, keywords, negativeKeywords) {
+    if (!context) return Number.NEGATIVE_INFINITY;
+
+    let score = 0;
+    let matched = false;
+
+    keywords.forEach((k) => {
+      if (!k) return;
+      if (context === k) {
+        score += 14;
+        matched = true;
+        return;
+      }
+      if (context.startsWith(`${k} `) || context.endsWith(` ${k}`) || context.includes(` ${k} `)) {
+        score += k.length >= 10 ? 9 : 7;
+        matched = true;
+        return;
+      }
+      if (context.includes(k)) {
+        score += k.length >= 10 ? 7 : 5;
+        matched = true;
+      }
+    });
+
+    if (!matched) return Number.NEGATIVE_INFINITY;
+
+    negativeKeywords.forEach((k) => {
+      if (!k) return;
+      if (context.includes(k)) {
+        score -= 14;
+      }
+    });
+
+    // Refuerzos semanticos por tipo: suben precision, pero con fallback posterior.
+    if (type === "affiliate") {
+      if (context.includes("numero afiliado") || context.includes("afiliado numero")) score += 20;
+      if (context.includes("afiliado")) score += 8;
+      if (context.includes("nombre apellido") || context.includes("nombre y apellido")) score -= 32;
+    }
+    if (type === "dni") {
+      if (context.includes("dni") || context.includes("documento")) score += 16;
+      if (context.includes("nombre apellido") || context.includes("nombre y apellido")) score -= 30;
+    }
+    if (type === "authorization") {
+      if (context.includes("autorizacion") || context.includes("autorizacion numero") || context.includes("numero autorizacion")) score += 16;
+      if (context.includes("nombre apellido") || context.includes("nombre y apellido")) score -= 26;
+    }
+
+    return score;
+  }
+
+  function getRuntimeFieldNegativeKeywords(type) {
+    if (type === "dni" || type === "affiliate" || type === "authorization") {
+      return ["nombre", "apellido", "name", "razon social", "titular", "medico"]; 
+    }
+    return [];
+  }
+
+  function getFieldContextText(el) {
+    const id = el.id || "";
+    const name = String(el.getAttribute && el.getAttribute("name") || "");
+    const placeholder = String(el.getAttribute && el.getAttribute("placeholder") || "");
+    const aria = String(el.getAttribute && el.getAttribute("aria-label") || "");
+    const title = String(el.getAttribute && el.getAttribute("title") || "");
+    let labelsText = "";
+
+    try {
+      if (el.labels && el.labels.length) {
+        labelsText = Array.from(el.labels).map((l) => (l.textContent || "")).join(" ");
+      } else if (el.id) {
+        const forLabel = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+        if (forLabel) labelsText = forLabel.textContent || "";
+      }
+    } catch (e) { /* ignore */ }
+
+    return normalizeRuntimeMatchText([id, name, placeholder, aria, title, labelsText].filter(Boolean).join(" "));
+  }
+
+  function setRuntimeFieldValue(el, value) {
+    const str = String(value == null ? "" : value);
+    const tag = (el.tagName || "").toLowerCase();
+
+    if (el.isContentEditable) {
+      el.focus && el.focus();
+      el.textContent = str;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      return;
+    }
+
+    if (tag === "select") {
+      el.value = str;
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      return;
+    }
+
+    const proto = el.constructor && el.constructor.prototype;
+    const desc = proto ? Object.getOwnPropertyDescriptor(proto, "value") : null;
+    if (desc && desc.set) desc.set.call(el, str);
+    else el.value = str;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function tryAutoFillRuntimeEntryOnPage(entry, usedElements) {
+    const runtimeData = String((entry && entry.data) || "").trim();
+    if (!runtimeData) return false;
+
+    const type = normalizeRuntimeDataType(entry && entry.type);
+    const keywords = normalizeRuntimeKeywords(getRuntimeFieldKeywords(type));
+    if (keywords.length === 0) return false;
+    const negativeKeywords = normalizeRuntimeKeywords(getRuntimeFieldNegativeKeywords(type));
+
+    const fields = document.querySelectorAll("input, textarea, select, [contenteditable='true'], [contenteditable='']");
+    const candidates = [];
+
+    fields.forEach((el) => {
+      if (!(el instanceof Element)) return;
+      if (usedElements && usedElements.has(el)) return;
+      if (el.closest && el.closest("#webmatic-panel-root")) return;
+      if (el instanceof HTMLInputElement) {
+        const itype = (el.type || "").toLowerCase();
+        if (["hidden", "submit", "button", "checkbox", "radio", "file"].includes(itype)) return;
+      }
+      if ("disabled" in el && el.disabled) return;
+      if ("readOnly" in el && el.readOnly) return;
+
+      const context = getFieldContextText(el);
+      if (!context) return;
+      if (!keywords.some((k) => context.includes(k))) return;
+
+      const current = ("value" in el ? String(el.value || "") : String(el.textContent || "")).trim();
+      if (current === runtimeData) return;
+      if (current && type !== "password") return;
+
+      let score = scoreRuntimeFieldContext(context, type, keywords, negativeKeywords);
+
+      if ((type === "dni" || type === "affiliate" || type === "authorization") && /^\d+$/.test(runtimeData)) {
+        if (el instanceof HTMLInputElement) {
+          const itype = String(el.type || "text").toLowerCase();
+          if (["text", "search", "tel", "number"].includes(itype)) {
+            score += 2;
+          }
+        }
+      }
+
+      candidates.push({ el, score, context });
+    });
+
+    if (candidates.length === 0) return false;
+    candidates.sort((a, b) => b.score - a.score);
+    let best = candidates.find((c) => c.score >= 10);
+    if (!best) {
+      // Fallback: si no hay coincidencia fuerte, usa la mejor positiva para no bloquear.
+      best = candidates.find((c) => c.score > 0) || null;
+    }
+    if (!best) {
+      // Ultimo fallback: con un unico candidato ambiguo, intentar igualmente.
+      if (candidates.length === 1) {
+        best = candidates[0];
+      } else {
+        return false;
+      }
+    }
+
+    setRuntimeFieldValue(best.el, runtimeData);
+    if (usedElements) usedElements.add(best.el);
+
+    return true;
+  }
+
+  function tryAutoFillRuntimeDataOnPage(settings) {
+    const entries = getActiveRuntimeDataEntries(settings);
+    if (entries.length === 0) return false;
+
+    let applied = false;
+    const usedElements = new Set();
+    entries.forEach((entry) => {
+      if (tryAutoFillRuntimeEntryOnPage(entry, usedElements)) {
+        applied = true;
+      }
+    });
+    return applied;
+  }
+
   // ── Playback floating panel ─────────────────────────────────────────────
   function _stepLabel(s) {
     if (!s) return "";
@@ -1637,6 +2062,211 @@
         settingsApi.saveSettings({ waitThreshold });
       }
 
+      if (actionId === "play-runtime-enabled") {
+        const runtimeDataEnabled = Boolean(meta?.checked);
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeDataEnabled } });
+        settingsApi.saveSettings({ runtimeDataEnabled });
+      }
+
+      if (actionId === "play-runtime-type") {
+        const runtimeDataType = normalizeRuntimeDataType(meta?.value);
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeDataType } });
+        settingsApi.saveSettings({ runtimeDataType });
+      }
+
+      if (actionId === "play-runtime-item-add") {
+        const current = store.getState().settings;
+        const next = [...normalizeRuntimeDataItems(current.runtimeDataItems), { enabled: true, type: "generic", data: "" }];
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeDataItems: next } });
+        settingsApi.saveSettings({ runtimeDataItems: next });
+      }
+
+      if (actionId === "play-runtime-item-remove") {
+        const current = store.getState().settings;
+        const index = Number(meta?.index);
+        if (!Number.isFinite(index) || index < 0) return;
+        const currentItems = normalizeRuntimeDataItems(current.runtimeDataItems);
+        const next = currentItems.filter((_, i) => i !== index);
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeDataItems: next } });
+        settingsApi.saveSettings({ runtimeDataItems: next });
+      }
+
+      if (actionId === "play-runtime-item-type") {
+        const current = store.getState().settings;
+        const index = Number(meta?.index);
+        if (!Number.isFinite(index) || index < 0) return;
+        const currentItems = normalizeRuntimeDataItems(current.runtimeDataItems);
+        if (!currentItems[index]) return;
+        currentItems[index] = { ...currentItems[index], type: normalizeRuntimeDataType(meta?.value) };
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeDataItems: currentItems } });
+        settingsApi.saveSettings({ runtimeDataItems: currentItems });
+      }
+
+      if (actionId === "play-runtime-item-enabled") {
+        const current = store.getState().settings;
+        const index = Number(meta?.index);
+        if (!Number.isFinite(index) || index < 0) return;
+        const currentItems = normalizeRuntimeDataItems(current.runtimeDataItems);
+        if (!currentItems[index]) return;
+        currentItems[index] = { ...currentItems[index], enabled: Boolean(meta?.checked) };
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeDataItems: currentItems } });
+        settingsApi.saveSettings({ runtimeDataItems: currentItems });
+      }
+
+      if (actionId === "play-runtime-template-select") {
+        const current = store.getState().settings;
+        const templates = normalizeRuntimeDataTemplates(current.runtimeDataTemplates);
+        const runtimeTemplateSelectedId = sanitizeRuntimeTemplateSelectedId(meta?.value, templates);
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeTemplateSelectedId } });
+        settingsApi.saveSettings({ runtimeTemplateSelectedId });
+      }
+
+      if (actionId === "play-runtime-template-save") {
+        const current = store.getState().settings;
+        const templates = normalizeRuntimeDataTemplates(current.runtimeDataTemplates);
+        const selectedId = sanitizeRuntimeTemplateSelectedId(current.runtimeTemplateSelectedId, templates);
+        const selected = templates.find((tpl) => tpl.id === selectedId);
+        const defaultName = selected ? selected.name : "Plantilla";
+        const askedName = await uiShell.wmModal("prompt", {
+          message: "Nombre de la plantilla:",
+          defaultValue: defaultName,
+          okLabel: "Guardar"
+        });
+        const name = String(askedName || "").trim();
+        if (!name) return;
+
+        const snapshot = {
+          id: selected ? selected.id : `rtpl_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+          name,
+          runtimeDataEnabled: Boolean(current.runtimeDataEnabled),
+          runtimeDataType: normalizeRuntimeDataType(current.runtimeDataType),
+          runtimeData: String(current.runtimeData || ""),
+          runtimeDataItems: normalizeRuntimeDataItems(current.runtimeDataItems)
+        };
+
+        const byNameIdx = templates.findIndex((tpl) => String(tpl.name).toLowerCase() === name.toLowerCase());
+        const byIdIdx = templates.findIndex((tpl) => tpl.id === snapshot.id);
+        const nextTemplates = [...templates];
+        if (byIdIdx >= 0) {
+          nextTemplates[byIdIdx] = snapshot;
+        } else if (byNameIdx >= 0) {
+          nextTemplates[byNameIdx] = { ...snapshot, id: nextTemplates[byNameIdx].id };
+        } else {
+          nextTemplates.push(snapshot);
+        }
+
+        const runtimeTemplateSelectedId = snapshot.id;
+        store.dispatch({
+          type: contracts.ActionTypes.SETTINGS_UPDATED,
+          payload: { runtimeDataTemplates: nextTemplates, runtimeTemplateSelectedId }
+        });
+        settingsApi.saveSettings({ runtimeDataTemplates: nextTemplates, runtimeTemplateSelectedId });
+        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Plantilla "${name}" guardada` });
+      }
+
+      if (actionId === "play-runtime-template-apply") {
+        const current = store.getState().settings;
+        const templates = normalizeRuntimeDataTemplates(current.runtimeDataTemplates);
+        const selectedId = sanitizeRuntimeTemplateSelectedId(current.runtimeTemplateSelectedId, templates);
+        const selected = templates.find((tpl) => tpl.id === selectedId);
+        if (!selected) {
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Selecciona una plantilla para aplicar" });
+          return;
+        }
+
+        const patch = {
+          runtimeDataEnabled: Boolean(selected.runtimeDataEnabled),
+          runtimeDataType: normalizeRuntimeDataType(selected.runtimeDataType),
+          runtimeData: String(selected.runtimeData || ""),
+          runtimeDataItems: normalizeRuntimeDataItems(selected.runtimeDataItems),
+          runtimeTemplateSelectedId: selected.id
+        };
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: patch });
+        settingsApi.saveSettings(patch);
+        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Plantilla "${selected.name}" aplicada` });
+      }
+
+      if (actionId === "play-runtime-template-delete") {
+        const current = store.getState().settings;
+        const templates = normalizeRuntimeDataTemplates(current.runtimeDataTemplates);
+        const selectedId = sanitizeRuntimeTemplateSelectedId(current.runtimeTemplateSelectedId, templates);
+        const selected = templates.find((tpl) => tpl.id === selectedId);
+        if (!selected) {
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No hay plantilla seleccionada" });
+          return;
+        }
+        const ok = await uiShell.wmModal("confirm", {
+          message: `¿Eliminar la plantilla \"${selected.name}\"?`,
+          okLabel: "Eliminar",
+          cancelLabel: "Cancelar"
+        });
+        if (!ok) return;
+        const nextTemplates = templates.filter((tpl) => tpl.id !== selected.id);
+        store.dispatch({
+          type: contracts.ActionTypes.SETTINGS_UPDATED,
+          payload: { runtimeDataTemplates: nextTemplates, runtimeTemplateSelectedId: "" }
+        });
+        settingsApi.saveSettings({ runtimeDataTemplates: nextTemplates, runtimeTemplateSelectedId: "" });
+      }
+
+      if (actionId === "settings-custom-type-add") {
+        const current = store.getState().settings;
+        const label = String(meta?.value || "").trim();
+        if (label.length < 3) {
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "El tipo personalizado debe tener al menos 3 caracteres" });
+          return;
+        }
+        const next = normalizeRuntimeCustomTypes([...(current.runtimeCustomTypes || []), label]);
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeCustomTypes: next } });
+        settingsApi.saveSettings({ runtimeCustomTypes: next });
+      }
+
+      if (actionId === "settings-custom-type-remove") {
+        const current = store.getState().settings;
+        const label = String(meta?.customLabel || "").trim();
+        const next = normalizeRuntimeCustomTypes((current.runtimeCustomTypes || []).filter((x) => String(x).toLowerCase() !== label.toLowerCase()));
+        const nextType = String(current.runtimeDataType || "generic").toLowerCase() === `custom:${label.toLowerCase()}`
+          ? "generic"
+          : current.runtimeDataType;
+        const nextItems = normalizeRuntimeDataItems(current.runtimeDataItems).map((item) => {
+          if (String(item.type || "").toLowerCase() === `custom:${label.toLowerCase()}`) {
+            return { ...item, type: "generic" };
+          }
+          return item;
+        });
+        const nextTemplates = normalizeRuntimeDataTemplates(current.runtimeDataTemplates).map((tpl) => {
+          const normalizedType = String(tpl.runtimeDataType || "").toLowerCase() === `custom:${label.toLowerCase()}`
+            ? "generic"
+            : tpl.runtimeDataType;
+          const normalizedItems = normalizeRuntimeDataItems(tpl.runtimeDataItems).map((item) => {
+            if (String(item.type || "").toLowerCase() === `custom:${label.toLowerCase()}`) {
+              return { ...item, type: "generic" };
+            }
+            return item;
+          });
+          return { ...tpl, runtimeDataType: normalizedType, runtimeDataItems: normalizedItems };
+        });
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeCustomTypes: next, runtimeDataType: nextType, runtimeDataItems: nextItems, runtimeDataTemplates: nextTemplates } });
+        settingsApi.saveSettings({ runtimeCustomTypes: next, runtimeDataType: nextType, runtimeDataItems: nextItems, runtimeDataTemplates: nextTemplates });
+      }
+
+      if (actionId === "play-runtime-data" || actionId === "settings-runtime-data") {
+        const runtimeData = String(meta?.value || "");
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeData } });
+        settingsApi.saveSettings({ runtimeData });
+      }
+
+      if (actionId === "play-runtime-item-data") {
+        const current = store.getState().settings;
+        const index = Number(meta?.index);
+        if (!Number.isFinite(index) || index < 0) return;
+        const currentItems = normalizeRuntimeDataItems(current.runtimeDataItems);
+        if (!currentItems[index]) return;
+        currentItems[index] = { ...currentItems[index], data: String(meta?.value || "") };
+        store.dispatch({ type: contracts.ActionTypes.SETTINGS_UPDATED, payload: { runtimeDataItems: currentItems } });
+        settingsApi.saveSettings({ runtimeDataItems: currentItems });
+      }
+
       if (actionId === "folder-pick") {
         chrome.runtime.sendMessage({ type: "OPEN_OPTIONS_PAGE" }, () => { void chrome.runtime.lastError; });
       }
@@ -1709,17 +2339,20 @@
           playerRuntime.activePlayer = _player;
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _resolvedSteps = _resolveCallMacros(_macro.steps, _state.library.macros);
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _resolvedSteps } });
-          _player.play(_resolvedSteps, {
+          const _preparedSteps = applyRuntimeDataToSteps(_resolvedSteps, _state.settings);
+          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _preparedSteps } });
+          _player.play(_preparedSteps, {
             speed: _state.settings.speed ?? 1,
+            vars: buildRuntimeVars(null, _state.settings),
             macroId: _macro.id,
             onStep: (step, index) => {
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _resolvedSteps } });
+              tryAutoFillRuntimeDataOnPage(_state.settings);
+              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _preparedSteps } });
             },
             onDone: () => {
               playerRuntime.activePlayer = null;
               // Mark all steps done, then stop
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _resolvedSteps.length, steps: _resolvedSteps } });
+              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _preparedSteps.length, steps: _preparedSteps } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
               store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
             },
@@ -1755,20 +2388,25 @@
             playerRuntime.activePlayer = _fbPlayer;
             let _fbIter = 0;
             const _fbResolved = _resolveCallMacros(_fbMacro.steps, _fbState.library.macros);
-            store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _fbResolved } });
+            const _fbPrepared = applyRuntimeDataToSteps(_fbResolved, _fbState.settings);
+            store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _fbPrepared } });
             function _fbNext() {
               if (_fbIter >= n || _fbPlayer._abort) {
                 playerRuntime.activePlayer = null;
-                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _fbResolved.length, steps: _fbResolved } });
+                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _fbPrepared.length, steps: _fbPrepared } });
                 store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
                 return;
               }
               _fbIter++;
               _fbPlayer._abort = false;
-              _fbPlayer.play(_fbResolved, {
+              _fbPlayer.play(_fbPrepared, {
                 speed: _fbState.settings.speed ?? 1,
+                vars: buildRuntimeVars(null, _fbState.settings),
                 macroId: _fbMacro.id,
-                onStep: (step, index) => { store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _fbResolved } }); },
+                onStep: (step, index) => {
+                  tryAutoFillRuntimeDataOnPage(_fbState.settings);
+                  store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _fbPrepared } });
+                },
                 onDone: _fbNext,
                 onError: (err) => {
                   playerRuntime.activePlayer = null;
@@ -1803,21 +2441,24 @@
           let _lIter = 0;
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _lResolvedSteps = _resolveCallMacros(_lmacro.steps, _lstate.library.macros);
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lResolvedSteps } });
+          const _lPreparedSteps = applyRuntimeDataToSteps(_lResolvedSteps, _lstate.settings);
+          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lPreparedSteps } });
           function _lNext() {
             if (_lIter >= _lCount || _lPlayer._abort) {
               playerRuntime.activePlayer = null;
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _lResolvedSteps.length, steps: _lResolvedSteps } });
+              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _lPreparedSteps.length, steps: _lPreparedSteps } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
               return;
             }
             _lIter++;
             _lPlayer._abort = false;
-            _lPlayer.play(_lResolvedSteps, {
+            _lPlayer.play(_lPreparedSteps, {
               speed: _lstate.settings.speed ?? 1,
+              vars: buildRuntimeVars(null, _lstate.settings),
               macroId: _lmacro.id,
               onStep: (step, index) => {
-                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lResolvedSteps } });
+                tryAutoFillRuntimeDataOnPage(_lstate.settings);
+                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lPreparedSteps } });
               },
               onDone: _lNext,
               onError: (err) => {
@@ -1841,20 +2482,25 @@
           playerRuntime.activePlayer = _lnPlayer;
           let _lnIter = 0;
           const _lnResolved = _resolveCallMacros(_lnmacro.steps, _lnstate.library.macros);
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lnResolved } });
+          const _lnPrepared = applyRuntimeDataToSteps(_lnResolved, _lnstate.settings);
+          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lnPrepared } });
           function _lnNext() {
             if (_lnIter >= n || _lnPlayer._abort) {
               playerRuntime.activePlayer = null;
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _lnResolved.length, steps: _lnResolved } });
+              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _lnPrepared.length, steps: _lnPrepared } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
               return;
             }
             _lnIter++;
             _lnPlayer._abort = false;
-            _lnPlayer.play(_lnResolved, {
+            _lnPlayer.play(_lnPrepared, {
               speed: _lnstate.settings.speed ?? 1,
+              vars: buildRuntimeVars(null, _lnstate.settings),
               macroId: _lnmacro.id,
-              onStep: (step, index) => { store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lnResolved } }); },
+              onStep: (step, index) => {
+                tryAutoFillRuntimeDataOnPage(_lnstate.settings);
+                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lnPrepared } });
+              },
               onDone: _lnNext,
               onError: (err) => {
                 playerRuntime.activePlayer = null;
@@ -2202,6 +2848,8 @@
 
   settingsApi.getSettings().then((settings) => {
     const themeSettings = resolveTheme(settings.themeMode, settings.themeVariant);
+    const runtimeDataTemplates = normalizeRuntimeDataTemplates(settings.runtimeDataTemplates);
+    const runtimeTemplateSelectedId = sanitizeRuntimeTemplateSelectedId(settings.runtimeTemplateSelectedId, runtimeDataTemplates);
     store.dispatch({ type: contracts.ActionTypes.PANEL_WIDTH_SET, payload: 260 });
     store.dispatch({ type: contracts.ActionTypes.PANEL_SIDE_SET, payload: settings.panelSide });
     store.dispatch({
@@ -2211,6 +2859,13 @@
         speed: settings.speed ?? 1,
         panelOpacity: settings.panelOpacity ?? 1,
         waitThreshold: settings.waitThreshold ?? 3,
+        runtimeDataEnabled: Boolean(settings.runtimeDataEnabled),
+        runtimeDataType: normalizeRuntimeDataType(settings.runtimeDataType),
+        runtimeCustomTypes: normalizeRuntimeCustomTypes(settings.runtimeCustomTypes),
+        runtimeData: settings.runtimeData || "",
+        runtimeDataItems: normalizeRuntimeDataItems(settings.runtimeDataItems),
+        runtimeDataTemplates,
+        runtimeTemplateSelectedId,
         downloadFolder: settings.downloadFolder || ""
       }
     });
@@ -2264,11 +2919,14 @@
           const _rPlayer = new _RPlayerClass();
           playerRuntime.activePlayer = _rPlayer;
           const _rResolvedSteps = _resolveCallMacros(_rmacro.steps, _rstate.library.macros);
-          _rPlayer.play(_rResolvedSteps, {
+          const _rPreparedSteps = applyRuntimeDataToSteps(_rResolvedSteps, _rstate.settings);
+          _rPlayer.play(_rPreparedSteps, {
             speed: p.speed,
+            vars: buildRuntimeVars(p.vars, _rstate.settings),
             macroId: p.macroId,
             onStep: (step, index) => {
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rResolvedSteps } });
+              tryAutoFillRuntimeDataOnPage(_rstate.settings);
+              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rPreparedSteps } });
             },
             onDone: () => {
               playerRuntime.activePlayer = null;
@@ -2299,20 +2957,25 @@
           playerRuntime.activePlayer = _rnPlayer;
           let _rnIter = 0;
           const _rnResolved = _resolveCallMacros(_rnmacro.steps, _rnstate.library.macros);
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _rnResolved } });
+          const _rnPrepared = applyRuntimeDataToSteps(_rnResolved, _rnstate.settings);
+          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _rnPrepared } });
           function _rnNext() {
             if (_rnIter >= n || _rnPlayer._abort) {
               playerRuntime.activePlayer = null;
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _rnResolved.length, steps: _rnResolved } });
+              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _rnPrepared.length, steps: _rnPrepared } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
               return;
             }
             _rnIter++;
             _rnPlayer._abort = false;
-            _rnPlayer.play(_rnResolved, {
+            _rnPlayer.play(_rnPrepared, {
               speed: p.speed,
+              vars: buildRuntimeVars(p.vars, _rnstate.settings),
               macroId: p.macroId,
-              onStep: (step, index) => { store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rnResolved } }); },
+              onStep: (step, index) => {
+                tryAutoFillRuntimeDataOnPage(_rnstate.settings);
+                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rnPrepared } });
+              },
               onDone: _rnNext,
               onError: (err) => {
                 playerRuntime.activePlayer = null;
@@ -2335,9 +2998,10 @@
       player.play(p.steps, {
         speed: p.speed,
         startIndex: p.index,
-        vars: p.vars,
+        vars: buildRuntimeVars(p.vars, store.getState().settings),
         macroId: p.macroId,
         onStep: (step, index) => {
+          tryAutoFillRuntimeDataOnPage(store.getState().settings);
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: p.steps } });
         },
         onDone: () => {
@@ -2362,6 +3026,8 @@
     }
 
     const nextSettings = changes.webmaticSettings.newValue || {};
+    const runtimeDataTemplates = normalizeRuntimeDataTemplates(nextSettings.runtimeDataTemplates);
+    const runtimeTemplateSelectedId = sanitizeRuntimeTemplateSelectedId(nextSettings.runtimeTemplateSelectedId, runtimeDataTemplates);
     store.dispatch({ type: contracts.ActionTypes.PANEL_WIDTH_SET, payload: 260 });
     if (typeof nextSettings.panelSide !== "undefined") {
       store.dispatch({ type: contracts.ActionTypes.PANEL_SIDE_SET, payload: nextSettings.panelSide });
@@ -2371,7 +3037,14 @@
       payload: {
         ...resolveTheme(nextSettings.themeMode, nextSettings.themeVariant),
         speed: nextSettings.speed ?? 1,
-        panelOpacity: nextSettings.panelOpacity ?? 1
+        panelOpacity: nextSettings.panelOpacity ?? 1,
+        runtimeDataEnabled: Boolean(nextSettings.runtimeDataEnabled),
+        runtimeDataType: normalizeRuntimeDataType(nextSettings.runtimeDataType),
+        runtimeCustomTypes: normalizeRuntimeCustomTypes(nextSettings.runtimeCustomTypes),
+        runtimeData: nextSettings.runtimeData || "",
+        runtimeDataItems: normalizeRuntimeDataItems(nextSettings.runtimeDataItems),
+        runtimeDataTemplates,
+        runtimeTemplateSelectedId
       }
     });
   };

@@ -96,7 +96,14 @@
       surfaceColor: "#fffaf3",
       speed: 1.5,
       panelOpacity: 1,
-      waitThreshold: 3
+      waitThreshold: 3,
+      runtimeDataEnabled: false,
+      runtimeDataType: "generic",
+      runtimeCustomTypes: [],
+      runtimeData: "",
+      runtimeDataItems: [],
+      runtimeDataTemplates: [],
+      runtimeTemplateSelectedId: ""
     }
   });
 
