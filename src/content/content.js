@@ -3167,7 +3167,66 @@
 
   const onRuntimeMessage = (message, sender, sendResponse) => {
     if (message?.type === "STOP_INLINE_RECORDING") {
-      if (typeof _activeInlineStop === "function") _activeInlineStop();
+      if (typeof _activeInlineStop === "function") {
+        _activeInlineStop();
+      } else {
+        // La página navegó y se perdió el contexto — limpiar el estado en background
+        const mirrorPanel = document.getElementById(INLINE_REC_PANEL_ID + "-mirror");
+        if (mirrorPanel && mirrorPanel.parentNode) mirrorPanel.parentNode.removeChild(mirrorPanel);
+        try { chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STOPPED" }, () => { void chrome.runtime.lastError; }); } catch (e) { /* ignore */ }
+      }
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    if (message?.type === "SHOW_INLINE_REC_MIRROR") {
+      // Si somos la pestaña original y el panel ya existe, no hacer nada
+      if (typeof _activeInlineStop === "function" && document.getElementById(INLINE_REC_PANEL_ID)) {
+        sendResponse({ ok: true }); return true;
+      }
+      // Eliminar mirror anterior si existe
+      const old = document.getElementById(INLINE_REC_PANEL_ID + "-mirror");
+      if (old && old.parentNode) old.parentNode.removeChild(old);
+      // Crear panel espejo flotante con solo el botón Detener
+      const mp = document.createElement("div");
+      mp.id = INLINE_REC_PANEL_ID + "-mirror";
+      mp.style.cssText = [
+        "all:initial","position:fixed","bottom:16px","right:16px","z-index:2147483647",
+        "display:flex","align-items:center","gap:8px",
+        "background:rgba(239,68,68,0.95)","color:#fff",
+        "border-radius:10px","padding:10px 14px",
+        "font-family:system-ui,sans-serif","font-size:13px","font-weight:600",
+        "box-shadow:0 4px 20px rgba(239,68,68,0.4)",
+        "cursor:default","user-select:none"
+      ].join(";");
+      if (!document.getElementById("webmatic-floating-keyframes")) {
+        const ks = document.createElement("style");
+        ks.id = "webmatic-floating-keyframes";
+        ks.textContent = "@keyframes webmatic-pulse{0%,100%{opacity:1}50%{opacity:0.35}}";
+        document.head.appendChild(ks);
+      }
+      const mdot = document.createElement("span");
+      mdot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:50%;background:#fff;animation:webmatic-pulse 0.8s infinite;flex-shrink:0";
+      mp.appendChild(mdot);
+      const mlbl = document.createElement("span");
+      mlbl.textContent = "Grabando pasos nuevos";
+      mp.appendChild(mlbl);
+      const mstop = document.createElement("button");
+      mstop.style.cssText = [
+        "all:initial","display:inline-flex","align-items:center","gap:4px",
+        "background:#fff","color:#dc2626","border-radius:6px",
+        "padding:4px 10px","font-size:12px","font-weight:700",
+        "font-family:system-ui,sans-serif","cursor:pointer",
+        "margin-left:6px","white-space:nowrap"
+      ].join(";");
+      mstop.textContent = "\u23F9 Detener";
+      mstop.addEventListener("click", (e) => {
+        e.stopPropagation();
+        mp.parentNode && mp.parentNode.removeChild(mp);
+        chrome.runtime.sendMessage({ type: "STOP_INLINE_RECORDING" }, () => { void chrome.runtime.lastError; });
+      });
+      mp.appendChild(mstop);
+      document.documentElement.appendChild(mp);
       sendResponse({ ok: true });
       return true;
     }

@@ -130,6 +130,10 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
     if (chrome.runtime.lastError) return;
     if (isRecording) ensureFloatingBtnInTab(tab);
     if (panelOpenTabs.has(activeInfo.tabId)) ensurePanelOpenInTab(tab);
+    // Mostrar panel espejo de grabación inline en la pestaña activa
+    if (inlineRecordingTabId !== null) {
+      sendMessageToTab(activeInfo.tabId, { type: "SHOW_INLINE_REC_MIRROR" });
+    }
   });
 });
 
@@ -137,10 +141,15 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete") return;
   if (isRecording) ensureFloatingBtnInTab(tab);
   if (panelOpenTabs.has(tabId)) ensurePanelOpenInTab(tab);
+  // Si la pestaña de grabación inline navegó, reinyectar el panel en la nueva página
+  if (inlineRecordingTabId === tabId) {
+    sendMessageToTab(tabId, { type: "SHOW_INLINE_REC_MIRROR" });
+  }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   panelOpenTabs.delete(tabId);
+  if (inlineRecordingTabId === tabId) inlineRecordingTabId = null;
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
