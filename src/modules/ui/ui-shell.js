@@ -72,7 +72,7 @@
             <input class="webmatic-search-input" data-action-input="library-search" type="text" placeholder="Buscar macro..." autocomplete="off" />
           </div>
           <details class="webmatic-play-data-box" aria-label="Dato de ejecucion">
-            <summary class="webmatic-play-data-summary">Datos de autocompletado (opcional)</summary>
+            <summary class="webmatic-play-data-summary">Datos de autocompletado</summary>
             <div class="webmatic-play-data-content">
               <div class="webmatic-play-data-tag">Dato para autocompletar</div>
               <label class="webmatic-toggle-row" for="webmatic-play-runtime-enabled">

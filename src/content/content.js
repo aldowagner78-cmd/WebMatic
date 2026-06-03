@@ -287,7 +287,8 @@
   };
 
   const playerRuntime = {
-    activePlayer: null
+    activePlayer: null,
+    runtimeAutoFillLocks: new Map()
   };
 
   // ── Visual step editor state ─────────────────────────────────────────
@@ -657,6 +658,7 @@
     if (tag === "select") {
       el.value = str;
       el.dispatchEvent(new Event("change", { bubbles: true }));
+      try { el.setAttribute("data-webmatic-runtime-autofill", "1"); } catch (e) { /* ignore */ }
       return;
     }
 
@@ -666,6 +668,35 @@
     else el.value = str;
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
+    try { el.setAttribute("data-webmatic-runtime-autofill", "1"); } catch (e) { /* ignore */ }
+  }
+
+  function clearRuntimeAutofilledFields() {
+    const fields = document.querySelectorAll("[data-webmatic-runtime-autofill='1']");
+    fields.forEach((el) => {
+      try {
+        const tag = String(el.tagName || "").toLowerCase();
+        if (tag === "select") {
+          if (el.options && el.options.length > 0) {
+            el.selectedIndex = 0;
+          } else {
+            el.value = "";
+          }
+        } else if ("value" in el) {
+          el.value = "";
+        } else if (el.isContentEditable) {
+          el.textContent = "";
+        }
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      } catch (e) { /* ignore */ }
+      try { el.removeAttribute("data-webmatic-runtime-autofill"); } catch (e) { /* ignore */ }
+    });
+  }
+
+  function resetRuntimeAutoFillSession() {
+    playerRuntime.runtimeAutoFillLocks = new Map();
+    clearRuntimeAutofilledFields();
   }
 
   function tryAutoFillRuntimeEntryOnPage(entry, usedElements) {
@@ -673,6 +704,23 @@
     if (!runtimeData) return false;
 
     const type = normalizeRuntimeDataType(entry && entry.type);
+    const entryKey = `${type}::${runtimeData}`;
+    const lockedTarget = playerRuntime.runtimeAutoFillLocks && playerRuntime.runtimeAutoFillLocks.get(entryKey);
+    if (lockedTarget && lockedTarget.isConnected) {
+      if (usedElements && usedElements.has(lockedTarget)) return false;
+      if (!("disabled" in lockedTarget) || !lockedTarget.disabled) {
+        if (!("readOnly" in lockedTarget) || !lockedTarget.readOnly) {
+          const currentLocked = ("value" in lockedTarget ? String(lockedTarget.value || "") : String(lockedTarget.textContent || "")).trim();
+          if (currentLocked !== runtimeData) {
+            setRuntimeFieldValue(lockedTarget, runtimeData);
+          }
+          if (usedElements) usedElements.add(lockedTarget);
+          return true;
+        }
+      }
+      playerRuntime.runtimeAutoFillLocks.delete(entryKey);
+    }
+
     const keywords = normalizeRuntimeKeywords(getRuntimeFieldKeywords(type));
     if (keywords.length === 0) return false;
     const negativeKeywords = normalizeRuntimeKeywords(getRuntimeFieldNegativeKeywords(type));
@@ -694,6 +742,17 @@
       const context = getFieldContextText(el);
       if (!context) return;
       if (!keywords.some((k) => context.includes(k))) return;
+
+      // Para tipos numericos, si un campo tiene contexto negativo sin ancla positiva,
+      // no se considera candidato para evitar contaminar campos de nombre/apellido.
+      if (type === "dni" || type === "affiliate" || type === "authorization") {
+        const hasNegative = negativeKeywords.some((k) => k && context.includes(k));
+        const hasPositiveAnchor =
+          (type === "affiliate" && (context.includes("numero afiliado") || context.includes("afiliado numero") || context.includes("afiliado"))) ||
+          (type === "dni" && (context.includes("dni") || context.includes("documento"))) ||
+          (type === "authorization" && (context.includes("autorizacion") || context.includes("numero autorizacion") || context.includes("autorizacion numero")));
+        if (hasNegative && !hasPositiveAnchor) return;
+      }
 
       const current = ("value" in el ? String(el.value || "") : String(el.textContent || "")).trim();
       if (current === runtimeData) return;
@@ -720,16 +779,12 @@
       // Fallback: si no hay coincidencia fuerte, usa la mejor positiva para no bloquear.
       best = candidates.find((c) => c.score > 0) || null;
     }
-    if (!best) {
-      // Ultimo fallback: con un unico candidato ambiguo, intentar igualmente.
-      if (candidates.length === 1) {
-        best = candidates[0];
-      } else {
-        return false;
-      }
-    }
+    if (!best) return false;
 
     setRuntimeFieldValue(best.el, runtimeData);
+    if (playerRuntime.runtimeAutoFillLocks) {
+      playerRuntime.runtimeAutoFillLocks.set(entryKey, best.el);
+    }
     if (usedElements) usedElements.add(best.el);
 
     return true;
@@ -2337,6 +2392,7 @@
           if (!_PlayerClass || !Array.isArray(_macro.steps) || _macro.steps.length === 0) return;
           const _player = new _PlayerClass();
           playerRuntime.activePlayer = _player;
+          resetRuntimeAutoFillSession();
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _resolvedSteps = _resolveCallMacros(_macro.steps, _state.library.macros);
           const _preparedSteps = applyRuntimeDataToSteps(_resolvedSteps, _state.settings);
@@ -2386,6 +2442,7 @@
             store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Bucle x${n}: "${_fbMacro.name}"` });
             const _fbPlayer = new (globalScope.WebMaticPlayer)();
             playerRuntime.activePlayer = _fbPlayer;
+            resetRuntimeAutoFillSession();
             let _fbIter = 0;
             const _fbResolved = _resolveCallMacros(_fbMacro.steps, _fbState.library.macros);
             const _fbPrepared = applyRuntimeDataToSteps(_fbResolved, _fbState.settings);
@@ -2438,6 +2495,7 @@
           if (!_LPlayerClass || !Array.isArray(_lmacro.steps) || _lmacro.steps.length === 0) return;
           const _lPlayer = new _LPlayerClass();
           playerRuntime.activePlayer = _lPlayer;
+          resetRuntimeAutoFillSession();
           let _lIter = 0;
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _lResolvedSteps = _resolveCallMacros(_lmacro.steps, _lstate.library.macros);
@@ -2480,6 +2538,7 @@
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Bucle x${n}: "${_lnmacro.name}"` });
           const _lnPlayer = new (globalScope.WebMaticPlayer)();
           playerRuntime.activePlayer = _lnPlayer;
+          resetRuntimeAutoFillSession();
           let _lnIter = 0;
           const _lnResolved = _resolveCallMacros(_lnmacro.steps, _lnstate.library.macros);
           const _lnPrepared = applyRuntimeDataToSteps(_lnResolved, _lnstate.settings);
@@ -2918,6 +2977,7 @@
           if (!_RPlayerClass) return;
           const _rPlayer = new _RPlayerClass();
           playerRuntime.activePlayer = _rPlayer;
+          resetRuntimeAutoFillSession();
           const _rResolvedSteps = _resolveCallMacros(_rmacro.steps, _rstate.library.macros);
           const _rPreparedSteps = applyRuntimeDataToSteps(_rResolvedSteps, _rstate.settings);
           _rPlayer.play(_rPreparedSteps, {
@@ -2955,6 +3015,7 @@
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Bucle x${n}: "${_rnmacro.name}"` });
           const _rnPlayer = new (globalScope.WebMaticPlayer)();
           playerRuntime.activePlayer = _rnPlayer;
+          resetRuntimeAutoFillSession();
           let _rnIter = 0;
           const _rnResolved = _resolveCallMacros(_rnmacro.steps, _rnstate.library.macros);
           const _rnPrepared = applyRuntimeDataToSteps(_rnResolved, _rnstate.settings);
@@ -2995,6 +3056,7 @@
       }
       const player = new PlayerClass();
       playerRuntime.activePlayer = player;
+      resetRuntimeAutoFillSession();
       player.play(p.steps, {
         speed: p.speed,
         startIndex: p.index,
