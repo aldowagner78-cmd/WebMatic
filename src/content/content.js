@@ -1545,6 +1545,7 @@
   }
 
   const INLINE_REC_PANEL_ID = "webmatic-inline-rec-panel";
+  let _activeInlineStop = null; // función _stop() de la grabación inline activa
 
   /**
    * Starts a lightweight recording session isolated from the main draft.
@@ -1732,11 +1733,14 @@
     }
 
     function _stop() {
+      _activeInlineStop = null;
       _cleanup();
       // Restaurar el panel si estaba visible antes de grabar
       if (_wasVisible && !store.getState().ui.panelVisible) {
         store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
       }
+      // Notificar al background que terminó la grabación inline
+      try { chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STOPPED" }, () => { void chrome.runtime.lastError; }); } catch (e) { /* ignore */ }
       const filtered = _cleanupSteps(buffer);
       if (typeof onDone === "function") onDone(filtered);
     }
@@ -1789,6 +1793,10 @@
     panel.appendChild(stopBtn);
 
     document.documentElement.appendChild(panel);
+
+    // Notificar al background que empezó la grabación inline y exponer _stop
+    _activeInlineStop = _stop;
+    try { chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STARTED" }, () => { void chrome.runtime.lastError; }); } catch (e) { /* ignore */ }
   }
 
   /**
@@ -3158,6 +3166,12 @@
   chrome.storage.onChanged.addListener(onStorageChanged);
 
   const onRuntimeMessage = (message, sender, sendResponse) => {
+    if (message?.type === "STOP_INLINE_RECORDING") {
+      if (typeof _activeInlineStop === "function") _activeInlineStop();
+      sendResponse({ ok: true });
+      return true;
+    }
+
     if (message?.type === "TOGGLE_PANEL") {
       store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
       sendResponse({ ok: true });

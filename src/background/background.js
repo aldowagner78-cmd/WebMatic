@@ -73,6 +73,7 @@ chrome.browserAction.onClicked.addListener((tab) => {
 
 let isRecording = false;
 let recordedSteps = [];
+let inlineRecordingTabId = null; // tab donde hay grabación inline activa
 
 // Tracks which tabs have the panel open, so it can be restored after page navigation
 const panelOpenTabs = new Set();
@@ -313,6 +314,41 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         void chrome.runtime.lastError;
       });
     });
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  // ── Grabación inline ──
+  if (message?.type === "INLINE_RECORDING_STARTED") {
+    if (sender && sender.tab && sender.tab.id) {
+      inlineRecordingTabId = sender.tab.id;
+      chrome.browserAction.setBadgeText({ text: "●REC" });
+      chrome.browserAction.setBadgeBackgroundColor({ color: "#ef4444" });
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  if (message?.type === "INLINE_RECORDING_STOPPED") {
+    inlineRecordingTabId = null;
+    if (!isRecording) {
+      chrome.browserAction.setBadgeText({ text: "" });
+    }
+    sendResponse({ ok: true });
+    return true;
+  }
+
+  if (message?.type === "QUERY_INLINE_RECORDING_STATE") {
+    sendResponse({ active: inlineRecordingTabId !== null, tabId: inlineRecordingTabId });
+    return true;
+  }
+
+  if (message?.type === "STOP_INLINE_RECORDING") {
+    if (inlineRecordingTabId !== null) {
+      chrome.tabs.sendMessage(inlineRecordingTabId, { type: "STOP_INLINE_RECORDING" }, () => {
+        void chrome.runtime.lastError;
+      });
+    }
     sendResponse({ ok: true });
     return true;
   }

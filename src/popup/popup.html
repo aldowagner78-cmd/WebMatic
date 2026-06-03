@@ -30,10 +30,53 @@
         background: #ffffff;
         cursor: pointer;
       }
+
+      #rec-bar {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        background: rgba(239,68,68,0.95);
+        color: #fff;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      #rec-bar.active { display: flex; }
+
+      #rec-dot {
+        width: 9px; height: 9px; border-radius: 50%;
+        background: #fff;
+        animation: pulse 0.8s infinite;
+        flex-shrink: 0;
+      }
+
+      @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+      #rec-stop-btn {
+        all: initial;
+        background: #fff;
+        color: #dc2626;
+        border-radius: 5px;
+        padding: 3px 8px;
+        font-size: 11px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        margin-left: auto;
+        white-space: nowrap;
+      }
     </style>
   </head>
   <body>
     <h1>WebMatic</h1>
+    <div id="rec-bar">
+      <span id="rec-dot"></span>
+      <span>Grabando pasos</span>
+      <button id="rec-stop-btn">⏹ Detener</button>
+    </div>
     <div class="row">
       <button id="togglePanel">Abrir/Cerrar panel</button>
       <button id="dockLeft">Dock Left</button>
