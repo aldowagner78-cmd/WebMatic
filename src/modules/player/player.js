@@ -601,6 +601,20 @@
           const step = steps[i];
           if (typeof options.onStep === "function") options.onStep(step, i);
 
+          // Save resumption state BEFORE every step — if a navigation happens at any
+          // point during this step (or any sleep/wait afterwards), the new page can
+          // resume from index i+1. We only clear pending state on full completion.
+          if (!step._fast && step.type !== "if_exists" && step.type !== "loop_until" &&
+              step.type !== "try_fallback" && step.type !== "call_macro" &&
+              step.type !== "for_each_row") {
+            await new Promise((res) => {
+              chrome.runtime.sendMessage({
+                type: "SAVE_PLAYBACK_STATE",
+                steps, index: i + 1, vars, speed, macroId
+              }, () => { void chrome.runtime.lastError; res(); });
+            });
+          }
+
           // Pasos _fast (capturePageDefaults): ejecutar sin delay ni overhead de mensajes
           if (step._fast) {
             await executeStep(step, vars, this.retryMs, this.timeoutMs, this._speed);
@@ -701,25 +715,8 @@
             continue;
           }
 
-          // Before a click or dblclick that might navigate: save state as a precaution
-          if (step.type === "click" || step.type === "dblclick") {
-            await new Promise((res) => {
-              chrome.runtime.sendMessage({
-                type: "SAVE_PLAYBACK_STATE",
-                steps, index: i + 1, vars, speed, macroId
-              }, () => { void chrome.runtime.lastError; res(); });
-            });
-            await executeStep(step, vars, this.retryMs, this.timeoutMs, this._speed);
-            // Wait briefly to detect if a navigation happened
-            await new Promise((r) => setTimeout(r, 60));
-            if (this._abort) break;
-            // If still alive (no navigation), clear the pending state
-            await new Promise((res) => {
-              chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; res(); });
-            });
-          } else {
-            await executeStep(step, vars, this.retryMs, this.timeoutMs, this._speed);
-          }
+          // Execute the step (state was already saved at the top of the loop)
+          await executeStep(step, vars, this.retryMs, this.timeoutMs, this._speed);
 
           if (i < steps.length - 1) {
             await new Promise((r) => setTimeout(r, baseDelayMs));
@@ -744,8 +741,15 @@
         await new Promise(r => setTimeout(r, 400));
         _clearAllHighlights();
         _doFinalClean();
+        // Clear pending playback state — playback completed normally
+        try {
+          chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
+        } catch (_) {}
         if (typeof options.onDone === "function") options.onDone();
       } catch (err) {
+        try {
+          chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
+        } catch (_) {}
         if (typeof options.onError === "function") options.onError(err);
       } finally {
         this.isPlaying = false;
@@ -756,6 +760,9 @@
     stop() {
       this._abort = true;
       this.isPlaying = false;
+      try {
+        chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
+      } catch (_) {}
     }
 
     // Ejecuta un paso simple o complejo de forma recursiva.
