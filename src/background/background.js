@@ -74,6 +74,7 @@ chrome.browserAction.onClicked.addListener((tab) => {
 let isRecording = false;
 let recordedSteps = [];
 let inlineRecordingTabId = null; // tab donde hay grabación inline activa
+let inlineBuffer = [];           // pasos acumulados entre navegaciones
 
 // Tracks which tabs have the panel open, so it can be restored after page navigation
 const panelOpenTabs = new Set();
@@ -169,10 +170,18 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete") return;
   if (isRecording) ensureFloatingBtnInTab(tab);
   if (panelOpenTabs.has(tabId)) ensurePanelOpenInTab(tab);
-  // Si la pestaña de grabación inline navegó, reinyectar el panel en la nueva página
-  // No enviamos SHOW_INLINE_REC_MIRROR a la pestaña de grabación:
-  // si el content script sobrevivió (SPA), el panel ya está; si la página navegó
-  // completamente, el buffer se perdió y crear un espejo solo confunde al usuario.
+  // Si la pestaña de grabación inline navegó a una subpágina, re-inyectar el panel flotante
+  if (inlineRecordingTabId !== null && tabId === inlineRecordingTabId) {
+    const count = inlineBuffer.length;
+    setTimeout(() => {
+      if (inlineRecordingTabId === tabId) {
+        chrome.tabs.sendMessage(tabId, {
+          type: "SHOW_INLINE_REC_PANEL",
+          priorStepCount: count
+        }, () => { void chrome.runtime.lastError; });
+      }
+    }, 600);
+  }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
@@ -359,6 +368,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "INLINE_RECORDING_STARTED") {
     if (sender && sender.tab && sender.tab.id) {
       inlineRecordingTabId = sender.tab.id;
+      inlineBuffer = []; // buffer fresco para esta sesión
       chrome.browserAction.setBadgeText({ text: "●REC" });
       chrome.browserAction.setBadgeBackgroundColor({ color: "#ef4444" });
     }
@@ -366,8 +376,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  // Cada paso capturado en content.js se envía aquí para persistir entre navegaciones
+  if (message?.type === "INLINE_RECORD_STEP") {
+    if (inlineRecordingTabId !== null && message.step) {
+      const step = message.step;
+      if (step._merge && inlineBuffer.length > 0) {
+        const clean = Object.assign({}, step);
+        delete clean._merge;
+        inlineBuffer[inlineBuffer.length - 1] = clean;
+      } else if (!step._merge) {
+        inlineBuffer.push(step);
+      }
+    }
+    return false;
+  }
+
+  // Solicitud de detención desde content.js: devolver todos los pasos acumulados
+  if (message?.type === "INLINE_RECORDING_STOP_REQUEST") {
+    const steps = inlineBuffer.slice();
+    inlineBuffer = [];
+    inlineRecordingTabId = null;
+    if (!isRecording) {
+      chrome.browserAction.setBadgeText({ text: "" });
+    }
+    sendResponse({ ok: true, steps });
+    return true;
+  }
+
   if (message?.type === "INLINE_RECORDING_STOPPED") {
     inlineRecordingTabId = null;
+    inlineBuffer = [];
     if (!isRecording) {
       chrome.browserAction.setBadgeText({ text: "" });
     }

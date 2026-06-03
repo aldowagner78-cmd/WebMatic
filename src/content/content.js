@@ -1552,7 +1552,7 @@
    * Captures events into a local buffer and calls onDone(filteredSteps) when stopped.
    * Shows a small floating panel to stop the recording.
    */
-  function startInlineRecording(onDone) {
+  function startInlineRecording(onDone, _priorStepCount) {
     // Remove any leftover panel
     const oldPanel = document.getElementById(INLINE_REC_PANEL_ID);
     if (oldPanel && oldPanel.parentNode) oldPanel.parentNode.removeChild(oldPanel);
@@ -1564,16 +1564,26 @@
     }
 
     const buffer = [];
+    const _priorCount = (_priorStepCount || 0); // pasos acumulados en páginas anteriores
     let _ceTimer = null;
     let _hoverEl = null, _hoverObs = null, _hoverSeen = false, _hoverTimer = null;
     let _scrollTimer = null;
     let lastCopiedText = null, lastCopiedVar = null, varCounter = 0;
 
-    function addStep(step) {
-      buffer.push(Object.assign({ _ts: Date.now() }, step));
-      // Update count in panel
+    function _updateCount() {
       const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
-      if (countEl) countEl.textContent = buffer.length + (buffer.length === 1 ? " paso" : " pasos");
+      if (countEl) {
+        const total = _priorCount + buffer.length;
+        countEl.textContent = total + (total === 1 ? " paso" : " pasos");
+      }
+    }
+
+    function addStep(step) {
+      const fullStep = Object.assign({ _ts: Date.now() }, step);
+      buffer.push(fullStep);
+      // Persistir en background para sobrevivir navegaciones
+      try { chrome.runtime.sendMessage({ type: "INLINE_RECORD_STEP", step: fullStep }, () => { void chrome.runtime.lastError; }); } catch (_) {}
+      _updateCount();
     }
 
     // ── Event handlers (same logic as startRecorderSession but writing to buffer) ──
@@ -1616,8 +1626,9 @@
         const last = buffer[buffer.length - 1];
         if (last && last.type === "text" && last.selector === sel) {
           last.value = (last.value || "") + e.key; // merge text
-          const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
-          if (countEl) countEl.textContent = buffer.length + (buffer.length === 1 ? " paso" : " pasos");
+          // Actualizar el último paso en background con el valor acumulado
+          try { chrome.runtime.sendMessage({ type: "INLINE_RECORD_STEP", step: { _merge: true, type: "text", selector: sel, value: last.value } }, () => { void chrome.runtime.lastError; }); } catch (_) {}
+          _updateCount();
         } else {
           addStep({ type: "text", selector: sel, value: e.key });
         }
@@ -1791,13 +1802,22 @@
       if (_wasVisible && !store.getState().ui.panelVisible) {
         store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
       }
-      // Notificar al background que terminó la grabación inline
-      try { chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STOPPED" }, () => { void chrome.runtime.lastError; }); } catch (e) { /* ignore */ }
-      const filtered = _cleanupSteps(buffer);
+      // Solicitar todos los pasos acumulados al background (incluye páginas anteriores)
       try {
-        if (typeof onDone === "function") onDone(filtered);
+        chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STOP_REQUEST" }, (resp) => {
+          if (chrome.runtime.lastError) {
+            // Fallback: usar buffer local
+            const filtered = _cleanupSteps(buffer);
+            try { if (typeof onDone === "function") onDone(filtered); } catch (e) { console.error("[WebMatic] onDone error:", e); }
+            return;
+          }
+          const allSteps = (resp && Array.isArray(resp.steps) && resp.steps.length > 0) ? resp.steps : buffer;
+          const filtered = _cleanupSteps(allSteps);
+          try { if (typeof onDone === "function") onDone(filtered); } catch (e) { console.error("[WebMatic] onDone error:", e); }
+        });
       } catch (e) {
-        console.error("[WebMatic] Error al insertar pasos grabados:", e);
+        const filtered = _cleanupSteps(buffer);
+        try { if (typeof onDone === "function") onDone(filtered); } catch (e2) { console.error("[WebMatic] onDone error:", e2); }
       }
     }
 
@@ -3231,6 +3251,33 @@
         if (mirrorPanel && mirrorPanel.parentNode) mirrorPanel.parentNode.removeChild(mirrorPanel);
         try { chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STOPPED" }, () => { void chrome.runtime.lastError; }); } catch (e) { /* ignore */ }
       }
+      sendResponse({ ok: true });
+      return true;
+    }
+
+    // Re-inyección del panel flotante al navegar a una subpágina
+    if (message?.type === "SHOW_INLINE_REC_PANEL") {
+      if (typeof _activeInlineStop === "function" && document.getElementById(INLINE_REC_PANEL_ID)) {
+        // El panel sobrevivió (SPA sin recarga completa) — solo actualizar contador
+        const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
+        if (countEl && message.priorStepCount !== undefined) {
+          const t = message.priorStepCount;
+          countEl.textContent = t + (t === 1 ? " paso" : " pasos");
+        }
+        sendResponse({ ok: true }); return true;
+      }
+      // La página recargó — re-iniciar la grabación en esta página
+      startInlineRecording(function _crossPageOnDone(steps) {
+        // Mostrar el panel principal
+        if (!store.getState().ui.panelVisible) {
+          store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
+        }
+        // Abrir el editor de pasos con todos los pasos acumulados
+        store.dispatch({
+          type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED,
+          payload: { macroId: null, script: "", draftSteps: steps }
+        });
+      }, message.priorStepCount || 0);
       sendResponse({ ok: true });
       return true;
     }
