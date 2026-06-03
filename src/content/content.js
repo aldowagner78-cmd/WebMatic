@@ -59,6 +59,7 @@
   if (window !== window.top) {
     const _Rec = globalScope.WebMaticRecorder;
     let _isRecording = false;
+    const _sfLastCheckChangeAt = new WeakMap();
     // Consultar estado inicial (si la grabacion ya estaba activa al cargar el iframe)
     chrome.runtime.sendMessage({ type: "QUERY_RECORDING_STATE" }, (resp) => {
       if (chrome.runtime.lastError) return;
@@ -80,6 +81,18 @@
     document.addEventListener("click", (e) => {
       let t = e.target;
       if (!(t instanceof Element)) return;
+      const checkTarget = t instanceof HTMLInputElement && (t.type === "checkbox" || t.type === "radio")
+        ? t
+        : t.closest && t.closest('input[type="checkbox"], input[type="radio"]');
+      if (checkTarget instanceof HTMLInputElement) {
+        setTimeout(() => {
+          const lastTs = _sfLastCheckChangeAt.get(checkTarget) || 0;
+          if (Date.now() - lastTs < 120) return;
+          if (_isRecording) flashElement(checkTarget);
+          _send({ type: "check", selector: _sel(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked });
+        }, 0);
+        return;
+      }
       const tTag = t.tagName.toLowerCase();
       if (tTag === "img" || (tTag === "input" && t.type === "image" && !t.id)) {
         const anchor = t.closest("a[href]");
@@ -94,7 +107,13 @@
       if (t.readOnly || t.disabled) return;
       if (_isRecording) flashElement(t);
       if (t instanceof HTMLInputElement && t.type === "checkbox") {
+        _sfLastCheckChangeAt.set(t, Date.now());
         _send({ type: "check", selector: _sel(t), checked: t.checked });
+        return;
+      }
+      if (t instanceof HTMLInputElement && t.type === "radio") {
+        _sfLastCheckChangeAt.set(t, Date.now());
+        _send({ type: "check", selector: _sel(t), checked: true });
         return;
       }
       _send({ type: "input", selector: _sel(t), value: t.value });
@@ -1284,9 +1303,25 @@
       captureStep({ type: "navigate", url: window.location.href });
     }
 
+    const _lastCheckChangeAt = new WeakMap();
+
     const onClick = (event) => {
       let target = event.target;
       if (!(target instanceof Element) || target.closest("#webmatic-panel-root") || target.closest("#webmatic-floating-recorder-global") || target.closest("#webmatic-floating-player-global")) {
+        return;
+      }
+      const checkTarget = target instanceof HTMLInputElement && (target.type === "checkbox" || target.type === "radio")
+        ? target
+        : target.closest && target.closest('input[type="checkbox"], input[type="radio"]');
+      if (checkTarget instanceof HTMLInputElement) {
+        // Some legacy UIs toggle checkbox/radio without emitting change reliably.
+        // Capture from click as a fallback, but skip if change was already captured.
+        setTimeout(() => {
+          const lastTs = _lastCheckChangeAt.get(checkTarget) || 0;
+          if (Date.now() - lastTs < 120) return;
+          flashElement(checkTarget);
+          captureStep({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked });
+        }, 0);
         return;
       }
       // For <img> and imageless clicks inside <a>, bubble up to the anchor
@@ -1325,11 +1360,13 @@
       flashElement(target);
       // For checkboxes capture the boolean checked state, not the raw .value attr
       if (target instanceof HTMLInputElement && target.type === "checkbox") {
+        _lastCheckChangeAt.set(target, Date.now());
         captureStep({ type: "check", selector: buildSelector(target), checked: target.checked });
         return;
       }
       // Radio buttons: record as check with checked:true (the selected option)
       if (target instanceof HTMLInputElement && target.type === "radio") {
+        _lastCheckChangeAt.set(target, Date.now());
         captureStep({ type: "check", selector: buildSelector(target), checked: true });
         return;
       }
@@ -1661,6 +1698,7 @@
     let _hoverEl = null, _hoverObs = null, _hoverSeen = false, _hoverTimer = null;
     let _scrollTimer = null;
     let lastCopiedText = null, lastCopiedVar = null, varCounter = 0;
+    const _lastInlineCheckChangeAt = new WeakMap();
 
     function _updateCount() {
       const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
@@ -1684,6 +1722,18 @@
       if (!(t instanceof Element)) return;
       if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
           t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      const checkTarget = t instanceof HTMLInputElement && (t.type === "checkbox" || t.type === "radio")
+        ? t
+        : t.closest && t.closest('input[type="checkbox"], input[type="radio"]');
+      if (checkTarget instanceof HTMLInputElement) {
+        setTimeout(() => {
+          const lastTs = _lastInlineCheckChangeAt.get(checkTarget) || 0;
+          if (Date.now() - lastTs < 120) return;
+          flashElement(checkTarget);
+          addStep({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked });
+        }, 0);
+        return;
+      }
       const tag = t.tagName.toLowerCase();
       if (tag === "img" || (tag === "input" && t.type === "image" && !t.id)) {
         const anchor = t.closest("a[href]"); if (anchor) t = anchor;
@@ -1710,8 +1760,8 @@
       if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
       if (t.readOnly || t.disabled) return;
       flashElement(t);
-      if (t instanceof HTMLInputElement && t.type === "checkbox") { addStep({ type: "check", selector: buildSelector(t), checked: t.checked }); return; }
-      if (t instanceof HTMLInputElement && t.type === "radio")    { addStep({ type: "check", selector: buildSelector(t), checked: true }); return; }
+      if (t instanceof HTMLInputElement && t.type === "checkbox") { _lastInlineCheckChangeAt.set(t, Date.now()); addStep({ type: "check", selector: buildSelector(t), checked: t.checked }); return; }
+      if (t instanceof HTMLInputElement && t.type === "radio")    { _lastInlineCheckChangeAt.set(t, Date.now()); addStep({ type: "check", selector: buildSelector(t), checked: true }); return; }
       const raw = t.value;
       const val = (lastCopiedText !== null && lastCopiedVar !== null && raw.trim() === lastCopiedText)
         ? `{{!${lastCopiedVar}}}` : raw;

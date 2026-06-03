@@ -590,9 +590,9 @@
       this._abort = false;
       this._speed = speed;
 
-      // Reset all form fields before replaying — unless the first step is reset_fields (which handles it with exclusions)
-      if (startIndex === 0 && (!steps[0] || steps[0].type !== "reset_fields")) {
-        // Don't clear fields that have useCurrentValue — the user wants to keep what's there
+      // Do not reset page forms implicitly: it can alter defaults not present in the recording.
+      // If needed, callers can opt-in with options.autoReset=true or record an explicit reset_fields step.
+      if (options.autoReset === true && startIndex === 0 && (!steps[0] || steps[0].type !== "reset_fields")) {
         const keepSels = steps
           .filter(s => (s.type === "input" || s.type === "text") && s.useCurrentValue && s.selector)
           .map(s => s.selector);

@@ -45,7 +45,17 @@
       }
 
       if (element.getAttribute("name")) {
-        return `${tag}[name="${E(element.getAttribute("name"))}"]`;
+        const nameAttr = element.getAttribute("name");
+        const sameName = Array.from((element.ownerDocument || document).getElementsByTagName(tag))
+          .filter((el) => el.getAttribute("name") === nameAttr).length;
+        if (sameName === 1) {
+          return `${tag}[name="${E(nameAttr)}"]`;
+        }
+        // Duplicate names are common in paged grids/modals; anchor the selector to a parent id.
+        const anc = element.closest("[id]");
+        if (anc && anc.id && !/^(wm-|webmatic-)/.test(anc.id)) {
+          return `#${anc.id} ${tag}[name="${E(nameAttr)}"]`;
+        }
       }
 
       // <a href> — use relative path as stable selector
