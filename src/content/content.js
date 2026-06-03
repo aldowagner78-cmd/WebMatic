@@ -1716,6 +1716,51 @@
     document.addEventListener("mouseover", _onMouseOver,true);
     document.addEventListener("scroll",    _onScroll,   true);
 
+    // ── Captura de eventos en iframes del mismo origen ──
+    const _attachedFrameDocs = new WeakSet();
+
+    function _attachToFrameDoc(frameDoc) {
+      if (!frameDoc || _attachedFrameDocs.has(frameDoc)) return;
+      try {
+        frameDoc.addEventListener("click",    _onClick,    true);
+        frameDoc.addEventListener("change",   _onChange,   true);
+        frameDoc.addEventListener("keydown",  _onKeydown,  true);
+        frameDoc.addEventListener("dblclick", _onDblClick, true);
+        frameDoc.addEventListener("copy",     _onCopy,     true);
+        frameDoc.addEventListener("input",    _onCeInput,  true);
+        _attachedFrameDocs.add(frameDoc);
+      } catch (_e) { /* iframe de origen cruzado — sin acceso */ }
+    }
+
+    function _detachFromFrameDoc(frameDoc) {
+      if (!frameDoc) return;
+      try {
+        frameDoc.removeEventListener("click",    _onClick,    true);
+        frameDoc.removeEventListener("change",   _onChange,   true);
+        frameDoc.removeEventListener("keydown",  _onKeydown,  true);
+        frameDoc.removeEventListener("dblclick", _onDblClick, true);
+        frameDoc.removeEventListener("copy",     _onCopy,     true);
+        frameDoc.removeEventListener("input",    _onCeInput,  true);
+      } catch (_e) {}
+    }
+
+    function _attachToAllFrames() {
+      try {
+        document.querySelectorAll("iframe").forEach((ifr) => {
+          try { if (ifr.contentDocument) _attachToFrameDoc(ifr.contentDocument); } catch (_e) {}
+        });
+      } catch (_e) {}
+    }
+
+    _attachToAllFrames();
+
+    // Observar iframes que se añadan dinámicamente
+    let _frameObs = null;
+    try {
+      _frameObs = new MutationObserver(_attachToAllFrames);
+      _frameObs.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    } catch (_e) {}
+
     // ── Cleanup ──
     function _cleanup() {
       document.removeEventListener("click",     _onClick,    true);
@@ -1726,6 +1771,13 @@
       document.removeEventListener("input",     _onCeInput,  true);
       document.removeEventListener("mouseover", _onMouseOver,true);
       document.removeEventListener("scroll",    _onScroll,   true);
+      // Desengancharse de todos los iframes
+      if (_frameObs) { _frameObs.disconnect(); _frameObs = null; }
+      try {
+        document.querySelectorAll("iframe").forEach((ifr) => {
+          try { if (ifr.contentDocument) _detachFromFrameDoc(ifr.contentDocument); } catch (_e) {}
+        });
+      } catch (_e) {}
       clearTimeout(_ceTimer); clearTimeout(_hoverTimer); clearTimeout(_scrollTimer);
       if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
       const p = document.getElementById(INLINE_REC_PANEL_ID);
@@ -1742,7 +1794,11 @@
       // Notificar al background que terminó la grabación inline
       try { chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STOPPED" }, () => { void chrome.runtime.lastError; }); } catch (e) { /* ignore */ }
       const filtered = _cleanupSteps(buffer);
-      if (typeof onDone === "function") onDone(filtered);
+      try {
+        if (typeof onDone === "function") onDone(filtered);
+      } catch (e) {
+        console.error("[WebMatic] Error al insertar pasos grabados:", e);
+      }
     }
 
     // ── Floating stop panel ──

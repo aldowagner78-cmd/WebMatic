@@ -170,9 +170,9 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (isRecording) ensureFloatingBtnInTab(tab);
   if (panelOpenTabs.has(tabId)) ensurePanelOpenInTab(tab);
   // Si la pestaña de grabación inline navegó, reinyectar el panel en la nueva página
-  if (inlineRecordingTabId === tabId) {
-    sendMessageToTab(tabId, { type: "SHOW_INLINE_REC_MIRROR" });
-  }
+  // No enviamos SHOW_INLINE_REC_MIRROR a la pestaña de grabación:
+  // si el content script sobrevivió (SPA), el panel ya está; si la página navegó
+  // completamente, el buffer se perdió y crear un espejo solo confunde al usuario.
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
