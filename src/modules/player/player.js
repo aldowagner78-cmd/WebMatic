@@ -365,6 +365,12 @@
           return;
         }
 
+        // useCurrentValue: no tocar el campo — dejarlo con lo que ya tiene
+        if ((step.type === "input" || step.type === "text") && step.useCurrentValue) {
+          resolve();
+          return;
+        }
+
         const selector = expandVariables(step.selector || "", vars);
         const el = findElement(selector);
 
@@ -577,7 +583,13 @@
       this._speed = speed;
 
       // Reset all form fields before replaying — unless the first step is reset_fields (which handles it with exclusions)
-      if (startIndex === 0 && (!steps[0] || steps[0].type !== "reset_fields")) _resetPageForms();
+      if (startIndex === 0 && (!steps[0] || steps[0].type !== "reset_fields")) {
+        // Don't clear fields that have useCurrentValue — the user wants to keep what's there
+        const keepSels = steps
+          .filter(s => (s.type === "input" || s.type === "text") && s.useCurrentValue && s.selector)
+          .map(s => s.selector);
+        _resetPageForms(keepSels.length > 0 ? keepSels.join(", ") : null);
+      }
 
       try {
         for (let i = startIndex; i < steps.length; i++) {

@@ -3,7 +3,7 @@
     { value: "navigate",     label: "\u{1F310} Navegar",        fields: [{ name: "url",        ph: "https://ejemplo.com" }] },
     { value: "click",        label: "\u{1F5B1} Clic",           fields: [{ name: "selector",   ph: "#mi-boton" }] },
     { value: "dblclick",     label: "\u{1F5B1}\u{1F5B1} Doble clic", fields: [{ name: "selector", ph: "#mi-boton" }] },
-    { value: "input",        label: "\u2328 Escribir",          fields: [{ name: "selector",   ph: "#mi-input" }, { name: "value", ph: "texto a escribir" }] },
+    { value: "input",        label: "\u2328 Escribir",          fields: [{ name: "selector",   ph: "#mi-input" }, { name: "value", ph: "texto a escribir" }, { name: "useCurrentValue", type: "toggle", label: "\u21BA Usar valor actual del campo" }] },
     { value: "wait",         label: "\u23F1 Esperar (s)",       fields: [{ name: "seconds",    ph: "2" }] },
     { value: "key",          label: "\u2328 Tecla",             fields: [{ name: "key",        ph: "Enter" }] },
     { value: "check",        label: "\u2611 Checkbox",          fields: [{ name: "selector",   ph: "#mi-check" }, { name: "checked", ph: "true" }] },
@@ -35,7 +35,7 @@
     if (s.type === "click")        return s.selector || "";
     if (s.type === "dblclick")     return s.selector || "";
     if (s.type === "input" || s.type === "text")
-      return `${s.selector || ""} = "${s.value || ""}"`;
+      return s.useCurrentValue ? `${s.selector || ""} = \u21BA actual` : `${s.selector || ""} = "${s.value || ""}"`;
     if (s.type === "wait")
       return s.seconds != null ? `${s.seconds}s` : `${s.ms || 0}ms`;
     if (s.type === "key")          return s.key || "";
@@ -300,6 +300,29 @@
               sel.appendChild(opt);
             });
             lbl.appendChild(sel);
+          } else if (field.type === "toggle") {
+            const wrap = document.createElement("div");
+            wrap.style.cssText = "display:flex;align-items:center;gap:8px;margin-top:4px;";
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.dataset.field = name;
+            cb.dataset.fieldtype = "toggle";
+            cb.checked = !!(prefill && prefill[name]);
+            cb.addEventListener("change", () => {
+              const valInp = fieldsDiv.querySelector("[data-field='value']");
+              if (valInp) { valInp.disabled = cb.checked; valInp.style.opacity = cb.checked ? "0.4" : "1"; }
+            });
+            const cbLbl = document.createElement("label");
+            cbLbl.textContent = field.label || name;
+            cbLbl.style.cssText = "font-weight:normal;cursor:pointer;font-size:12px;";
+            wrap.appendChild(cb);
+            wrap.appendChild(cbLbl);
+            lbl.textContent = "";
+            lbl.appendChild(wrap);
+            setTimeout(() => {
+              const valInp = fieldsDiv.querySelector("[data-field='value']");
+              if (valInp && cb.checked) { valInp.disabled = true; valInp.style.opacity = "0.4"; }
+            }, 0);
           } else {
             const inp = document.createElement("input");
             inp.className = "wm-sved-field-input";
@@ -333,8 +356,12 @@
       confirmBtn.addEventListener("click", () => {
         const updated = { type: typeSelect.value };
         fieldsDiv.querySelectorAll("[data-field]").forEach((inp) => {
-          const v = inp.value.trim();
-          if (v !== "") updated[inp.dataset.field] = v;
+          if (inp.dataset.fieldtype === "toggle") {
+            updated[inp.dataset.field] = inp.checked;
+          } else {
+            const v = inp.value.trim();
+            if (v !== "") updated[inp.dataset.field] = v;
+          }
         });
         if (updated.type === "wait") {
           const n = Number(updated.seconds);
@@ -424,6 +451,24 @@
               sel.appendChild(opt);
             });
             lbl.appendChild(sel);
+          } else if (field.type === "toggle") {
+            const wrap = document.createElement("div");
+            wrap.style.cssText = "display:flex;align-items:center;gap:8px;margin-top:4px;";
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.dataset.field = name;
+            cb.dataset.fieldtype = "toggle";
+            cb.addEventListener("change", () => {
+              const valInp = fieldsDiv.querySelector("[data-field='value']");
+              if (valInp) { valInp.disabled = cb.checked; valInp.style.opacity = cb.checked ? "0.4" : "1"; }
+            });
+            const cbLbl = document.createElement("label");
+            cbLbl.textContent = field.label || name;
+            cbLbl.style.cssText = "font-weight:normal;cursor:pointer;font-size:12px;";
+            wrap.appendChild(cb);
+            wrap.appendChild(cbLbl);
+            lbl.textContent = "";
+            lbl.appendChild(wrap);
           } else {
             const inp = document.createElement("input");
             inp.className = "wm-sved-field-input";
@@ -451,8 +496,12 @@
       confirmBtn.addEventListener("click", () => {
         const step = { type: typeSelect.value };
         fieldsDiv.querySelectorAll("[data-field]").forEach((inp) => {
-          const v = inp.value.trim();
-          if (v !== "") step[inp.dataset.field] = v;
+          if (inp.dataset.fieldtype === "toggle") {
+            step[inp.dataset.field] = inp.checked;
+          } else {
+            const v = inp.value.trim();
+            if (v !== "") step[inp.dataset.field] = v;
+          }
         });
         if (step.type === "wait") {
           const n = Number(step.seconds);
