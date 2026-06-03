@@ -441,6 +441,52 @@
     return null;
   }
 
+  function normalizeSelectorMatchText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function selectorHasAny(text, words) {
+    return words.some((w) => w && text.includes(w));
+  }
+
+  function isRuntimeStepSelectorMatch(type, selector) {
+    const text = normalizeSelectorMatchText(selector);
+    if (!text) return false;
+
+    const hasNegativeName = selectorHasAny(text, ["nombre", "apellido", "name", "razon social", "titular"]);
+
+    if (type === "affiliate") {
+      const positive = selectorHasAny(text, ["afiliado", "affiliate", "nro afili", "numero afili", "socio", "nro socio", "numero socio"]);
+      if (!positive) return false;
+      // Blindaje: si parece campo de nombre/apellido, no reemplazar por afiliado.
+      if (hasNegativeName) return false;
+      return true;
+    }
+
+    if (type === "dni") {
+      const positive = selectorHasAny(text, ["dni", "documento", "nro doc", "numero doc", "cuil", "cuit"]);
+      if (!positive) return false;
+      if (hasNegativeName) return false;
+      return true;
+    }
+
+    if (type === "authorization") {
+      const positive = selectorHasAny(text, ["autoriz", "autorizacion", "authorization", "nro aut", "numero aut"]);
+      if (!positive) return false;
+      if (hasNegativeName) return false;
+      return true;
+    }
+
+    const matcher = getRuntimeSelectorMatcher(type);
+    return Boolean(matcher && matcher(selector));
+  }
+
   function buildRuntimeVars(baseVars, settings) {
     const merged = { ...(baseVars || {}) };
     const entries = getActiveRuntimeDataEntries(settings);
@@ -502,9 +548,7 @@
       if (!selector) return step;
 
       for (const entry of entries) {
-        const matcher = getRuntimeSelectorMatcher(entry.type);
-        if (!matcher) continue;
-        if (matcher(selector)) {
+        if (isRuntimeStepSelectorMatch(entry.type, selector)) {
           return { ...step, value: entry.data };
         }
       }
