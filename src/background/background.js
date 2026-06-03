@@ -75,6 +75,7 @@ let isRecording = false;
 let recordedSteps = [];
 let inlineRecordingTabId = null; // tab donde hay grabación inline activa
 let inlineBuffer = [];           // pasos acumulados entre navegaciones
+let inlineEditorContext = null;  // { macroId, draftSteps } del editor al iniciar grabación
 
 // Tracks which tabs have the panel open, so it can be restored after page navigation
 const panelOpenTabs = new Set();
@@ -369,6 +370,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (sender && sender.tab && sender.tab.id) {
       inlineRecordingTabId = sender.tab.id;
       inlineBuffer = []; // buffer fresco para esta sesión
+      inlineEditorContext = message.editorContext || null;
       chrome.browserAction.setBadgeText({ text: "●REC" });
       chrome.browserAction.setBadgeBackgroundColor({ color: "#ef4444" });
     }
@@ -391,21 +393,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // Solicitud de detención desde content.js: devolver todos los pasos acumulados
+  // Solicitud de detención desde content.js: devolver todos los pasos acumulados y el contexto del editor
   if (message?.type === "INLINE_RECORDING_STOP_REQUEST") {
     const steps = inlineBuffer.slice();
+    const editorContext = inlineEditorContext;
     inlineBuffer = [];
+    inlineEditorContext = null;
     inlineRecordingTabId = null;
     if (!isRecording) {
       chrome.browserAction.setBadgeText({ text: "" });
     }
-    sendResponse({ ok: true, steps });
+    sendResponse({ ok: true, steps, editorContext });
     return true;
   }
 
   if (message?.type === "INLINE_RECORDING_STOPPED") {
     inlineRecordingTabId = null;
     inlineBuffer = [];
+    inlineEditorContext = null;
     if (!isRecording) {
       chrome.browserAction.setBadgeText({ text: "" });
     }

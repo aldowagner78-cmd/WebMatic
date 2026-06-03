@@ -1808,16 +1808,17 @@
           if (chrome.runtime.lastError) {
             // Fallback: usar buffer local
             const filtered = _cleanupSteps(buffer);
-            try { if (typeof onDone === "function") onDone(filtered); } catch (e) { console.error("[WebMatic] onDone error:", e); }
+            try { if (typeof onDone === "function") onDone(filtered, null); } catch (e) { console.error("[WebMatic] onDone error:", e); }
             return;
           }
           const allSteps = (resp && Array.isArray(resp.steps) && resp.steps.length > 0) ? resp.steps : buffer;
+          const editorCtx = (resp && resp.editorContext) || null;
           const filtered = _cleanupSteps(allSteps);
-          try { if (typeof onDone === "function") onDone(filtered); } catch (e) { console.error("[WebMatic] onDone error:", e); }
+          try { if (typeof onDone === "function") onDone(filtered, editorCtx); } catch (e) { console.error("[WebMatic] onDone error:", e); }
         });
       } catch (e) {
         const filtered = _cleanupSteps(buffer);
-        try { if (typeof onDone === "function") onDone(filtered); } catch (e2) { console.error("[WebMatic] onDone error:", e2); }
+        try { if (typeof onDone === "function") onDone(filtered, null); } catch (e2) { console.error("[WebMatic] onDone error:", e2); }
       }
     }
 
@@ -1870,9 +1871,22 @@
 
     document.documentElement.appendChild(panel);
 
-    // Notificar al background que empezó la grabación inline y exponer _stop
+    // Notificar al background que empezó la grabación inline, enviando el contexto del editor actual
     _activeInlineStop = _stop;
-    try { chrome.runtime.sendMessage({ type: "INLINE_RECORDING_STARTED" }, () => { void chrome.runtime.lastError; }); } catch (e) { /* ignore */ }
+    try {
+      const editorState = store.getState().ui.scriptEditor;
+      const currentEditorSteps = (seEditor && typeof seEditor.getSteps === "function")
+        ? seEditor.getSteps()
+        : (editorState.draftSteps || []);
+      chrome.runtime.sendMessage({
+        type: "INLINE_RECORDING_STARTED",
+        editorContext: {
+          macroId: editorState.macroId || null,
+          script: editorState.script || "",
+          draftSteps: currentEditorSteps
+        }
+      }, () => { void chrome.runtime.lastError; });
+    } catch (e) { /* ignore */ }
   }
 
   /**
@@ -3267,15 +3281,20 @@
         sendResponse({ ok: true }); return true;
       }
       // La página recargó — re-iniciar la grabación en esta página
-      startInlineRecording(function _crossPageOnDone(steps) {
-        // Mostrar el panel principal
+      // _stop() llama onDone(filteredNewSteps, editorContext) — editorContext tiene los pasos previos
+      startInlineRecording(function _crossPageOnDone(newSteps, editorContext) {
         if (!store.getState().ui.panelVisible) {
           store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
         }
-        // Abrir el editor de pasos con todos los pasos acumulados
+        const prior = (editorContext && Array.isArray(editorContext.draftSteps)) ? editorContext.draftSteps : [];
+        const combined = prior.concat(newSteps); // newSteps ya fueron limpiados por _stop()
         store.dispatch({
           type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED,
-          payload: { macroId: null, script: "", draftSteps: steps }
+          payload: {
+            macroId: (editorContext && editorContext.macroId) || null,
+            script: (editorContext && editorContext.script) || "",
+            draftSteps: combined
+          }
         });
       }, message.priorStepCount || 0);
       sendResponse({ ok: true });
