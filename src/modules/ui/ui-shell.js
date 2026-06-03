@@ -120,6 +120,7 @@
             <button class="webmatic-action-btn webmatic-btn-stop" data-action="play-stop" style="display:none">&#9632; Detener</button>
             <button class="webmatic-action-btn" data-action="macro-rename" disabled>Renombrar</button>
             <button class="webmatic-action-btn" data-action="macro-duplicate" disabled title="Crea una c\u00f3pia de la macro seleccionada">Duplicar</button>
+            <button class="webmatic-action-btn" data-action="macro-concat" disabled title="Concatena una o m\u00e1s macros al final de la seleccionada y crea una nueva">&#9741; Concatenar</button>
             <button class="webmatic-action-btn" data-action="macro-delete" disabled>Eliminar</button>
           </div>
           <div class="webmatic-loop-row">

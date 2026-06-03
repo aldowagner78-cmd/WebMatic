@@ -1295,6 +1295,19 @@
         const anchor = target.closest("a[href]");
         if (anchor) target = anchor;
       }
+      // If clicking a link that opens a new tab, record navigate instead of click
+      // (the player can't follow a new tab; navigate keeps the flow in the same tab)
+      const navAnchor = target.tagName.toLowerCase() === "a" ? target : target.closest("a[href]");
+      if (navAnchor && navAnchor.getAttribute("target") === "_blank") {
+        try {
+          const navUrl = new URL(navAnchor.getAttribute("href") || "", window.location.href).href;
+          if (navUrl && !navUrl.startsWith("javascript:")) {
+            flashElement(navAnchor);
+            captureStep({ type: "navigate", url: navUrl });
+            return;
+          }
+        } catch (_e) {}
+      }
       flashElement(target);
       captureStep({ type: "click", selector: buildSelector(target) });
     };
@@ -1674,6 +1687,18 @@
       const tag = t.tagName.toLowerCase();
       if (tag === "img" || (tag === "input" && t.type === "image" && !t.id)) {
         const anchor = t.closest("a[href]"); if (anchor) t = anchor;
+      }
+      // Si el enlace abre una pestaña nueva, grabar navigate en lugar de click
+      const navAnchor = t.tagName.toLowerCase() === "a" ? t : t.closest("a[href]");
+      if (navAnchor && navAnchor.getAttribute("target") === "_blank") {
+        try {
+          const navUrl = new URL(navAnchor.getAttribute("href") || "", window.location.href).href;
+          if (navUrl && !navUrl.startsWith("javascript:")) {
+            flashElement(navAnchor);
+            addStep({ type: "navigate", url: navUrl });
+            return;
+          }
+        } catch (_e) {}
       }
       flashElement(t);
       addStep({ type: "click", selector: buildSelector(t) });
@@ -2594,6 +2619,55 @@
         store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: copy.id });
         chrome.storage.local.set({ webmaticMacros: store.getState().library.macros });
         store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro duplicada: "${copyName}"` });
+      }
+
+      if (actionId === "macro-concat") {
+        const currentState = store.getState();
+        const selectedId = currentState.library.selectedMacroId;
+        const macro = currentState.library.macros.find((m) => m.id === selectedId);
+        if (!macro) return;
+
+        const availableNames = currentState.library.macros
+          .filter((m) => m.id !== selectedId)
+          .map((m) => m.name)
+          .join(", ");
+
+        const input = await uiShell.wmModal("prompt", {
+          message: `Concatenar al final de "${macro.name}".\n\nNombre(s) de macro a agregar (separados por coma):`,
+          defaultValue: "",
+          okLabel: "Concatenar",
+          cancelLabel: "Cancelar"
+        });
+
+        if (!input || !String(input).trim()) return;
+
+        const names = String(input).split(",").map((n) => n.trim()).filter(Boolean);
+        const toMerge = names
+          .map((name) => currentState.library.macros.find((m) => m.name.toLowerCase() === name.toLowerCase()))
+          .filter(Boolean);
+
+        if (toMerge.length === 0) {
+          await uiShell.wmModal("alert", { message: `No se encontró ninguna macro con esos nombres.\nMacros disponibles: ${availableNames}` });
+          return;
+        }
+
+        const mergedSteps = [
+          ...(macro.steps || []),
+          ...toMerge.flatMap((m) => JSON.parse(JSON.stringify(m.steps || [])))
+        ];
+        const mergedName = [macro.name, ...toMerge.map((m) => m.name)].join(" + ");
+        const mergedScript = iimAdapter ? iimAdapter.exportToIim({ steps: mergedSteps }) : "";
+        const mergedMacro = {
+          id: `macro_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+          name: mergedName,
+          steps: mergedSteps,
+          script: mergedScript,
+          createdAt: Date.now()
+        };
+        store.dispatch({ type: contracts.ActionTypes.MACRO_SAVED, payload: mergedMacro });
+        store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: mergedMacro.id });
+        chrome.storage.local.set({ webmaticMacros: store.getState().library.macros });
+        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro "${mergedName}" creada — ${mergedSteps.length} pasos` });
       }
 
       if (actionId === "add-wait-here") {
