@@ -1552,7 +1552,7 @@
    * Captures events into a local buffer and calls onDone(filteredSteps) when stopped.
    * Shows a small floating panel to stop the recording.
    */
-  function startInlineRecording(onDone, _priorStepCount) {
+  function startInlineRecording(onDone, _priorStepCount, _isReinjection) {
     // Remove any leftover panel
     const oldPanel = document.getElementById(INLINE_REC_PANEL_ID);
     if (oldPanel && oldPanel.parentNode) oldPanel.parentNode.removeChild(oldPanel);
@@ -1871,22 +1871,26 @@
 
     document.documentElement.appendChild(panel);
 
-    // Notificar al background que empezó la grabación inline, enviando el contexto del editor actual
+    // Notificar al background que empezó la grabación inline, enviando el contexto del editor actual.
+    // Si es re-inyección (el content script recargó por navegación), NO enviar INLINE_RECORDING_STARTED
+    // para no pisar el inlineEditorContext y el inlineBuffer ya acumulados en background.
     _activeInlineStop = _stop;
-    try {
-      const editorState = store.getState().ui.scriptEditor;
-      const currentEditorSteps = (seEditor && typeof seEditor.getSteps === "function")
-        ? seEditor.getSteps()
-        : (editorState.draftSteps || []);
-      chrome.runtime.sendMessage({
-        type: "INLINE_RECORDING_STARTED",
-        editorContext: {
-          macroId: editorState.macroId || null,
-          script: editorState.script || "",
-          draftSteps: currentEditorSteps
-        }
-      }, () => { void chrome.runtime.lastError; });
-    } catch (e) { /* ignore */ }
+    if (!_isReinjection) {
+      try {
+        const editorState = store.getState().ui.scriptEditor;
+        const currentEditorSteps = (seEditor && typeof seEditor.getSteps === "function")
+          ? seEditor.getSteps()
+          : (editorState.draftSteps || []);
+        chrome.runtime.sendMessage({
+          type: "INLINE_RECORDING_STARTED",
+          editorContext: {
+            macroId: editorState.macroId || null,
+            script: editorState.script || "",
+            draftSteps: currentEditorSteps
+          }
+        }, () => { void chrome.runtime.lastError; });
+      } catch (e) { /* ignore */ }
+    }
   }
 
   /**
@@ -3296,7 +3300,7 @@
             draftSteps: combined
           }
         });
-      }, message.priorStepCount || 0);
+      }, message.priorStepCount || 0, true); // true = re-inyección, no resetear estado en background
       sendResponse({ ok: true });
       return true;
     }
