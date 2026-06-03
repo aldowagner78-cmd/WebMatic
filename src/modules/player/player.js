@@ -111,12 +111,16 @@
    * Simulates a click on an element, dispatching mousedown + mouseup + click.
    */
   function simulateClick(el) {
-    ["mousedown", "mouseup", "click"].forEach((type) => {
-      el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
-    });
-    // For anchor elements, also call the native click() to guarantee href navigation in Firefox
-    if (el.tagName && el.tagName.toLowerCase() === "a") {
+    const isAnchor = el.tagName && el.tagName.toLowerCase() === "a";
+    // Always dispatch mousedown + mouseup (page handlers may listen to these)
+    el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
+    if (isAnchor) {
+      // For anchors, use the native click() which guarantees href navigation
+      // AND dispatches a real "click" event that bubbles. Avoids double-click/double-submit.
       el.click();
+    } else {
+      el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     }
   }
 

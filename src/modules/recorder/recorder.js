@@ -13,12 +13,21 @@
     }
 
     /**
+     * Escapes a value to be safely embedded in a [attr="..."] CSS-like selector.
+     * Backslashes first, then double quotes.
+     */
+    static escapeAttr(value) {
+      return String(value == null ? "" : value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+    }
+
+    /**
      * Builds a CSS selector for an element using priority:
      * id → name → aria-label → placeholder → data-testid →
      * a[href] (for link/image-in-link) → gxrow action → text → tag+position
      */
     static buildSelector(element) {
       if (!element || !(element instanceof Element)) return "";
+      const E = Recorder.escapeAttr;
 
       // If element is <img> or <input type=image> inside an <a>, target the <a>
       const tag0 = element.tagName.toLowerCase();
@@ -36,7 +45,7 @@
       }
 
       if (element.getAttribute("name")) {
-        return `${tag}[name="${element.getAttribute("name")}"]`;
+        return `${tag}[name="${E(element.getAttribute("name"))}"]`;
       }
 
       // <a href> — use relative path as stable selector
@@ -44,33 +53,33 @@
         const href = element.getAttribute("href");
         // Prefer short/stable hrefs (relative paths without long hash tokens)
         if (href.length <= 80 && !href.startsWith("javascript")) {
-          return `a[href="${href}"]`;
+          return `a[href="${E(href)}"]`;
         }
       }
 
       if (element.getAttribute("aria-label")) {
-        return `[aria-label="${element.getAttribute("aria-label")}"]`;
+        return `[aria-label="${E(element.getAttribute("aria-label"))}"]`;
       }
 
       if (element.getAttribute("placeholder")) {
-        return `${tag}[placeholder="${element.getAttribute("placeholder")}"]`;
+        return `${tag}[placeholder="${E(element.getAttribute("placeholder"))}"]`;
       }
 
       if (element.dataset && element.dataset.testid) {
-        return `[data-testid="${element.dataset.testid}"]`;
+        return `[data-testid="${E(element.dataset.testid)}"]`;
       }
 
       // GeneXus grid row action: element is inside a [gxrow] row
       const gxRow = element.closest && element.closest("[gxrow]");
       if (gxRow) {
         const rowNum = gxRow.getAttribute("gxrow");
-        if (element.title) return `[gxrow="${rowNum}"] [title="${element.title}"]`;
+        if (element.title) return `[gxrow="${E(rowNum)}"] [title="${E(element.title)}"]`;
       }
 
       // title attribute (stable in legacy/enterprise apps)
       const titleAttr = element.getAttribute("title");
       if (titleAttr && titleAttr.length <= 80) {
-        return `[title="${titleAttr}"]`;
+        return `[title="${E(titleAttr)}"]`;
       }
 
       // Stable data-* attribute (skip auto-generated/dynamic ones)
@@ -80,11 +89,11 @@
         if (a.value.length > 80 || a.value === "") return false;
         return true;
       });
-      if (stableData) return `[${stableData.name}="${stableData.value}"]`;
+      if (stableData) return `[${stableData.name}="${E(stableData.value)}"]`;
 
       const text = (element.textContent || "").replace(/\s+/g, " ").trim();
       if (text && text.length <= 60) {
-        return `${tag}[text="${text}"]`;
+        return `${tag}[text="${E(text)}"]`;
       }
 
       // Anchor selector: nearest ancestor with a stable id + relative path
