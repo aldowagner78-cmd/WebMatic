@@ -125,14 +125,42 @@ function ensurePanelOpenInTab(tab) {
   });
 }
 
+function _ensureInlineMirrorOrGoBack(tabId) {
+  if (inlineRecordingTabId === null) return;
+  // Si es la misma pestaña de grabación, no hacer nada
+  if (tabId === inlineRecordingTabId) return;
+  chrome.tabs.get(tabId, (tab) => {
+    if (chrome.runtime.lastError) return;
+    const url = tab.url || tab.pendingUrl || "";
+    // PDFs y páginas restringidas no aceptan content scripts — volver a la pestaña de grabación
+    const isRestricted = /^(about:|chrome:|moz-extension:|chrome-extension:|blob:|data:)/i.test(url) ||
+      /\.pdf(\?|#|$)/i.test(url);
+    if (isRestricted) {
+      setTimeout(() => {
+        chrome.tabs.update(inlineRecordingTabId, { active: true }, () => { void chrome.runtime.lastError; });
+      }, 300);
+      return;
+    }
+    // Página normal: intentar mostrar el espejo; si falla (sin content script), volver
+    chrome.tabs.sendMessage(tabId, { type: "SHOW_INLINE_REC_MIRROR" }, (resp) => {
+      if (chrome.runtime.lastError || !resp) {
+        setTimeout(() => {
+          if (inlineRecordingTabId !== null) {
+            chrome.tabs.update(inlineRecordingTabId, { active: true }, () => { void chrome.runtime.lastError; });
+          }
+        }, 300);
+      }
+    });
+  });
+}
+
 chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     if (chrome.runtime.lastError) return;
     if (isRecording) ensureFloatingBtnInTab(tab);
     if (panelOpenTabs.has(activeInfo.tabId)) ensurePanelOpenInTab(tab);
-    // Mostrar panel espejo de grabación inline en la pestaña activa
     if (inlineRecordingTabId !== null) {
-      sendMessageToTab(activeInfo.tabId, { type: "SHOW_INLINE_REC_MIRROR" });
+      _ensureInlineMirrorOrGoBack(activeInfo.tabId);
     }
   });
 });
