@@ -107,6 +107,57 @@
     return findInDocument(document, selector);
   }
 
+  function _isInteractable(el) {
+    if (!el || !(el instanceof Element)) return false;
+    const htmlEl = /** @type {HTMLElement} */ (el);
+    if ("disabled" in htmlEl && htmlEl.disabled) return false;
+    const cs = getComputedStyle(htmlEl);
+    if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return false;
+    return htmlEl.getClientRects && htmlEl.getClientRects().length > 0;
+  }
+
+  function _allDocs(rootDoc) {
+    const docs = [];
+    function _walk(doc) {
+      if (!doc) return;
+      docs.push(doc);
+      try {
+        const frames = doc.querySelectorAll("iframe, frame");
+        for (const frame of frames) {
+          try {
+            const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+            if (innerDoc) _walk(innerDoc);
+          } catch (e) { /* cross-origin */ }
+        }
+      } catch (e) { /* ignore */ }
+    }
+    _walk(rootDoc || document);
+    return docs;
+  }
+
+  function findBestCheckTarget(selector) {
+    if (!selector) return null;
+    // Keep XPath / custom text selectors on existing path.
+    if (selector.startsWith("/") || selector.startsWith("(") || /^\w+\[text="/.test(selector)) {
+      return findElement(selector);
+    }
+    const matches = [];
+    for (const d of _allDocs(document)) {
+      try {
+        const list = d.querySelectorAll(selector);
+        for (const el of list) {
+          if (!(el instanceof HTMLInputElement)) continue;
+          const t = (el.type || "").toLowerCase();
+          if (t !== "checkbox" && t !== "radio") continue;
+          matches.push(el);
+        }
+      } catch (e) { /* invalid selector */ }
+    }
+    if (matches.length === 0) return findElement(selector);
+    const interactable = matches.find((el) => _isInteractable(el));
+    return interactable || matches[0];
+  }
+
   /**
    * Simulates a click on an element, dispatching mousedown + mouseup + click.
    */
@@ -380,7 +431,7 @@
         }
 
         const selector = expandVariables(step.selector || "", vars);
-        const el = findElement(selector);
+        const el = step.type === "check" ? findBestCheckTarget(selector) : findElement(selector);
 
         if (!el) {
           if (Date.now() - start < timeoutMs) {
@@ -430,10 +481,19 @@
             // Radio buttons: simulate a click to activate the radio group logic correctly
             if (!el.checked) simulateClick(el);
           } else {
-            // Checkbox: set checked state and fire change event
+            // Checkbox: prefer real click (framework logic), fallback to property + change
             if (el.checked !== desired) {
-              el.checked = desired;
-              el.dispatchEvent(new Event("change", { bubbles: true }));
+              if (_isInteractable(el)) {
+                simulateClick(el);
+              } else {
+                el.checked = desired;
+                el.dispatchEvent(new Event("change", { bubbles: true }));
+              }
+              // If a custom handler prevented state toggle, force desired state.
+              if (el.checked !== desired) {
+                el.checked = desired;
+                el.dispatchEvent(new Event("change", { bubbles: true }));
+              }
             }
           }
         } else if (step.type === "extract") {
