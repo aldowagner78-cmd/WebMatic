@@ -67,15 +67,69 @@
     return btn;
   }
 
-  class StepEditor {
-    constructor() {
-      this.steps = [];
+  function _mkBtn(text, title, disabled, onClick) {
+    const btn = document.createElement("button");
+    btn.className = "wm-sved-btn";
+    btn.textContent = text;
+    btn.title = title;
+    btn.disabled = disabled;
+    if (!disabled) btn.addEventListener("click", onClick);
+    return btn;
+  }
+
+  // Campos que tienen selector de elemento en la página
+  const PICKER_FIELDS = new Set(["selector", "from", "to"]);
+
+  /** Envuelve un input en un wrapper con botón picker cuando el campo lo admite */
+  function _wrapWithPicker(inp, fieldName, stepEditor) {
+    if (!PICKER_FIELDS.has(fieldName) || !stepEditor._onPickRequest) return inp;
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "display:flex;gap:4px;align-items:center;width:100%";
+    inp.style.flex = "1";
+    const pickerBtn = document.createElement("button");
+    pickerBtn.type = "button";
+    pickerBtn.className = "wm-sved-picker-btn";
+    pickerBtn.textContent = "\uD83C\uDFAF Elegir";
+    pickerBtn.title = "Haz clic en un elemento de la p\u00e1gina para capturar su selector";
+    pickerBtn.style.cssText = [
+      "all:initial", "display:inline-flex", "align-items:center",
+      "background:#0ea5e9", "color:#fff", "border-radius:6px",
+      "padding:4px 8px", "font-size:11px", "font-weight:700",
+      "font-family:system-ui,sans-serif", "cursor:pointer",
+      "white-space:nowrap", "flex-shrink:0"
+    ].join(";");
+    pickerBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      stepEditor._pickElement((selector) => {
+        inp.value = selector;
+        inp.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+    });
+    wrap.appendChild(inp);
+    wrap.appendChild(pickerBtn);
+    return wrap;
+  }
+
+
       this._container = null;
       this._onChange = null;
       this._addFormOpen = false;
       this._editIdx = null;   // index of the step being edited, or null
       this._onRecordRequest = null; // callback(onDone) para grabar pasos inline
       this._pendingRecord = false;  // true mientras la grabación inline está activa
+      this._onPickRequest = null;   // callback(onPicked) para modo picker de elemento
+    }
+
+    /** Registra el handler que activa el picker de elemento desde content.js */
+    setPickerHandler(fn) {
+      this._onPickRequest = fn;
+    }
+
+    /** Activa el modo picker; llama onPicked(selector) cuando el usuario hace clic en un elemento */
+    _pickElement(onPicked) {
+      if (typeof this._onPickRequest === "function") {
+        this._onPickRequest(onPicked);
+      }
     }
 
     /** Registra el handler que activa la grabación inline desde content.js */
@@ -333,7 +387,7 @@
               const pv = prefill[name];
               inp.value = Array.isArray(pv) ? pv.join(", ") : String(pv);
             }
-            lbl.appendChild(inp);
+            lbl.appendChild(_wrapWithPicker(inp, name, this));
           }
           fieldsDiv.appendChild(lbl);
         });
@@ -475,7 +529,7 @@
             inp.type = "text";
             inp.dataset.field = name;
             inp.placeholder = ph || "";
-            lbl.appendChild(inp);
+            lbl.appendChild(_wrapWithPicker(inp, name, this));
           }
           fieldsDiv.appendChild(lbl);
         });

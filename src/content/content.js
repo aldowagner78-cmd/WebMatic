@@ -1547,7 +1547,79 @@
   const INLINE_REC_PANEL_ID = "webmatic-inline-rec-panel";
   let _activeInlineStop = null; // función _stop() de la grabación inline activa
 
-  /**
+  // ── Element picker ──────────────────────────────────────────────────────────
+  let _pickerActive = false;
+  let _pickerHighlighted = null;
+  const _PICKER_STYLE_ID = "webmatic-picker-style";
+
+  function startElementPicker(onPicked) {
+    if (_pickerActive) return;
+    _pickerActive = true;
+
+    // Inyectar estilos del picker
+    if (!document.getElementById(_PICKER_STYLE_ID)) {
+      const s = document.createElement("style");
+      s.id = _PICKER_STYLE_ID;
+      s.textContent = `.wm-picker-highlight{outline:3px solid #0ea5e9 !important;outline-offset:2px !important;cursor:crosshair !important;background-color:rgba(14,165,233,0.08) !important;}`;
+      document.head.appendChild(s);
+    }
+
+    // Banner flotante informativo
+    const banner = document.createElement("div");
+    banner.id = "webmatic-picker-banner";
+    banner.style.cssText = [
+      "all:initial","position:fixed","top:12px","left:50%","transform:translateX(-50%)",
+      "z-index:2147483647","background:rgba(14,165,233,0.97)","color:#fff",
+      "border-radius:10px","padding:10px 18px",
+      "font-family:system-ui,sans-serif","font-size:13px","font-weight:700",
+      "box-shadow:0 4px 20px rgba(0,0,0,0.25)","pointer-events:none","white-space:nowrap"
+    ].join(";");
+    banner.textContent = "🎯 Hacé clic en el elemento que querés seleccionar  ·  ESC para cancelar";
+    document.documentElement.appendChild(banner);
+
+    function _highlight(e) {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.id === "webmatic-picker-banner") return;
+      if (_pickerHighlighted && _pickerHighlighted !== t) {
+        _pickerHighlighted.classList.remove("wm-picker-highlight");
+      }
+      t.classList.add("wm-picker-highlight");
+      _pickerHighlighted = t;
+    }
+
+    function _pick(e) {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.id === "webmatic-picker-banner") return;
+      e.preventDefault();
+      e.stopPropagation();
+      _cancel();
+      const selector = buildSelector(t);
+      onPicked(selector);
+    }
+
+    function _cancel() {
+      _pickerActive = false;
+      document.removeEventListener("mouseover", _highlight, true);
+      document.removeEventListener("click", _pick, true);
+      document.removeEventListener("keydown", _onKey, true);
+      if (_pickerHighlighted) { _pickerHighlighted.classList.remove("wm-picker-highlight"); _pickerHighlighted = null; }
+      const b = document.getElementById("webmatic-picker-banner");
+      if (b && b.parentNode) b.parentNode.removeChild(b);
+    }
+
+    function _onKey(e) {
+      if (e.key === "Escape") { e.preventDefault(); _cancel(); }
+    }
+
+    document.addEventListener("mouseover", _highlight, true);
+    document.addEventListener("click", _pick, true);
+    document.addEventListener("keydown", _onKey, true);
+  }
+  // ────────────────────────────────────────────────────────────────────────────
+
+
    * Starts a lightweight recording session isolated from the main draft.
    * Captures events into a local buffer and calls onDone(filteredSteps) when stopped.
    * Shows a small floating panel to stop the recording.
@@ -2759,6 +2831,7 @@
           seEditor.setSteps((parsed && parsed.steps) || []);
           if (!seEditor._onRecordRequest) {
             seEditor.setRecordRequestHandler((onDone) => { startInlineRecording(onDone); });
+            seEditor.setPickerHandler((onPicked) => { startElementPicker(onPicked); });
           }
           _applyScriptTab(overlay, "visual");
           if (container) seEditor.mount(container, () => {});
@@ -2996,6 +3069,7 @@
           seEditor.setRecordRequestHandler((onDone) => {
             startInlineRecording(onDone);
           });
+          seEditor.setPickerHandler((onPicked) => { startElementPicker(onPicked); });
         }
         const seState = state.ui.scriptEditor;
         const steps = seState.draftSteps && seState.draftSteps.length > 0
