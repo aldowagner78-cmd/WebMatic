@@ -477,25 +477,44 @@
           _highlightElement(el);
           const desired = step.checked === true || step.checked === "true";
           const elType = (el.type || "").toLowerCase();
-          if (elType === "radio") {
-            // Radio buttons: simulate a click to activate the radio group logic correctly
-            if (!el.checked) simulateClick(el);
-          } else {
-            // Checkbox: prefer real click (framework logic), fallback to property + change
-            if (el.checked !== desired) {
-              if (_isInteractable(el)) {
-                simulateClick(el);
-              } else {
-                el.checked = desired;
-                el.dispatchEvent(new Event("change", { bubbles: true }));
-              }
-              // If a custom handler prevented state toggle, force desired state.
+          let _checkAttempts = 0;
+          const _applyCheck = () => {
+            if (elType === "radio") {
+              // Radio buttons: simulate a click to activate the radio group logic correctly
+              if (!el.checked && desired) simulateClick(el);
+            } else {
+              // Checkbox: prefer real click (framework logic), fallback to property + change
               if (el.checked !== desired) {
-                el.checked = desired;
-                el.dispatchEvent(new Event("change", { bubbles: true }));
+                if (_isInteractable(el)) {
+                  simulateClick(el);
+                } else {
+                  el.checked = desired;
+                  el.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+                // If a custom handler prevented state toggle, force desired state.
+                if (el.checked !== desired) {
+                  el.checked = desired;
+                  el.dispatchEvent(new Event("change", { bubbles: true }));
+                }
               }
             }
-          }
+
+            // Some legacy frameworks revert checkbox/radio state asynchronously.
+            setTimeout(() => {
+              if (el.checked === desired) {
+                resolve();
+                return;
+              }
+              _checkAttempts += 1;
+              if (_checkAttempts < 3) {
+                _applyCheck();
+                return;
+              }
+              reject(new Error(`No se pudo establecer el estado CHECK esperado en: ${selector}`));
+            }, 80);
+          };
+          _applyCheck();
+          return;
         } else if (step.type === "extract") {
           const extracted = el.value !== undefined ? el.value : (el.textContent || "").trim();
           if (step.variable) vars[step.variable] = extracted;
