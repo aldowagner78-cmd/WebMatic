@@ -3250,7 +3250,25 @@
     if (chrome.runtime.lastError || !resp || !resp.pending) return;
     const p = resp.pending;
     const PlayerClass = globalScope.WebMaticPlayer;
-    if (!PlayerClass || !Array.isArray(p.steps) || p.index >= p.steps.length) return;
+    if (!PlayerClass || !Array.isArray(p.steps)) return;
+
+    // If all steps already ran (last step navigated here), show the completed panel
+    if (p.index >= p.steps.length) {
+      setTimeout(() => {
+        if (p.macroId) store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: p.macroId });
+        createPlaybackFloating(
+          () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
+          null, null,
+          () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
+          null
+        );
+        store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
+        store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: p.steps.length, steps: p.steps } });
+        store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+      }, 800);
+      return;
+    }
 
     // Brief delay to let the page finish rendering
     setTimeout(() => {

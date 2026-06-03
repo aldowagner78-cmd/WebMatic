@@ -114,6 +114,10 @@
     ["mousedown", "mouseup", "click"].forEach((type) => {
       el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }));
     });
+    // For anchor elements, also call the native click() to guarantee href navigation in Firefox
+    if (el.tagName && el.tagName.toLowerCase() === "a") {
+      el.click();
+    }
   }
 
   /**
