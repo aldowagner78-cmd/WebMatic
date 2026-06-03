@@ -1546,84 +1546,91 @@
 
   const INLINE_REC_PANEL_ID = "webmatic-inline-rec-panel";
   let _activeInlineStop = null; // función _stop() de la grabación inline activa
-
-  // ── Element picker ──────────────────────────────────────────────────────────
   let _pickerActive = false;
-  let _pickerHighlighted = null;
-  const _PICKER_STYLE_ID = "webmatic-picker-style";
 
-  function startElementPicker(onPicked) {
+  /**
+   * Activa el picker visual: oculta el panel, espera que el usuario haga clic
+   * en cualquier elemento de la página (en esta pestaña u otras), y luego
+   * restaura el panel y llama onPicked(selector).
+   */
+  function startElementPicker(fieldName, onPicked) {
     if (_pickerActive) return;
     _pickerActive = true;
 
-    // Inyectar estilos del picker
-    if (!document.getElementById(_PICKER_STYLE_ID)) {
-      const s = document.createElement("style");
-      s.id = _PICKER_STYLE_ID;
-      s.textContent = `.wm-picker-highlight{outline:3px solid #0ea5e9 !important;outline-offset:2px !important;cursor:crosshair !important;background-color:rgba(14,165,233,0.08) !important;}`;
-      document.head.appendChild(s);
+    // Minimizar panel
+    const panelWasVisible = store.getState().ui.panelVisible;
+    if (panelWasVisible) {
+      store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
     }
 
-    // Banner flotante informativo
+    // Banner flotante
     const banner = document.createElement("div");
     banner.id = "webmatic-picker-banner";
     banner.style.cssText = [
-      "all:initial","position:fixed","top:12px","left:50%","transform:translateX(-50%)",
-      "z-index:2147483647","background:rgba(14,165,233,0.97)","color:#fff",
-      "border-radius:10px","padding:10px 18px",
-      "font-family:system-ui,sans-serif","font-size:13px","font-weight:700",
-      "box-shadow:0 4px 20px rgba(0,0,0,0.25)","pointer-events:none","white-space:nowrap"
+      "all:initial", "position:fixed", "top:12px", "left:50%", "transform:translateX(-50%)",
+      "z-index:2147483647", "background:rgba(14,165,233,0.97)", "color:#fff",
+      "border-radius:10px", "padding:10px 20px",
+      "font-family:system-ui,sans-serif", "font-size:13px", "font-weight:700",
+      "box-shadow:0 4px 20px rgba(0,0,0,0.3)", "pointer-events:none", "white-space:nowrap",
+      "text-align:center"
     ].join(";");
-    banner.textContent = "🎯 Hacé clic en el elemento que querés seleccionar  ·  ESC para cancelar";
+    banner.textContent = "\uD83C\uDFAF Hac\u00e9 clic en el elemento que quer\u00e9s  \u00B7  ESC para cancelar";
     document.documentElement.appendChild(banner);
 
-    function _highlight(e) {
+    // Estilos de resaltado
+    const styleEl = document.createElement("style");
+    styleEl.id = "webmatic-picker-hl-style";
+    styleEl.textContent = ".wm-picker-hl{outline:3px solid #0ea5e9 !important;outline-offset:2px !important;cursor:crosshair !important;background-color:rgba(14,165,233,0.10) !important;}";
+    document.head.appendChild(styleEl);
+
+    let highlighted = null;
+
+    function _over(e) {
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest("#webmatic-panel-root") || t.id === "webmatic-picker-banner") return;
-      if (_pickerHighlighted && _pickerHighlighted !== t) {
-        _pickerHighlighted.classList.remove("wm-picker-highlight");
+      if (t.id === "webmatic-picker-banner" || t.closest("#webmatic-panel-root")) return;
+      if (highlighted && highlighted !== t) highlighted.classList.remove("wm-picker-hl");
+      t.classList.add("wm-picker-hl");
+      highlighted = t;
+    }
+
+    function _cleanup() {
+      _pickerActive = false;
+      document.removeEventListener("mouseover", _over, true);
+      document.removeEventListener("click", _pick, true);
+      document.removeEventListener("keydown", _esc, true);
+      if (highlighted) { highlighted.classList.remove("wm-picker-hl"); highlighted = null; }
+      const b = document.getElementById("webmatic-picker-banner");
+      if (b && b.parentNode) b.parentNode.removeChild(b);
+      const s = document.getElementById("webmatic-picker-hl-style");
+      if (s && s.parentNode) s.parentNode.removeChild(s);
+      // Restaurar panel
+      if (panelWasVisible && !store.getState().ui.panelVisible) {
+        store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
       }
-      t.classList.add("wm-picker-highlight");
-      _pickerHighlighted = t;
     }
 
     function _pick(e) {
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest("#webmatic-panel-root") || t.id === "webmatic-picker-banner") return;
+      if (t.id === "webmatic-picker-banner" || t.closest("#webmatic-panel-root")) return;
       e.preventDefault();
       e.stopPropagation();
-      _cancel();
       const selector = buildSelector(t);
+      _cleanup();
       onPicked(selector);
     }
 
-    function _cancel() {
-      _pickerActive = false;
-      document.removeEventListener("mouseover", _highlight, true);
-      document.removeEventListener("click", _pick, true);
-      document.removeEventListener("keydown", _onKey, true);
-      if (_pickerHighlighted) { _pickerHighlighted.classList.remove("wm-picker-highlight"); _pickerHighlighted = null; }
-      const b = document.getElementById("webmatic-picker-banner");
-      if (b && b.parentNode) b.parentNode.removeChild(b);
+    function _esc(e) {
+      if (e.key === "Escape") { e.preventDefault(); _cleanup(); }
     }
 
-    function _onKey(e) {
-      if (e.key === "Escape") { e.preventDefault(); _cancel(); }
-    }
-
-    document.addEventListener("mouseover", _highlight, true);
+    document.addEventListener("mouseover", _over, true);
     document.addEventListener("click", _pick, true);
-    document.addEventListener("keydown", _onKey, true);
+    document.addEventListener("keydown", _esc, true);
   }
-  // ────────────────────────────────────────────────────────────────────────────
 
 
-   * Starts a lightweight recording session isolated from the main draft.
-   * Captures events into a local buffer and calls onDone(filteredSteps) when stopped.
-   * Shows a small floating panel to stop the recording.
-   */
   function startInlineRecording(onDone, _priorStepCount, _isReinjection) {
     // Remove any leftover panel
     const oldPanel = document.getElementById(INLINE_REC_PANEL_ID);
@@ -2831,7 +2838,7 @@
           seEditor.setSteps((parsed && parsed.steps) || []);
           if (!seEditor._onRecordRequest) {
             seEditor.setRecordRequestHandler((onDone) => { startInlineRecording(onDone); });
-            seEditor.setPickerHandler((onPicked) => { startElementPicker(onPicked); });
+            seEditor.setPickerHandler((fieldName, onPicked) => { startElementPicker(fieldName, onPicked); });
           }
           _applyScriptTab(overlay, "visual");
           if (container) seEditor.mount(container, () => {});
@@ -3069,7 +3076,7 @@
           seEditor.setRecordRequestHandler((onDone) => {
             startInlineRecording(onDone);
           });
-          seEditor.setPickerHandler((onPicked) => { startElementPicker(onPicked); });
+          seEditor.setPickerHandler((fieldName, onPicked) => { startElementPicker(fieldName, onPicked); });
         }
         const seState = state.ui.scriptEditor;
         const steps = seState.draftSteps && seState.draftSteps.length > 0
