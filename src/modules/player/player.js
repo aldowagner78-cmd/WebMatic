@@ -887,6 +887,7 @@
       const vars = options.vars || {};
       const startIndex = options.startIndex || 0;
       const macroId = options.macroId || null;
+      const hasExplicitCaptureDefaults = steps.some((s) => s && s.type === "capture_defaults");
       this.isPlaying = true;
       this._abort = false;
       this._speed = speed;
@@ -901,9 +902,22 @@
       }
 
       try {
+        let autoCaptureDone = hasExplicitCaptureDefaults || startIndex > 0;
         for (let i = startIndex; i < steps.length; i++) {
           if (this._abort) break;
           const step = steps[i];
+
+          // Automatic safety net: if the macro doesn't include capture_defaults,
+          // normalize defaults right before the first field-mutating step.
+          if (!autoCaptureDone && (step.type === "input" || step.type === "text" || step.type === "check" || step.type === "choose_option")) {
+            const autoStep = {
+              type: "capture_defaults",
+              _preserveSelectors: Array.from(_collectModifiedSelectors(steps, i))
+            };
+            await executeStep(autoStep, vars, this.retryMs, this.timeoutMs, this._speed);
+            autoCaptureDone = true;
+          }
+
           const capturePreserve = step.type === "capture_defaults"
             ? Array.from(_collectModifiedSelectors(steps, i + 1))
             : null;
