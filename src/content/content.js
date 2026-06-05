@@ -886,6 +886,7 @@
                                   return "\u270E " + (s.selector || "") + (s.value ? " = \"" + s.value + "\"" : "");
     if (s.type === "wait")        return "\u23F1 " + (s.seconds != null ? s.seconds + "s" : (s.ms || 0) + "ms");
     if (s.type === "check")       return "\u2611 " + (s.selector || "");
+    if (s.type === "choose_option") return "\u{1F4CB} opcion " + (s.selector || "") + (s.value ? ` = ${s.value}` : "");
     if (s.type === "key")         return "\u2328 " + (s.key || "");
     if (s.type === "extract")     return "\u270F " + (s.selector || "") + (s.variable ? " \u2192 " + s.variable : "");
     if (s.type === "wait_for")    return "\u23F3 esperar " + (s.selector || "");

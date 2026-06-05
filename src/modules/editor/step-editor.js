@@ -7,6 +7,7 @@
     { value: "wait",         label: "\u23F1 Esperar (s)",       fields: [{ name: "seconds",    ph: "2" }] },
     { value: "key",          label: "\u2328 Tecla",             fields: [{ name: "key",        ph: "Enter" }] },
     { value: "check",        label: "\u2611 Checkbox",          fields: [{ name: "selector",   ph: "#mi-check" }, { name: "checked", ph: "true" }] },
+    { value: "choose_option", label: "\u{1F4CB} Elegir opcion",   fields: [{ name: "selector", ph: "#mi-select" }, { name: "variable", ph: "OPCION (opcional)" }, { name: "value", ph: "valor fijo (opcional)" }] },
     { value: "extract",      label: "\u270F Extraer",           fields: [{ name: "selector",   ph: "#precio" }, { name: "variable", ph: "PRECIO" }] },
     { value: "wait_for",     label: "\u23F3 Esperar selector",  fields: [{ name: "selector",   ph: "#resultado" }] },
     { value: "scroll_to",    label: "\u21D3 Scroll a",          fields: [{ name: "selector",   ph: "#footer" }] },
@@ -24,7 +25,7 @@
 
   const TYPE_ICONS = {
     navigate: "\u{1F310}", click: "\u{1F5B1}", dblclick: "\u{1F5B1}\u{1F5B1}", input: "\u2328", text: "\u2328",
-    wait: "\u23F1", key: "\u2328", check: "\u2611", extract: "\u270F",
+    wait: "\u23F1", key: "\u2328", check: "\u2611", choose_option: "\u{1F4CB}", extract: "\u270F",
     wait_for: "\u23F3", scroll_to: "\u21D3", hover: "\u25B7", drag_drop: "\u2194",
     set_variable: "=", prompt: "?", if_exists: "\u2299", loop_until: "\u21BA",
     capture_defaults: "\u2699",
@@ -42,6 +43,7 @@
       return s.seconds != null ? `${s.seconds}s` : `${s.ms || 0}ms`;
     if (s.type === "key")          return s.key || "";
     if (s.type === "check")        return `${s.selector || ""} ${s.checked ? "\u2714" : "\u2718"}`;
+    if (s.type === "choose_option")return `${s.selector || ""} ${s.value ? `= ${s.value}` : "(preguntar)"}`;
     if (s.type === "extract")      return `${s.selector || ""} \u2192 ${s.variable || ""}`;
     if (s.type === "wait_for")     return s.selector || "";
     if (s.type === "scroll_to")    return s.selector || "";

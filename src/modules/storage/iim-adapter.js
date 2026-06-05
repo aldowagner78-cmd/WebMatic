@@ -47,6 +47,13 @@
         lines.push(`CHECK SELECTOR=${_quote(step.selector)} CHECKED=${_quote(step.checked ? "true" : "false")}`);
         return;
       }
+      if (step.type === "choose_option") {
+        let line = `CHOOSE_OPTION SELECTOR=${_quote(step.selector)}`;
+        if (step.value) line += ` VALUE=${_quote(step.value)}`;
+        if (step.variable) line += ` VAR=${_quote(step.variable)}`;
+        lines.push(line);
+        return;
+      }
       if (step.type === "key") {
         lines.push(`KEY CODE=${_quote(step.key || "")}`);
         return;
@@ -146,6 +153,11 @@
         const checked = _parseParam(l, "CHECKED") === "true";
         // Unchecked defaults are fast (no user intent)
         steps.push({ type: "check", selector: sel, checked, _fast: !checked });
+      } else if (l.startsWith("CHOOSE_OPTION")) {
+        const sel = _parseParam(l, "SELECTOR");
+        const value = _parseParam(l, "VALUE");
+        const variable = _parseParam(l, "VAR");
+        steps.push({ type: "choose_option", selector: sel, value: value || "", variable: variable || "" });
       } else if (l.startsWith("KEY")) {
         const key = _parseParam(l, "CODE");
         steps.push({ type: "key", key });

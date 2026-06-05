@@ -468,6 +468,94 @@
             const types = ["mousedown", "mouseup", "click", "mousedown", "mouseup", "click", "dblclick"];
             el.dispatchEvent(new MouseEvent(types[i], { bubbles: true, cancelable: true, detail }));
           });
+        } else if (step.type === "choose_option") {
+          _highlightElement(el);
+          if (!(el instanceof HTMLSelectElement)) {
+            reject(new Error(`choose_option requiere un <select>: ${selector}`));
+            return;
+          }
+
+          const _resolvedValue = expandVariables(step.value || "", vars);
+          const _applyAndResolve = (v) => {
+            setInputValue(el, v);
+            if (step.variable) vars[step.variable] = v;
+            resolve();
+          };
+
+          if (_resolvedValue) {
+            _applyAndResolve(_resolvedValue);
+            return;
+          }
+
+          if (step._testValue !== undefined) {
+            _applyAndResolve(String(step._testValue));
+            return;
+          }
+
+          const _options = Array.from(el.options || []).filter((o) => !o.disabled);
+          if (_options.length === 0) {
+            reject(new Error(`choose_option sin opciones disponibles: ${selector}`));
+            return;
+          }
+
+          const _overlay = document.createElement("div");
+          _overlay.id = "wm-choose-option-overlay";
+          _overlay.style.cssText = [
+            "position:fixed;top:0;left:0;right:0;bottom:0",
+            "background:rgba(0,0,0,0.45)",
+            "display:flex;align-items:center;justify-content:center",
+            "z-index:2147483646;font-family:system-ui,sans-serif"
+          ].join(";");
+
+          const _box = document.createElement("div");
+          _box.style.cssText = [
+            "background:#fff;border-radius:10px;padding:24px 28px",
+            "min-width:340px;max-width:520px;width:92%",
+            "box-shadow:0 8px 32px rgba(0,0,0,0.22)"
+          ].join(";");
+
+          const _lbl = document.createElement("p");
+          _lbl.style.cssText = "margin:0 0 12px;font-size:14px;color:#064e3b;font-weight:600";
+          _lbl.textContent = step.label || "Elige una opción:";
+
+          const _sel = document.createElement("select");
+          _sel.style.cssText = [
+            "display:block;width:100%;box-sizing:border-box",
+            "border:1px solid #a7f3d0;border-radius:6px",
+            "padding:8px 10px;font-size:14px;margin-bottom:14px",
+            "background:#fff"
+          ].join(";");
+          _options.forEach((opt) => {
+            const _o = document.createElement("option");
+            _o.value = String(opt.value ?? "");
+            _o.textContent = (opt.text || opt.innerText || opt.value || "").trim();
+            _sel.appendChild(_o);
+          });
+          _sel.value = String(el.value ?? "");
+
+          const _btn = document.createElement("button");
+          _btn.textContent = "Continuar ▶";
+          _btn.style.cssText = [
+            "padding:8px 20px;background:#059669;color:#fff",
+            "border:none;border-radius:6px;font-size:14px;cursor:pointer;width:100%"
+          ].join(";");
+
+          const _done = () => {
+            const _chosen = _sel.value;
+            try { document.body.removeChild(_overlay); } catch (e) { /* ignore */ }
+            _applyAndResolve(_chosen);
+          };
+
+          _btn.addEventListener("click", _done);
+          _sel.addEventListener("keydown", (e) => { if (e.key === "Enter") _done(); });
+
+          _box.appendChild(_lbl);
+          _box.appendChild(_sel);
+          _box.appendChild(_btn);
+          _overlay.appendChild(_box);
+          document.body.appendChild(_overlay);
+          setTimeout(() => { try { _sel.focus(); } catch (e) { /* ignore */ } }, 50);
+          return;
         } else if (step.type === "input" || step.type === "text") {
           _highlightElement(el);
           el.focus();
@@ -601,7 +689,7 @@
     for (let i = Math.max(0, startIndex || 0); i < steps.length; i++) {
       const s = steps[i];
       if (!s || typeof s !== "object") continue;
-      if ((s.type === "input" || s.type === "text" || s.type === "check") && s.selector) {
+      if ((s.type === "input" || s.type === "text" || s.type === "check" || s.type === "choose_option") && s.selector) {
         out.add(String(s.selector));
       }
       if (Array.isArray(s.steps)) {
