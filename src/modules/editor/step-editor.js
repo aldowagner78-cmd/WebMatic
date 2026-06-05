@@ -43,7 +43,7 @@
       return s.seconds != null ? `${s.seconds}s` : `${s.ms || 0}ms`;
     if (s.type === "key")          return s.key || "";
     if (s.type === "check")        return `${s.selector || ""} ${s.checked ? "\u2714" : "\u2718"}`;
-    if (s.type === "choose_option")return `${s.selector || ""} ${s.value ? `= ${s.value}` : "(preguntar)"}`;
+    if (s.type === "choose_option")return `${s.selector || ""} ${s.value ? `= ${s.value}` : "(elegir al ejecutar)"}`;
     if (s.type === "extract")      return `${s.selector || ""} \u2192 ${s.variable || ""}`;
     if (s.type === "wait_for")     return s.selector || "";
     if (s.type === "scroll_to")    return s.selector || "";

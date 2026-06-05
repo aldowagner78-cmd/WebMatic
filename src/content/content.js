@@ -125,6 +125,10 @@
         _send({ type: "check", selector: _sel(t), checked: true });
         return;
       }
+      if (t instanceof HTMLSelectElement) {
+        _send({ type: "choose_option", selector: _sel(t), value: t.value });
+        return;
+      }
       _send({ type: "input", selector: _sel(t), value: t.value });
     }, true);
     document.addEventListener("keydown", (e) => {
@@ -886,7 +890,7 @@
                                   return "\u270E " + (s.selector || "") + (s.value ? " = \"" + s.value + "\"" : "");
     if (s.type === "wait")        return "\u23F1 " + (s.seconds != null ? s.seconds + "s" : (s.ms || 0) + "ms");
     if (s.type === "check")       return "\u2611 " + (s.selector || "");
-    if (s.type === "choose_option") return "\u{1F4CB} opcion " + (s.selector || "") + (s.value ? ` = ${s.value}` : "");
+    if (s.type === "choose_option") return "\u{1F4CB} elegir " + (s.selector || "") + (s.value ? ` = ${s.value}` : "");
     if (s.type === "key")         return "\u2328 " + (s.key || "");
     if (s.type === "extract")     return "\u270F " + (s.selector || "") + (s.variable ? " \u2192 " + s.variable : "");
     if (s.type === "wait_for")    return "\u23F3 esperar " + (s.selector || "");
@@ -1390,6 +1394,10 @@
         captureStep({ type: "check", selector: buildSelector(target), checked: true });
         return;
       }
+      if (target instanceof HTMLSelectElement) {
+        captureStep({ type: "choose_option", selector: buildSelector(target), value: target.value });
+        return;
+      }
       // Dynamic copy/paste: if pasted value matches last copied text, use variable reference
       const rawValue = target.value;
       let recordedValue = rawValue;
@@ -1791,6 +1799,7 @@
       flashElement(t);
       if (t instanceof HTMLInputElement && t.type === "checkbox") { _lastInlineCheckChangeAt.set(t, Date.now()); addStep({ type: "check", selector: buildSelector(t), checked: t.checked }); return; }
       if (t instanceof HTMLInputElement && t.type === "radio")    { _lastInlineCheckChangeAt.set(t, Date.now()); addStep({ type: "check", selector: buildSelector(t), checked: true }); return; }
+      if (t instanceof HTMLSelectElement) { addStep({ type: "choose_option", selector: buildSelector(t), value: t.value }); return; }
       const raw = t.value;
       const val = (lastCopiedText !== null && lastCopiedVar !== null && raw.trim() === lastCopiedText)
         ? `{{!${lastCopiedVar}}}` : raw;
