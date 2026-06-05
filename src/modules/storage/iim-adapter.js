@@ -50,6 +50,7 @@
       if (step.type === "choose_option") {
         let line = `CHOOSE_OPTION SELECTOR=${_quote(step.selector)}`;
         if (step.value) line += ` VALUE=${_quote(step.value)}`;
+        if (step.text) line += ` TEXT=${_quote(step.text)}`;
         if (step.variable) line += ` VAR=${_quote(step.variable)}`;
         lines.push(line);
         return;
@@ -156,8 +157,11 @@
       } else if (l.startsWith("CHOOSE_OPTION")) {
         const sel = _parseParam(l, "SELECTOR");
         const value = _parseParam(l, "VALUE");
+        const text = _parseParam(l, "TEXT");
         const variable = _parseParam(l, "VAR");
-        steps.push({ type: "choose_option", selector: sel, value: value || "", variable: variable || "" });
+        const step = { type: "choose_option", selector: sel, value: value || "", variable: variable || "" };
+        if (text) step.text = text;
+        steps.push(step);
       } else if (l.startsWith("KEY")) {
         const key = _parseParam(l, "CODE");
         steps.push({ type: "key", key });

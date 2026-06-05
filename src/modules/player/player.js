@@ -476,14 +476,46 @@
           }
 
           const _resolvedValue = expandVariables(step.value || "", vars);
+          const _resolvedText = expandVariables(step.text || "", vars);
+
+          // Resuelve la opción: primero por value, luego por texto visible exacto.
+          const _findOption = (needle) => {
+            const opts = Array.from(el.options || []);
+            const byValue = opts.find((o) => String(o.value) === String(needle));
+            if (byValue) return byValue;
+            const target = String(needle).trim();
+            return opts.find(
+              (o) => (o.text || "").trim() === target || (o.innerText || "").trim() === target
+            ) || null;
+          };
+
+          // Aplica la opción encontrada disparando input + change; falla controlada si no existe.
+          const _selectByNeedle = (needle) => {
+            const opt = _findOption(needle);
+            if (!opt) {
+              reject(new Error(`choose_option: opción no encontrada "${needle}" en ${selector}`));
+              return;
+            }
+            setInputValue(el, opt.value);
+            el.dispatchEvent(new Event("input", { bubbles: true }));
+            if (step.variable) vars[step.variable] = opt.value;
+            resolve();
+          };
+
           const _applyAndResolve = (v) => {
             setInputValue(el, v);
+            el.dispatchEvent(new Event("input", { bubbles: true }));
             if (step.variable) vars[step.variable] = v;
             resolve();
           };
 
           if (_resolvedValue) {
-            _applyAndResolve(_resolvedValue);
+            _selectByNeedle(_resolvedValue);
+            return;
+          }
+
+          if (_resolvedText) {
+            _selectByNeedle(_resolvedText);
             return;
           }
 
@@ -902,7 +934,11 @@
       }
 
       try {
-        let autoCaptureDone = hasExplicitCaptureDefaults || startIndex > 0;
+        // Auto-normalización de defaults: opt-in (options.autoCaptureDefaults === true).
+        // Por defecto NO se inyecta, para no alterar macros que no usan defaults.
+        // Las macros con un paso capture_defaults explícito siguen funcionando igual.
+        const autoCaptureEnabled = options.autoCaptureDefaults === true;
+        let autoCaptureDone = !autoCaptureEnabled || hasExplicitCaptureDefaults || startIndex > 0;
         for (let i = startIndex; i < steps.length; i++) {
           if (this._abort) break;
           const step = steps[i];

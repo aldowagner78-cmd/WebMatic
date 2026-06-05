@@ -566,3 +566,157 @@ test("navigate: misma URL como no-op permite que pasos siguientes ejecuten", asy
   });
   assert.equal(vars.AFTER_NAV, "ok", "paso siguiente al navigate misma URL debe ejecutar");
 });
+
+// ── Tests: choose_option ────────────────────────────────────────────────────────
+
+const SELECT_HTML = `
+  <select id="pais">
+    <option value="ar">Argentina</option>
+    <option value="br">Brasil</option>
+    <option value="uy">Uruguay</option>
+  </select>`;
+
+test("choose_option: selecciona el <select> por VALUE", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "choose_option", selector: "#pais", value: "br" });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("pais").value, "br");
+});
+
+test("choose_option: selecciona por TEXTO visible cuando el VALUE no coincide", async () => {
+  resetBody(SELECT_HTML);
+  // "Uruguay" no es un value (los values son ar/br/uy), pero sí el texto visible.
+  const result = await runStep({ type: "choose_option", selector: "#pais", value: "Uruguay" });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("pais").value, "uy");
+});
+
+test("choose_option: campo text explícito selecciona por texto visible", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "choose_option", selector: "#pais", text: "Brasil" });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("pais").value, "br");
+});
+
+test("choose_option: dispara eventos input y change", async () => {
+  resetBody(SELECT_HTML);
+  const el = win.document.getElementById("pais");
+  let inputFired = false, changeFired = false;
+  el.addEventListener("input", () => { inputFired = true; });
+  el.addEventListener("change", () => { changeFired = true; });
+  const result = await runStep({ type: "choose_option", selector: "#pais", value: "br" });
+  assert.equal(result.ok, true);
+  assert.equal(inputFired, true, "debe disparar input");
+  assert.equal(changeFired, true, "debe disparar change");
+});
+
+test("choose_option: falla controlada si el selector no existe", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "choose_option", selector: "#no-existe", value: "br" });
+  assert.equal(result.ok, false);
+  assert.ok(result.error, "debe devolver un mensaje de error");
+});
+
+test("choose_option: falla controlada si la opción no existe", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "choose_option", selector: "#pais", value: "no-existe-xyz" });
+  assert.equal(result.ok, false);
+  assert.ok(/opción no encontrada/i.test(result.error), `Error inesperado: ${result.error}`);
+});
+
+test("choose_option: guarda el value elegido en la variable", async () => {
+  resetBody(SELECT_HTML);
+  const vars = {};
+  const result = await runStep(
+    { type: "choose_option", selector: "#pais", value: "Uruguay", variable: "PAIS" },
+    vars
+  );
+  assert.equal(result.ok, true);
+  assert.equal(vars.PAIS, "uy", "la variable debe guardar el value de la opción");
+});
+
+// ── Regresión: macro vieja con TYPE/INPUT sobre <select> sigue funcionando ───────
+
+test("input sobre <select> (macro legacy) sigue seleccionando la opción", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "input", selector: "#pais", value: "br" });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("pais").value, "br");
+});
+
+test("input sobre <select> por texto visible (macro legacy) sigue funcionando", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "input", selector: "#pais", value: "Uruguay" });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("pais").value, "uy");
+});
+
+// ── capture_defaults: opt-in, no altera macros que no lo usan ─────────────────────
+
+const TWO_SELECTS_HTML = `
+  <select id="trigger"><option value="x">X</option><option value="y">Y</option></select>
+  <select id="other"><option value="a">A</option><option value="b">B</option></select>`;
+
+// Stub de layout: happy-dom devuelve rect 0x0 y capture_defaults saltea campos
+// "invisibles". Le damos un rect no nulo para que el escaneo procese los <select>.
+function withVisibleLayout(fn) {
+  const origRect = win.Element.prototype.getBoundingClientRect;
+  win.Element.prototype.getBoundingClientRect = function () {
+    return { width: 120, height: 24, top: 0, left: 0, right: 120, bottom: 24, x: 0, y: 0 };
+  };
+  return Promise.resolve()
+    .then(fn)
+    .finally(() => { win.Element.prototype.getBoundingClientRect = origRect; });
+}
+
+test("capture_defaults: NO se auto-inyecta por defecto (no resetea otros campos)", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(TWO_SELECTS_HTML);
+    // #other tiene un valor distinto al default ("a"); la macro sólo toca #trigger.
+    win.document.getElementById("other").value = "b";
+    const Player2 = require("../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    await new Promise((resolve) => {
+      p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
+        vars: {}, speed: 1, onDone: resolve, onError: resolve
+      });
+    });
+    // Sin auto-capture, #other conserva su valor (no se resetea al default "a").
+    assert.equal(win.document.getElementById("other").value, "b");
+    assert.equal(win.document.getElementById("trigger").value, "y");
+  });
+});
+
+test("capture_defaults: con autoCaptureDefaults=true sí normaliza los defaults", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(TWO_SELECTS_HTML);
+    win.document.getElementById("other").value = "b";
+    const Player2 = require("../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    await new Promise((resolve) => {
+      p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
+        vars: {}, speed: 1, autoCaptureDefaults: true, onDone: resolve, onError: resolve
+      });
+    });
+    // Con opt-in activo, #other se normaliza a su default "a"; #trigger se respeta.
+    assert.equal(win.document.getElementById("other").value, "a");
+    assert.equal(win.document.getElementById("trigger").value, "y");
+  });
+});
+
+test("capture_defaults explícito sigue ejecutándose (normaliza al default)", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(TWO_SELECTS_HTML);
+    win.document.getElementById("other").value = "b";
+    const Player2 = require("../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    await new Promise((resolve) => {
+      p.play([
+        { type: "capture_defaults" },
+        { type: "choose_option", selector: "#trigger", value: "y" }
+      ], { vars: {}, speed: 1, onDone: resolve, onError: resolve });
+    });
+    assert.equal(win.document.getElementById("other").value, "a");
+    assert.equal(win.document.getElementById("trigger").value, "y");
+  });
+});
