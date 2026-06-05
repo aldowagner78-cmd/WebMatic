@@ -64,6 +64,12 @@
         lines.push(`EXTRACT SELECTOR=${_quote(step.selector)} VAR=${_quote(step.variable || "VAR1")}`);
         return;
       }
+      if (step.type === "capture_defaults") {
+        lines.push(step.exclude
+          ? `CAPTURE_DEFAULTS EXCLUDE=${_quote(step.exclude)}`
+          : "CAPTURE_DEFAULTS");
+        return;
+      }
 
       // ── Extended step types — informational comments only ────────────────
       // (WM_JSON is the authoritative source; these lines are for readability)
@@ -150,6 +156,9 @@
         const sel = _parseParam(l, "SELECTOR");
         const variable = _parseParam(l, "VAR") || "VAR1";
         steps.push({ type: "extract", selector: sel, variable });
+      } else if (l.startsWith("CAPTURE_DEFAULTS")) {
+        const exclude = _parseParam(l, "EXCLUDE");
+        steps.push({ type: "capture_defaults", exclude: exclude || "" });
       }
     });
 

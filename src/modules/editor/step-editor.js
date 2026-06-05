@@ -18,6 +18,7 @@
     { value: "if_exists",    label: "\u2299 Si existe",         fields: [{ name: "selector", ph: "#elemento" }] },
     { value: "loop_until",   label: "\u21BA Repetir hasta",     fields: [{ name: "selector", ph: "#spinner" }, { name: "condition", ph: "not_exists", select: [["not_exists", "\u23F3 mientras NO existe"], ["exists", "\u23F3 mientras S\u00ED existe"]] }, { name: "max_iterations", ph: "50" }] },
     { value: "for_each_row", label: "\u25A6 Por cada fila",     fields: [{ name: "columns", ph: "COL1, COL2" }] },
+    { value: "capture_defaults", label: "\u2699 Capturar defaults", fields: [{ name: "exclude", ph: "#campo-a-conservar, .selector (opcional)" }] },
     { value: "reset_fields", label: "\uD83E\uDDF9 Limpiar campos", fields: [{ name: "exclude", ph: "#campo-a-conservar (opcional)" }] },
   ];
 
@@ -26,6 +27,7 @@
     wait: "\u23F1", key: "\u2328", check: "\u2611", extract: "\u270F",
     wait_for: "\u23F3", scroll_to: "\u21D3", hover: "\u25B7", drag_drop: "\u2194",
     set_variable: "=", prompt: "?", if_exists: "\u2299", loop_until: "\u21BA",
+    capture_defaults: "\u2699",
     try_fallback: "\u26A0", call_macro: "\u21AA", for_each_row: "\u25A6"
   };
 
@@ -50,6 +52,7 @@
     if (s.type === "call_macro")   return `"${s.macro_name || ""}"`;
     if (s.type === "if_exists")    return s.selector || "";
     if (s.type === "loop_until")   return s.selector || "";
+    if (s.type === "capture_defaults") return s.exclude ? `excepto ${s.exclude}` : "todos los campos";
     if (s.type === "try_fallback")
       return `${(s.steps || []).length} / ${(s.fallback || []).length} pasos`;
     if (s.type === "for_each_row")

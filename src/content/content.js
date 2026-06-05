@@ -896,6 +896,7 @@
     if (s.type === "prompt")      return "? " + (s.label || "prompt") + (s.variable ? " \u2192 " + s.variable : "");
     if (s.type === "if_exists")   return "? si existe " + (s.selector || "");
     if (s.type === "loop_until")  return "\u21BA bucle " + (s.selector || "");
+    if (s.type === "capture_defaults") return "\u2699 defaults " + (s.exclude ? `(excepto ${s.exclude})` : "");
     if (s.type === "try_fallback")return "\u26A0 try/fallback";
     if (s.type === "call_macro")  return "\u21AA llamar \"" + (s.macro_name || "") + "\"";
     if (s.type === "for_each_row")return "\u25A6 " + ((s.dataset || []).length) + " filas \u00D7 " + ((s.columns || []).join(", "));
