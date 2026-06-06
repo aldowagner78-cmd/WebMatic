@@ -187,6 +187,14 @@ async function readMarkers(sessionId) {
   return result.value !== undefined ? result.value : result;
 }
 
+async function execSync(sessionId, script, args = []) {
+  const result = await wdRequest("POST", `/session/${sessionId}/execute/sync`, {
+    script,
+    args
+  });
+  return result.value !== undefined ? result.value : result;
+}
+
 async function main() {
   const log = makeSafeLogger({ secrets: [] });
   log("Inicio test:e2e:firefox-extension (Firefox real, fixture local, read-only)");
@@ -221,6 +229,13 @@ async function main() {
     fixtureOpened: false,
     contentScriptInjected: false,
     panelPresentOrMountReady: false,
+    inventoryModuleWorks: false,
+    visualEditorFlowPassed: false,
+    valueDropdownVisible: false,
+    valueDropdownHasRealOptions: false,
+    stepUpdatedFromDropdown: false,
+    iimReflectsEditedValue: false,
+    playbackAppliedExpectedValue: false,
     iaposRealDisabled: process.env.IAPOS_E2E_REAL !== "1",
     dangerousActionsExecuted: false
   };
@@ -298,6 +313,326 @@ async function main() {
     }
 
     log(`OK: inyección detectada hasStyleLink=${markers.hasStyleLink ? "sí" : "no"} hasPanelRoot=${markers.hasPanelRoot ? "sí" : "no"}`);
+
+    // ── Validación del módulo de inventario en Firefox real ─────────────────
+    // El módulo se inyecta en el contexto de la página (window === globalThis)
+    // y se ejecuta contra la fixture real para confirmar que captura controles
+    // y ofrece las opciones predefinidas de un <select> (VALUE como dropdown).
+    const inventorySrc = fs.readFileSync(
+      path.join(ROOT, "src", "modules", "inventory", "page-inventory.js"),
+      "utf8"
+    );
+    const invResp = await wdRequest("POST", `/session/${sessionId}/execute/sync`, {
+      script: `
+        ${inventorySrc}
+        const api = (typeof globalThis !== "undefined" && globalThis.WebMaticPageInventory) || window.WebMaticPageInventory;
+        if (!api) return { hasApi: false };
+        const snap = api.captureInventory(document);
+        const opts = api.findOptionsForSelector("#filtro-modalidad", [snap]);
+        return {
+          hasApi: true,
+          controlCount: snap.controls.length,
+          optCount: opts ? opts.length : 0,
+          optValues: opts ? opts.map((o) => o.value) : []
+        };
+      `,
+      args: []
+    });
+    const invValue = invResp.value !== undefined ? invResp.value : invResp;
+    if (invValue && invValue.hasApi && invValue.controlCount > 0 && invValue.optCount === 2) {
+      checks.inventoryModuleWorks = true;
+      log(`OK: inventario capturó ${invValue.controlCount} controles; opciones de #filtro-modalidad=[${invValue.optValues.join(", ")}]`);
+    } else {
+      log(`DIAG inventory=${JSON.stringify(invValue)}`);
+      throw new Error("El módulo de inventario no funcionó correctamente en Firefox real");
+    }
+
+    // ── Flujo UI real: grabar -> editar paso -> dropdown VALUE -> guardar -> replay ──
+    const macroName = `E2E Inventory ${Date.now()}`;
+
+    // 1) Abrir panel y empezar grabación real desde UI.
+    const startedRecording = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      if (!panel) return { ok: false, reason: "panel_missing" };
+      panel.style.display = "block";
+      const btn = panel.querySelector("[data-action='record-toggle'][data-record-btn]");
+      if (!btn) return { ok: false, reason: "record_btn_missing" };
+      btn.click();
+      return { ok: true, text: btn.textContent || "" };
+    `);
+    if (!startedRecording || !startedRecording.ok) {
+      throw new Error(`No se pudo iniciar grabación desde UI: ${JSON.stringify(startedRecording)}`);
+    }
+
+    const recStartedAt = Date.now();
+    while (Date.now() - recStartedAt < 10000) {
+      const recState = await execSync(sessionId, `
+        const panel = document.getElementById("webmatic-panel-root");
+        const btn = panel && panel.querySelector("[data-action='record-toggle'][data-record-btn]");
+        return !!(btn && btn.dataset && btn.dataset.recording === "true");
+      `);
+      if (recState) break;
+      await sleep(200);
+    }
+
+    // 2) Interactuar con select real de fixture para generar choose_option.
+    const interacted = await execSync(sessionId, `
+      const sel = document.getElementById("filtro-modalidad");
+      if (!sel) return { ok: false, reason: "fixture_select_missing" };
+      sel.focus();
+      sel.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      sel.value = "2";
+      sel.dispatchEvent(new Event("change", { bubbles: true }));
+      return { ok: true, value: sel.value };
+    `);
+    if (!interacted || !interacted.ok) {
+      throw new Error(`No se pudo interactuar con select de fixture: ${JSON.stringify(interacted)}`);
+    }
+
+    // 3) Detener grabación desde UI.
+    const stoppedRecording = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const btn = panel && panel.querySelector("[data-action='record-toggle'][data-record-btn]");
+      if (!btn) return { ok: false, reason: "record_btn_missing_on_stop" };
+      btn.click();
+      return { ok: true };
+    `);
+    if (!stoppedRecording || !stoppedRecording.ok) {
+      throw new Error(`No se pudo detener grabación desde UI: ${JSON.stringify(stoppedRecording)}`);
+    }
+
+    // 4) Esperar apertura del editor visual.
+    const seOpenedAt = Date.now();
+    let seVisible = false;
+    while (Date.now() - seOpenedAt < 15000) {
+      const state = await execSync(sessionId, `
+        const panel = document.getElementById("webmatic-panel-root");
+        const ov = panel && panel.querySelector("[data-script-editor]");
+        return !!(ov && ov.style.display !== "none");
+      `);
+      if (state) { seVisible = true; break; }
+      await sleep(250);
+    }
+    if (!seVisible) throw new Error("No se abrió el editor visual tras detener grabación");
+
+    // 5) Expandir paso choose_option.
+    const openedChooseStep = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const rows = Array.from(panel.querySelectorAll(".wm-sved-row"));
+      let opened = false;
+      for (const row of rows) {
+        const t = row.querySelector(".wm-sved-type");
+        if (!t) continue;
+        const type = (t.textContent || "").trim();
+        if (type === "choose_option") {
+          const edit = row.querySelector(".wm-sved-btn-edit");
+          if (edit) {
+            edit.click();
+            opened = true;
+            break;
+          }
+        }
+      }
+      return { opened, rowCount: rows.length };
+    `);
+    if (!openedChooseStep || !openedChooseStep.opened) {
+      throw new Error(`No se encontró/abrió paso choose_option: ${JSON.stringify(openedChooseStep)}`);
+    }
+
+    // 6) Verificar dropdown VALUE y opciones reales visibles.
+    const comboReadyAt = Date.now();
+    let comboInfo = null;
+    while (Date.now() - comboReadyAt < 10000) {
+      comboInfo = await execSync(sessionId, `
+        const panel = document.getElementById("webmatic-panel-root");
+        const combo = panel && panel.querySelector(".wm-sved-edit-form [data-wm-optcombo]");
+        if (!combo) return { visible: false };
+        const options = Array.from(combo.options).map((o) => ({ value: o.value, text: o.textContent || "" }));
+        return { visible: true, options, value: combo.value };
+      `);
+      if (comboInfo && comboInfo.visible) break;
+      await sleep(200);
+    }
+    if (!comboInfo || !comboInfo.visible) throw new Error("VALUE no se renderizó como dropdown visible");
+    checks.valueDropdownVisible = true;
+    const texts = (comboInfo.options || []).map((o) => String(o.text || "").trim());
+    const hasAmb = texts.includes("Ambulatorio");
+    const hasInt = texts.includes("Internacion");
+    if (!(hasAmb && hasInt)) {
+      throw new Error(`Dropdown VALUE sin opciones reales esperadas: ${JSON.stringify(comboInfo.options || [])}`);
+    }
+    checks.valueDropdownHasRealOptions = true;
+
+    // 7) Cambiar VALUE desde dropdown y guardar paso.
+    const changedValue = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const combo = panel && panel.querySelector(".wm-sved-edit-form [data-wm-optcombo]");
+      if (!combo) return { ok: false, reason: "combo_missing" };
+      combo.value = "1";
+      combo.dispatchEvent(new Event("change", { bubbles: true }));
+      const save = panel.querySelector(".wm-sved-edit-form .wm-sved-confirm-btn");
+      if (!save) return { ok: false, reason: "step_save_missing" };
+      save.click();
+      const rows = Array.from(panel.querySelectorAll(".wm-sved-row"));
+      let desc = "";
+      for (const row of rows) {
+        const typeEl = row.querySelector(".wm-sved-type");
+        const descEl = row.querySelector(".wm-sved-desc");
+        const type = (typeEl && typeEl.textContent ? typeEl.textContent : "").trim();
+        const txt = (descEl && descEl.textContent ? descEl.textContent : "").trim();
+        if (type === "choose_option" && txt.includes("#filtro-modalidad")) {
+          desc = txt;
+          break;
+        }
+      }
+      return { ok: true, desc };
+    `);
+    if (!changedValue || !changedValue.ok) {
+      throw new Error(`No se pudo cambiar/guardar VALUE desde dropdown: ${JSON.stringify(changedValue)}`);
+    }
+    if (!String(changedValue.desc || "").includes("= 1")) {
+      throw new Error(`El step no quedó actualizado tras guardar dropdown: ${JSON.stringify(changedValue)}`);
+    }
+    checks.stepUpdatedFromDropdown = true;
+
+    // 8) Guardar macro desde editor (prompt modal).
+    const saveClicked = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const btn = panel && panel.querySelector("[data-action='script-editor-save']");
+      if (!btn) return { ok: false, reason: "script_save_missing" };
+      btn.click();
+      return { ok: true };
+    `);
+    if (!saveClicked || !saveClicked.ok) {
+      throw new Error(`No se pudo accionar Guardar macro: ${JSON.stringify(saveClicked)}`);
+    }
+
+    const modalHandled = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const input = panel && panel.querySelector("[data-wm-input]");
+      const ok = panel && panel.querySelector("[data-wm-ok]");
+      if (!input || !ok) return { ok: false, reason: "wm_modal_missing" };
+      input.value = arguments[0];
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      ok.click();
+      return { ok: true };
+    `, [macroName]);
+    if (!modalHandled || !modalHandled.ok) {
+      throw new Error(`No se pudo completar modal Guardar macro: ${JSON.stringify(modalHandled)}`);
+    }
+
+    const savedAt = Date.now();
+    let macroSaved = false;
+    while (Date.now() - savedAt < 10000) {
+      const found = await execSync(sessionId, `
+        const panel = document.getElementById("webmatic-panel-root");
+        const names = Array.from(panel.querySelectorAll(".webmatic-macro-item .webmatic-macro-name"))
+          .map((n) => (n.textContent || "").trim());
+        const overlay = panel && panel.querySelector("[data-script-editor]");
+        return {
+          exists: names.includes(arguments[0]),
+          overlayOpen: !!(overlay && overlay.style.display !== "none")
+        };
+      `, [macroName]);
+      if (found && found.exists && !found.overlayOpen) { macroSaved = true; break; }
+      await sleep(250);
+    }
+    if (!macroSaved) throw new Error("La macro guardada no apareció en biblioteca o el editor no cerró");
+
+    // 9) Reabrir macro, ir a tab Script y verificar IIM actualizado.
+    const openedMacro = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const rows = Array.from(panel.querySelectorAll(".webmatic-macro-item"));
+      const row = rows.find((r) => {
+        const nameEl = r.querySelector(".webmatic-macro-name");
+        return nameEl && (nameEl.textContent || "").trim() === arguments[0];
+      });
+      if (!row) return { ok: false, reason: "macro_row_missing" };
+      const edit = row.querySelector("[data-action='macro-edit']");
+      if (!edit) return { ok: false, reason: "macro_edit_missing" };
+      edit.click();
+      return { ok: true };
+    `, [macroName]);
+    if (!openedMacro || !openedMacro.ok) {
+      throw new Error(`No se pudo reabrir macro guardada: ${JSON.stringify(openedMacro)}`);
+    }
+
+    const iimCheck = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const scriptTab = panel && panel.querySelector("[data-action='script-editor-tab'][data-script-tab='script']");
+      if (!scriptTab) return { ok: false, reason: "script_tab_missing" };
+      scriptTab.click();
+      const area = panel.querySelector("[data-script-editor-area]");
+      if (!area) return { ok: false, reason: "script_area_missing" };
+      const txt = String(area.value || "");
+      return {
+        ok: true,
+        hasChoose: txt.includes("CHOOSE_OPTION") && txt.includes("#filtro-modalidad"),
+        hasValue1: /CHOOSE_OPTION[^\\n]*VALUE="1"/m.test(txt),
+        snippet: txt.split("\\n").filter((l) => l.includes("CHOOSE_OPTION")).slice(0, 1)[0] || ""
+      };
+    `);
+    if (!iimCheck || !iimCheck.ok || !iimCheck.hasChoose || !iimCheck.hasValue1) {
+      throw new Error(`IIM no refleja VALUE editado a 1: ${JSON.stringify(iimCheck)}`);
+    }
+    checks.iimReflectsEditedValue = true;
+
+    // Cerrar editor.
+    await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const close = panel && panel.querySelector("[data-action='script-editor-close']");
+      if (close) close.click();
+      return true;
+    `);
+
+    // 10) Reproducir macro y confirmar valor final esperado en fixture.
+    const startedPlay = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const rows = Array.from(panel.querySelectorAll(".webmatic-macro-item"));
+      const row = rows.find((r) => {
+        const nameEl = r.querySelector(".webmatic-macro-name");
+        return nameEl && (nameEl.textContent || "").trim() === arguments[0];
+      });
+      if (!row) return { ok: false, reason: "macro_row_missing_for_play" };
+      row.click();
+      const play = panel.querySelector("[data-action='macro-play']");
+      if (!play || play.disabled) return { ok: false, reason: "play_disabled_or_missing" };
+      play.click();
+      return { ok: true };
+    `, [macroName]);
+    if (!startedPlay || !startedPlay.ok) {
+      throw new Error(`No se pudo iniciar reproducción: ${JSON.stringify(startedPlay)}`);
+    }
+
+    const playDoneAt = Date.now();
+    let playbackApplied = false;
+    while (Date.now() - playDoneAt < 20000) {
+      const pb = await execSync(sessionId, `
+        const panel = document.getElementById("webmatic-panel-root");
+        const playBtn = panel && panel.querySelector("[data-action='macro-play']");
+        const stopBtn = panel && panel.querySelector("[data-action='play-stop']");
+        const sel = document.getElementById("filtro-modalidad");
+        const playing = !!(stopBtn && stopBtn.style.display !== "none");
+        const value = sel ? sel.value : null;
+        return { playing, value, playVisible: !!(playBtn && playBtn.style.display !== "none") };
+      `);
+      if (pb && !pb.playing && pb.value === "1") {
+        playbackApplied = true;
+        break;
+      }
+      await sleep(300);
+    }
+    if (!playbackApplied) {
+      throw new Error("La reproducción no dejó el valor final esperado (filtro-modalidad=1)");
+    }
+    checks.playbackAppliedExpectedValue = true;
+
+    checks.visualEditorFlowPassed =
+      checks.valueDropdownVisible &&
+      checks.valueDropdownHasRealOptions &&
+      checks.stepUpdatedFromDropdown &&
+      checks.iimReflectsEditedValue &&
+      checks.playbackAppliedExpectedValue;
 
     const failed = Object.entries(checks)
       .filter(([key, value]) => {

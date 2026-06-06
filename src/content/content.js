@@ -315,8 +315,45 @@
     lastCopiedVar: null,
     _ceTimer: null,       // debounce timer for contenteditable input
     _hoverTimer: null,    // debounce timer for hover recording
-    _scrollTimer: null    // debounce timer for scroll_to recording
+    _scrollTimer: null,   // debounce timer for scroll_to recording
+    pageInventories: []   // inventario de controles capturado durante la grabación
   };
+
+  /**
+   * Captura el inventario de la pantalla actual y lo acumula en el runtime de
+   * grabación (evitando duplicados consecutivos de la misma url).
+   */
+  function captureScreenInventory() {
+    const inv = globalScope.WebMaticPageInventory;
+    if (!inv || typeof inv.captureInventory !== "function") return;
+    try {
+      const snapshot = inv.captureInventory(document);
+      recorderRuntime.pageInventories = inv.appendInventory(recorderRuntime.pageInventories, snapshot);
+    } catch (e) { /* nunca interrumpir la grabación por el inventario */ }
+  }
+
+  /**
+   * Recaptura el inventario final y asocia cada step con su control (controlRef).
+   * Devuelve los steps con controlRef cuando hay coincidencia; si no hay módulo
+   * de inventario disponible, devuelve los steps sin tocar.
+   */
+  function _finalizeWithInventory(steps) {
+    const inv = globalScope.WebMaticPageInventory;
+    if (!inv) return steps;
+    captureScreenInventory();
+    try {
+      return inv.associateSteps(steps, recorderRuntime.pageInventories);
+    } catch (e) {
+      return steps;
+    }
+  }
+
+  /** Construye el bloque meta de la macro a partir del inventario acumulado. */
+  function _recordingMeta() {
+    const list = recorderRuntime.pageInventories;
+    if (!Array.isArray(list) || list.length === 0) return undefined;
+    return { pageInventories: list.slice() };
+  }
 
   const playerRuntime = {
     activePlayer: null,
@@ -2346,12 +2383,14 @@
             const navigateSteps = recorded.filter((s) => s.type === "navigate");
             const interactions = recorded.filter((s) => s.type !== "navigate");
             const allSteps = _cleanupSteps([...navigateSteps, ...interactions]);
-            const processedSteps = utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps;
+            const processedSteps = _finalizeWithInventory(utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps);
             const script = iimAdapter.exportToIim({ steps: processedSteps });
-            store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: processedSteps } });
+            store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: processedSteps, meta: _recordingMeta() } });
           }
         } else {
           store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
+          recorderRuntime.pageInventories = [];
+          captureScreenInventory();
           startRecorderSession();
           createFloatingBtn(() => {
             stopRecorderSession();
@@ -2366,9 +2405,9 @@
               const navigateSteps = recorded.filter((s) => s.type === "navigate");
               const interactions = recorded.filter((s) => s.type !== "navigate");
               const allSteps = _cleanupSteps([...navigateSteps, ...interactions]);
-              const processedSteps = utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps;
+              const processedSteps = _finalizeWithInventory(utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps);
               const script = iimAdapter.exportToIim({ steps: processedSteps });
-              store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: processedSteps } });
+              store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: processedSteps, meta: _recordingMeta() } });
             }
           });
           chrome.runtime.sendMessage({ type: "RECORDING_STATE", active: true }, () => { void chrome.runtime.lastError; });
@@ -2980,7 +3019,7 @@
         const macro = currentState.library.macros.find((m) => m.id === editId);
         if (!macro || !iimAdapter) return;
         const script = macro.script || iimAdapter.exportToIim(macro);
-        store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: macro.id } });
+        store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: macro.id, meta: macro.meta || null } });
       }
 
       if (actionId === "script-editor-close") {
@@ -2998,6 +3037,10 @@
           // Script → Visual: parse current textarea into step editor
           const parsed = iimAdapter.importFromIim(area.value);
           seEditor.setSteps((parsed && parsed.steps) || []);
+          if (typeof seEditor.setInventory === "function") {
+            const _se = store.getState().ui.scriptEditor;
+            seEditor.setInventory(_se.meta && _se.meta.pageInventories ? _se.meta.pageInventories : []);
+          }
           if (!seEditor._onRecordRequest) {
             seEditor.setRecordRequestHandler((onDone) => { startInlineRecording(onDone); });
             seEditor.setPickerHandler((fieldName, onPicked) => { startElementPicker(fieldName, onPicked); });
@@ -3052,6 +3095,7 @@
             script: scriptToStore,
             createdAt: Date.now()
           };
+          if (seState.meta && typeof seState.meta === "object") macro.meta = seState.meta;
           store.dispatch({ type: contracts.ActionTypes.MACRO_SAVED, payload: macro });
           store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_CLOSED });
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro "${macro.name}" guardada` });
@@ -3061,7 +3105,7 @@
           const steps = _resolveEditorSteps(area, seState, originalSteps);
           const scriptToStore = iimAdapter ? iimAdapter.exportToIim({ steps }) : (area ? area.value : "");
           const updatedMacros = currentState.library.macros.map((m) =>
-            m.id === macroId ? { ...m, script: scriptToStore, steps } : m
+            m.id === macroId ? { ...m, script: scriptToStore, steps, ...(seState.meta ? { meta: seState.meta } : {}) } : m
           );
           store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: updatedMacros });
           store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_CLOSED });
@@ -3085,6 +3129,7 @@
           script: scriptToStoreSa,
           createdAt: Date.now()
         };
+        if (seStateSa.meta && typeof seStateSa.meta === "object") macro.meta = seStateSa.meta;
         store.dispatch({ type: contracts.ActionTypes.MACRO_SAVED, payload: macro });
         store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_CLOSED });
         store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro "${macro.name}" guardada` });
@@ -3245,6 +3290,9 @@
           ? seState.draftSteps
           : (iimAdapter ? iimAdapter.importFromIim(seState.script || "").steps : []);
         seEditor.setSteps(steps);
+        if (typeof seEditor.setInventory === "function") {
+          seEditor.setInventory(seState.meta && seState.meta.pageInventories ? seState.meta.pageInventories : []);
+        }
         _applyScriptTab(overlay, "visual");
         seEditor.mount(container, () => {});
       }

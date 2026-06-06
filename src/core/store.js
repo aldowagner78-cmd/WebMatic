@@ -58,7 +58,8 @@
         open: false,
         script: "",
         macroId: null,
-        draftSteps: []
+        draftSteps: [],
+        meta: null
       }
     },
     playback: {
@@ -389,7 +390,8 @@
               open: true,
               script: String(action.payload?.script || ""),
               macroId: action.payload?.macroId || null,
-              draftSteps: Array.isArray(action.payload?.draftSteps) ? action.payload.draftSteps : []
+              draftSteps: Array.isArray(action.payload?.draftSteps) ? action.payload.draftSteps : [],
+              meta: (action.payload && typeof action.payload.meta === "object") ? action.payload.meta : null
             }
           }
         };
@@ -398,7 +400,7 @@
           ...state,
           ui: {
             ...state.ui,
-            scriptEditor: { open: false, script: "", macroId: null, draftSteps: [] }
+            scriptEditor: { open: false, script: "", macroId: null, draftSteps: [], meta: null }
           }
         };
       default:

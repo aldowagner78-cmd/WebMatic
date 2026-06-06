@@ -1,7 +1,44 @@
 (function initIimAdapter(globalScope) {
+  const SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security)/i;
+
   // Quotes a value for iim format, escaping backslashes and double quotes
   function _quote(val) {
     return '"' + String(val || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+  }
+
+  function _isSensitiveControl(ctrl) {
+    if (!ctrl || typeof ctrl !== "object") return false;
+    const id = String(ctrl.id || "");
+    const name = String(ctrl.name || "");
+    const type = String(ctrl.type || "").toLowerCase();
+    const label = String(ctrl.label || "");
+    const role = String(ctrl.role || "");
+    return type === "password" ||
+      SENSITIVE_RE.test(id) ||
+      SENSITIVE_RE.test(name) ||
+      SENSITIVE_RE.test(label) ||
+      SENSITIVE_RE.test(role);
+  }
+
+  function _sanitizeMetaForExport(meta) {
+    if (!meta || typeof meta !== "object") return null;
+    const out = Object.assign({}, meta);
+    if (Array.isArray(meta.pageInventories)) {
+      out.pageInventories = meta.pageInventories.map((inv) => {
+        const next = Object.assign({}, inv);
+        if (Array.isArray(inv.controls)) {
+          next.controls = inv.controls.map((ctrl) => {
+            const c = Object.assign({}, ctrl);
+            if (_isSensitiveControl(c)) {
+              delete c.currentValue;
+            }
+            return c;
+          });
+        }
+        return next;
+      });
+    }
+    return out;
   }
 
   /**
@@ -20,17 +57,20 @@
    */
   function exportToIim(macro) {
     const steps = macro?.steps || [];
+    const meta = _sanitizeMetaForExport(macro?.meta || null);
     const lines = ["VERSION BUILD=1000", "TAB T=1"];
 
     // Embed full steps JSON for lossless round-trip (importFromIim uses this first)
-    if (steps.length > 0) {
+    if (steps.length > 0 || meta) {
       // Strip internal runtime-only keys before serialising
       const clean = steps.map((s) => {
         const c = Object.assign({}, s);
         delete c._ts;
         return c;
       });
-      lines.push("// WM_JSON:" + JSON.stringify({ version: 2, steps: clean }));
+      const payload = { version: 2, steps: clean };
+      if (meta) payload.meta = meta;
+      lines.push("// WM_JSON:" + JSON.stringify(payload));
     }
 
     steps.forEach((step) => {
@@ -122,8 +162,15 @@
       if (l.startsWith("// WM_JSON:")) {
         try {
           const parsed = JSON.parse(l.slice("// WM_JSON:".length));
+          // Backward compat #1: WM_JSON era un array de steps.
+          if (Array.isArray(parsed)) {
+            return { steps: parsed };
+          }
+          // Backward compat #2: WM_JSON como objeto con steps (+ opcional meta).
           if (parsed && Array.isArray(parsed.steps)) {
-            return { steps: parsed.steps };
+            const out = { steps: parsed.steps };
+            if (parsed.meta && typeof parsed.meta === "object") out.meta = parsed.meta;
+            return out;
           }
         } catch (e) { /* malformed JSON — fall through to IIM parser */ }
         break; // only one WM_JSON line expected; stop searching

@@ -82,6 +82,12 @@
       this._onRecordRequest = null; // callback(onDone) para grabar pasos inline
       this._pendingRecord = false;  // true mientras la grabación inline está activa
       this._onPickRequest = null;   // callback(fieldName, onPicked) para picker visual
+      this._inventory = [];         // inventario de controles capturado al grabar
+    }
+
+    /** Registra el inventario de controles (macro.meta.pageInventories). */
+    setInventory(inventories) {
+      this._inventory = Array.isArray(inventories) ? inventories : [];
     }
 
     /** Registra el handler que activa la grabación inline desde content.js */
@@ -129,20 +135,32 @@
     }
 
     /**
-     * Si el paso en edicion es choose_option y su selector apunta a un <select>
-     * real de la pagina, inserta un combo amigable con las opciones reales.
-     * Al elegir, sincroniza los campos manuales `value` y `text` existentes.
-     * Si no resuelve a un <select>, no hace nada (queda el editor manual).
+     * Inserta un combo amigable de opciones cuando el paso en edición lo admite
+     * (choose_option, input o text) y existen opciones conocidas para su selector.
+     * Las opciones se obtienen primero del <select> real de la página y, si no hay,
+     * del inventario capturado al grabar (macro.meta.pageInventories). Al elegir,
+     * sincroniza los campos manuales `value` (y `text` en choose_option), sin
+     * borrarlos si el valor escrito no está en la lista. Si no hay opciones, no
+     * hace nada (queda el editor manual).
      */
     _syncOptionPicker(fieldsDiv, typeValue) {
-      if (!fieldsDiv || typeValue !== "choose_option") return;
+      const supported = typeValue === "choose_option" || typeValue === "input" || typeValue === "text";
+      if (!fieldsDiv || !supported) return;
       const prev = fieldsDiv.querySelector("[data-wm-optpicker]");
       if (prev) prev.remove();
 
       const selInput = fieldsDiv.querySelector("[data-field='selector']");
       if (!selInput) return;
       const selector = (selInput.value || "").trim();
-      const options = StepEditor.getSelectOptionsForSelector(selector);
+
+      // 1) Opciones del <select> real de la página. 2) Inventario de la macro.
+      let options = StepEditor.getSelectOptionsForSelector(selector);
+      if ((!options || options.length === 0) && this._inventory && this._inventory.length) {
+        const inv = (typeof globalScope !== "undefined" && globalScope.WebMaticPageInventory) || null;
+        if (inv && typeof inv.findOptionsForSelector === "function") {
+          options = inv.findOptionsForSelector(selector, this._inventory);
+        }
+      }
       if (!options || options.length === 0) return;
 
       const valInput  = fieldsDiv.querySelector("[data-field='value']");
@@ -188,6 +206,7 @@
       let pre = null;
       if (curVal)  pre = options.find((o) => String(o.value) === curVal);
       if (!pre && curText) pre = options.find((o) => (o.text || "").trim() === curText);
+      if (!pre && curVal) pre = options.find((o) => (o.text || "").trim() === curVal);
       if (!pre) pre = options.find((o) => o.selected);
       if (pre) combo.value = pre.value;
 

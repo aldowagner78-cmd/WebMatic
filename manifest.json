@@ -42,6 +42,7 @@
         "src/modules/ui/ui-shell.js",
         "src/modules/editor/step-editor.js",
         "src/modules/recorder/recorder.js",
+        "src/modules/inventory/page-inventory.js",
         "src/modules/player/player.js",
         "src/modules/storage/iim-adapter.js",
         "src/modules/settings/settings-manager.js",

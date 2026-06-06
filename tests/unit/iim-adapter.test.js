@@ -279,3 +279,106 @@ test("round-trip: choose_option con value + text + variable sin pérdida (IIM + 
   assert.equal(rt[0].text, "Brasil");
   assert.equal(rt[0].variable, "PAIS");
 });
+
+// ── WM_JSON meta.pageInventories persistence ───────────────────────────────
+
+test("exportToIim: WM_JSON conserva meta.pageInventories", () => {
+  const macro = {
+    steps: [{ type: "choose_option", selector: "#filtro-modalidad", value: "1" }],
+    meta: {
+      pageInventories: [{
+        url: "https://example.com/",
+        title: "Fixture",
+        capturedAt: 111,
+        controls: [{
+          selector: "#filtro-modalidad",
+          controlKind: "native-select",
+          options: [{ index: 0, value: "1", text: "Ambulatorio" }]
+        }]
+      }]
+    }
+  };
+  const script = adapter.exportToIim(macro);
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  assert.ok(parsed.meta);
+  assert.ok(Array.isArray(parsed.meta.pageInventories));
+  assert.equal(parsed.meta.pageInventories[0].controls[0].selector, "#filtro-modalidad");
+});
+
+test("importFromIim: devuelve {steps, meta} cuando WM_JSON contiene meta", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    '// WM_JSON:{"version":2,"steps":[{"type":"click","selector":"#x"}],"meta":{"pageInventories":[{"url":"u","controls":[{"selector":"#x"}]}]}}',
+    'CLICK SELECTOR="#x"'
+  ].join("\n");
+  const out = adapter.importFromIim(script);
+  assert.equal(out.steps.length, 1);
+  assert.ok(out.meta);
+  assert.equal(out.meta.pageInventories[0].controls[0].selector, "#x");
+});
+
+test("round-trip IIM: conserva meta.pageInventories", () => {
+  const macro = {
+    steps: [{ type: "click", selector: "#x" }],
+    meta: {
+      pageInventories: [{
+        url: "u",
+        controls: [{ selector: "#x", options: [{ index: 0, value: "A", text: "A" }] }]
+      }]
+    }
+  };
+  const script = adapter.exportToIim(macro);
+  const out = adapter.importFromIim(script);
+  assert.equal(out.steps.length, 1);
+  assert.ok(out.meta);
+  assert.equal(out.meta.pageInventories[0].controls[0].selector, "#x");
+});
+
+test("importFromIim: compat con WM_JSON antiguo como array de steps", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    '// WM_JSON:[{"type":"navigate","url":"https://old.example"}]'
+  ].join("\n");
+  const out = adapter.importFromIim(script);
+  assert.equal(out.steps.length, 1);
+  assert.equal(out.steps[0].type, "navigate");
+  assert.equal(out.meta, undefined);
+});
+
+test("importFromIim: script sin meta sigue funcionando", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    '// WM_JSON:{"version":2,"steps":[{"type":"click","selector":"#legacy"}]}'
+  ].join("\n");
+  const out = adapter.importFromIim(script);
+  assert.equal(out.steps.length, 1);
+  assert.equal(out.steps[0].selector, "#legacy");
+  assert.equal(out.meta, undefined);
+});
+
+test("exportToIim: sanea currentValue sensible dentro de meta.pageInventories", () => {
+  const macro = {
+    steps: [{ type: "click", selector: "#go" }],
+    meta: {
+      pageInventories: [{
+        url: "u",
+        controls: [
+          { selector: "#pwd", type: "password", name: "password", currentValue: "secret123" },
+          { selector: "#tok", name: "csrf_token", currentValue: "abc" },
+          { selector: "#ok", name: "nombre", currentValue: "Juan" }
+        ]
+      }]
+    }
+  };
+  const script = adapter.exportToIim(macro);
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  const controls = parsed.meta.pageInventories[0].controls;
+  assert.equal(controls[0].currentValue, undefined);
+  assert.equal(controls[1].currentValue, undefined);
+  assert.equal(controls[2].currentValue, "Juan");
+});
