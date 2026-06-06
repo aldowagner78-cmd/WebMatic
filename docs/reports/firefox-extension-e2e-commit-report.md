@@ -34,6 +34,7 @@ Cerrar la verificación Firefox-first con commits limpios y separados, sin abrir
 Resultado: PASS
 
 Resumen:
+
 - `tests 117`
 - `pass 117`
 - `fail 0`
@@ -43,6 +44,7 @@ Resumen:
 Resultado: PASS
 
 Resumen:
+
 - fixture local seguro validado
 - `IAPOS_E2E_REAL` omitido
 
@@ -51,6 +53,7 @@ Resumen:
 Resultado: PASS
 
 Resumen:
+
 - Firefox real usado como validación principal
 - extensión temporal instalada
 - content script inyectado
