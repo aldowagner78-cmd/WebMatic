@@ -11,7 +11,8 @@ Mejorar el editor visual para que un paso `choose_option` pueda detectar si su s
 - `tests/unit/step-editor.test.js`
 - `docs/reports/editor-smart-select-report.md`
 
-Nota: `bookmarks.html` aparece borrado en el árbol de trabajo, pero es un cambio ajeno a esta tarea y no se incluyó en la implementación ni en el commit previsto.
+Nota: `bookmarks.html` fue restaurado y no forma parte de esta tarea.
+El test `tests/unit/step-editor.test.js` quedó incluido y trackeado correctamente.
 
 ## 3. Cambios realizados por archivo
 
@@ -91,22 +92,17 @@ Salida resumida de `npm test`:
 
 ## 9. Estado de Git
 
-Salida resumida de `git status --short` al momento de preparar el reporte:
+Salida resumida de `git status --short` al momento de dejar la tarea lista para revisión:
 
 ```text
- M .gitignore
- D bookmarks.html
- M src/modules/editor/step-editor.js
-?? tests/unit/step-editor.test.js
+ M docs/reports/editor-smart-select-report.md
 ```
 
 Salida resumida de `git diff --stat`:
 
 ```text
- .gitignore                        |    7 +
- bookmarks.html                    | 1651 -------------------------------------
- src/modules/editor/step-editor.js |  124 +++
- 3 files changed, 131 insertions(+), 1651 deletions(-)
+ docs/reports/editor-smart-select-report.md | 20 ++++++++------------
+ 1 file changed, 8 insertions(+), 12 deletions(-)
 ```
 
 ## 10. Validación manual realizada
@@ -117,8 +113,8 @@ En este entorno no se ejecutó una validación manual interactiva en navegador r
 
 - La validación final en navegador real sigue pendiente para confirmar la interacción visual del combo en el editor.
 - El filtrado para selects grandes es mínimo y local; cumple el objetivo de usabilidad sin introducir dependencias externas.
-- El borrado de `bookmarks.html` sigue apareciendo en el árbol de trabajo, pero es ajeno a esta tarea.
+- No quedan JSON privados agregados al índice ni archivos privados dentro de `docs/private-fixtures/` en Git.
 
 ## 12. Conclusión
 
-La tarea quedó lista para revisión. No hay regresiones conocidas en la suite automatizada y el comportamiento nuevo quedó cubierto por tests.
+La tarea quedó lista para revisión. No hay regresiones conocidas en la suite automatizada y el comportamiento nuevo quedó cubierto por tests. `bookmarks.html` fue restaurado y el test nuevo quedó incluido correctamente.
