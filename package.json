@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test tests/unit/*.test.js",
     "test:watch": "node --test --watch tests/unit/*.test.js",
-    "test:e2e": "node tests/e2e/run.js"
+    "test:e2e": "node tests/e2e/iapos-safe/run.js",
+    "test:e2e:legacy": "node tests/e2e/run.js"
   },
   "devDependencies": {
     "happy-dom": "^20.9.0",

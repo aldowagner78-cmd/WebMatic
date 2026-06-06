@@ -10,6 +10,15 @@ webmatic-desktop/test-results/
 # Archivos de desarrollo interno (no van al repo)
 _dev-only/
 
+# Credenciales locales (NO subir)
+.env
+.env.local
+.env.*
+
+# Artefactos privados de E2E
+tests/e2e/private/
+tests/e2e/artifacts-private/
+
 # Fixtures privados (datos reales de referencia, NO subir)
 docs/private-fixtures/
 docs/private-fixtures/iapos/

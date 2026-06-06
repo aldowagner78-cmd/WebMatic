@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fixture IAPOS Safe E2E</title>
+</head>
+<body>
+  <h1>Fixture de seguridad WebMatic</h1>
+
+  <section>
+    <label for="filtro-texto">Filtro</label>
+    <input id="filtro-texto" name="filtro" type="text" value="" />
+
+    <label for="filtro-modalidad">Modalidad</label>
+    <select id="filtro-modalidad" name="modalidad">
+      <option value="1">Ambulatorio</option>
+      <option value="2">Internacion</option>
+    </select>
+
+    <button id="btn-buscar" aria-label="Buscar">Buscar</button>
+    <button id="btn-consultar" title="Consultar registros">Consultar</button>
+    <button id="btn-filtrar">Filtrar</button>
+  </section>
+
+  <section>
+    <button id="btn-autorizar">Autorizar</button>
+    <button id="btn-eliminar">Eliminar</button>
+    <button id="btn-guardar">Guardar</button>
+    <input id="img-peligroso" type="image" alt="Anular" value="Anular" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" />
+  </section>
+
+  <table id="grid-afiliados" border="1">
+    <tr>
+      <th>Afiliado</th>
+      <th>Accion</th>
+    </tr>
+    <tr>
+      <td>Paciente demo</td>
+      <td><button class="accion-fila">Ver detalle</button></td>
+    </tr>
+  </table>
+</body>
+</html>
