@@ -17,29 +17,176 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function resolveCommand(name) {
-  const out = spawnSync("sh", ["-lc", `command -v ${name}`], { encoding: "utf8" });
+function normalizeCandidatePath(candidate, platform = process.platform) {
+  if (!candidate) return null;
+  const trimmed = String(candidate).trim().replace(/^"|"$/g, "");
+  if (!trimmed) return null;
+
+  if (platform === "win32") {
+    // Convierte rutas estilo MSYS (/c/Program Files/...) a formato Windows.
+    const msys = /^\/([a-zA-Z])\/(.*)$/.exec(trimmed);
+    if (msys) {
+      return `${msys[1].toUpperCase()}:\\${msys[2].replace(/\//g, "\\")}`;
+    }
+  }
+
+  return trimmed;
+}
+
+function uniquePaths(items) {
+  const seen = new Set();
+  const out = [];
+  for (const item of items || []) {
+    if (!item) continue;
+    if (seen.has(item)) continue;
+    seen.add(item);
+    out.push(item);
+  }
+  return out;
+}
+
+function parseOutputLines(text, platform = process.platform) {
+  return uniquePaths(
+    String(text || "")
+      .split(/\r?\n/)
+      .map((line) => normalizeCandidatePath(line, platform))
+      .filter(Boolean)
+  );
+}
+
+function resolveCommand(name, options = {}) {
+  const spawnSyncImpl = options.spawnSyncImpl || spawnSync;
+  const out = spawnSyncImpl("sh", ["-lc", `command -v ${name}`], { encoding: "utf8" });
   if (out.status !== 0) return null;
-  const v = (out.stdout || "").trim();
+  const v = normalizeCandidatePath((out.stdout || "").trim(), process.platform);
   return v || null;
 }
 
-function resolveFirefoxBinary() {
-  const candidates = [resolveCommand("firefox"), resolveCommand("firefox-esr")].filter(Boolean);
+function resolveWhere(name, options = {}) {
+  const platform = options.platform || process.platform;
+  if (platform !== "win32") return [];
+
+  const spawnSyncImpl = options.spawnSyncImpl || spawnSync;
+  const out = spawnSyncImpl("where", [name], {
+    encoding: "utf8",
+    windowsHide: true
+  });
+  if (out.status !== 0) return [];
+  return parseOutputLines(out.stdout, platform);
+}
+
+function detectFirefoxCandidates(options = {}) {
+  const platform = options.platform || process.platform;
+  const env = options.env || process.env;
+
+  const candidates = [env.FIREFOX_BIN];
+  if (platform === "win32") {
+    candidates.push(...resolveWhere("firefox", options));
+    candidates.push(...resolveWhere("firefox.exe", options));
+    candidates.push(
+      "C:\\Program Files\\Mozilla Firefox\\firefox.exe",
+      "C:\\Program Files (x86)\\Mozilla Firefox\\firefox.exe"
+    );
+  } else {
+    candidates.push(resolveCommand("firefox", options));
+    candidates.push(resolveCommand("firefox-esr", options));
+  }
+
+  return uniquePaths(candidates.map((c) => normalizeCandidatePath(c, platform)).filter(Boolean));
+}
+
+function detectExecutableCandidates(options = {}) {
+  const platform = options.platform || process.platform;
+  const env = options.env || process.env;
+  const envVarName = options.envVarName;
+  const commandName = options.commandName;
+  const windowsFallbacks = options.windowsFallbacks || [];
+  const candidates = [envVarName ? env[envVarName] : null];
+
+  if (platform === "win32") {
+    if (commandName) {
+      candidates.push(...resolveWhere(commandName, options));
+      candidates.push(...resolveWhere(`${commandName}.exe`, options));
+    }
+    candidates.push(...windowsFallbacks);
+  } else if (commandName) {
+    candidates.push(resolveCommand(commandName, options));
+  }
+
+  return uniquePaths(candidates.map((c) => normalizeCandidatePath(c, platform)).filter(Boolean));
+}
+
+function resolveFirstExistingExecutable(candidates, options = {}) {
+  const fsApi = options.fsApi || fs;
+  for (const candidate of candidates || []) {
+    try {
+      if (!fsApi.existsSync(candidate)) continue;
+      return fsApi.realpathSync(candidate);
+    } catch {
+      // continuar probando candidatos
+    }
+  }
+  return null;
+}
+
+function resolveFirefoxBinary(options = {}) {
+  const platform = options.platform || process.platform;
+  const log = options.log || (() => {});
+  const spawnSyncImpl = options.spawnSyncImpl || spawnSync;
+  const fsApi = options.fsApi || fs;
+  const candidates = options.candidates || detectFirefoxCandidates(options);
+
   for (const candidate of candidates) {
     try {
-      const real = fs.realpathSync(candidate);
-      const preferred = path.join(path.dirname(real), "firefox-bin");
-      const probePreferred = spawnSync(preferred, ["--version"], { encoding: "utf8" });
-      if (probePreferred.status === 0) return preferred;
+      if (!fsApi.existsSync(candidate)) continue;
+      const real = fsApi.realpathSync(candidate);
 
-      const probe = spawnSync(real, ["--version"], { encoding: "utf8" });
+      if (platform === "win32") {
+        const probe = spawnSyncImpl(real, ["--version"], { encoding: "utf8", windowsHide: true });
+        if (probe.status !== 0) {
+          log(`WARN: Firefox detectado en ${real}, pero '--version' devolvió status ${probe.status}; se continúa usando el binario.`);
+        }
+        return real;
+      }
+
+      const preferred = path.join(path.dirname(real), "firefox-bin");
+      if (fsApi.existsSync(preferred)) {
+        const probePreferred = spawnSyncImpl(preferred, ["--version"], { encoding: "utf8" });
+        if (probePreferred.status === 0) return preferred;
+      }
+
+      const probe = spawnSyncImpl(real, ["--version"], { encoding: "utf8" });
       if (probe.status === 0) return real;
     } catch {
       // continuar probando candidatos
     }
   }
   return null;
+}
+
+function resolveGeckodriverBin(options = {}) {
+  const env = options.env || process.env;
+  const candidates = detectExecutableCandidates({
+    ...options,
+    envVarName: "GECKODRIVER_BIN",
+    commandName: "geckodriver",
+    windowsFallbacks: [
+      env.USERPROFILE ? path.join(env.USERPROFILE, "tools", "geckodriver", "geckodriver.exe") : null
+    ]
+  });
+  return resolveFirstExistingExecutable(candidates, options);
+}
+
+function resolveZipBin(options = {}) {
+  const candidates = detectExecutableCandidates({
+    ...options,
+    envVarName: "ZIP_BIN",
+    commandName: "zip",
+    windowsFallbacks: [
+      "C:\\Program Files\\MiKTeX\\miktex\\bin\\x64\\zip.exe"
+    ]
+  });
+  return resolveFirstExistingExecutable(candidates, options);
 }
 
 function startFixtureServer() {
@@ -199,10 +346,10 @@ async function main() {
   const log = makeSafeLogger({ secrets: [] });
   log("Inicio test:e2e:firefox-extension (Firefox real, fixture local, read-only)");
 
-  const firefoxPath = resolveFirefoxBinary();
-  const geckodriverPath = resolveCommand("geckodriver");
+  const firefoxPath = resolveFirefoxBinary({ log });
+  const geckodriverPath = resolveGeckodriverBin();
   const webExtPath = resolveCommand("web-ext");
-  const zipPath = resolveCommand("zip");
+  const zipPath = resolveZipBin();
 
   log(`Tooling detectado: firefox=${firefoxPath ? "sí" : "no"}, geckodriver=${geckodriverPath ? "sí" : "no"}, web-ext=${webExtPath ? "sí" : "no"}, zip=${zipPath ? "sí" : "no"}`);
   log(`IAPOS_E2E_REAL=${process.env.IAPOS_E2E_REAL === "1" ? "1" : "0"} (debe ser 0 en este runner)`);
@@ -665,8 +812,21 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  // eslint-disable-next-line no-console
-  console.error("[firefox-extension-safe] FATAL", e && e.stack ? e.stack : e);
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch((e) => {
+    // eslint-disable-next-line no-console
+    console.error("[firefox-extension-safe] FATAL", e && e.stack ? e.stack : e);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  detectFirefoxCandidates,
+  detectExecutableCandidates,
+  resolveFirstExistingExecutable,
+  resolveFirefoxBinary,
+  resolveGeckodriverBin,
+  resolveZipBin,
+  normalizeCandidatePath,
+  parseOutputLines
+};
