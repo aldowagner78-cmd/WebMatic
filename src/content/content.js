@@ -2827,6 +2827,7 @@
             speed: _state.settings.speed ?? 1,
             vars: buildRuntimeVars(null, _state.settings),
             macroId: _macro.id,
+            autoCaptureDefaults: true,
             onStep: (step, index) => {
               tryAutoFillRuntimeDataOnPage(_state.settings);
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _preparedSteps } });
@@ -2886,6 +2887,7 @@
                 speed: _fbState.settings.speed ?? 1,
                 vars: buildRuntimeVars(null, _fbState.settings),
                 macroId: _fbMacro.id,
+                autoCaptureDefaults: true,
                 onStep: (step, index) => {
                   tryAutoFillRuntimeDataOnPage(_fbState.settings);
                   store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _fbPrepared } });
@@ -2940,6 +2942,7 @@
               speed: _lstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lstate.settings),
               macroId: _lmacro.id,
+              autoCaptureDefaults: true,
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lstate.settings);
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lPreparedSteps } });
@@ -2982,6 +2985,7 @@
               speed: _lnstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lnstate.settings),
               macroId: _lnmacro.id,
+              autoCaptureDefaults: true,
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lnstate.settings);
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lnPrepared } });
@@ -3439,6 +3443,7 @@
             speed: p.speed,
             vars: buildRuntimeVars(p.vars, _rstate.settings),
             macroId: p.macroId,
+            autoCaptureDefaults: true,
             onStep: (step, index) => {
               tryAutoFillRuntimeDataOnPage(_rstate.settings);
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rPreparedSteps } });
@@ -3488,6 +3493,7 @@
               speed: p.speed,
               vars: buildRuntimeVars(p.vars, _rnstate.settings),
               macroId: p.macroId,
+              autoCaptureDefaults: true,
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_rnstate.settings);
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rnPrepared } });
@@ -3517,6 +3523,7 @@
         startIndex: p.index,
         vars: buildRuntimeVars(p.vars, store.getState().settings),
         macroId: p.macroId,
+        autoCaptureDefaults: true,
         onStep: (step, index) => {
           tryAutoFillRuntimeDataOnPage(store.getState().settings);
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: p.steps } });
