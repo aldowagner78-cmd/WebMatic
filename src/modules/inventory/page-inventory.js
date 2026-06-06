@@ -344,11 +344,109 @@
     return arr;
   }
 
+  /** Longitud del prefijo común entre dos strings (case-insensitive). */
+  function _commonPrefixLen(a, b) {
+    let i = 0;
+    const la = (a || "").toLowerCase();
+    const lb = (b || "").toLowerCase();
+    while (i < la.length && i < lb.length && la[i] === lb[i]) i++;
+    return i;
+  }
+
+  /** Extrae el id de un selector tipo #foo → "foo". Devuelve "" si no aplica. */
+  function _idFromSelector(sel) {
+    const m = (sel || "").match(/^#([\w-]+)/);
+    return m ? m[1] : "";
+  }
+
+  /**
+   * Busca opciones para un step considerando matching cruzado de controles.
+   * Intenta en orden:
+   *   1. selector exacto del step (findOptionsForSelector);
+   *   2. step.controlRef.selector;
+   *   3. step.controlRef.altSelectors;
+   *   4. si el control es input/autocomplete y no tiene opciones, busca un
+   *      native-select relacionado por: misma label o prefijo de id/name común.
+   * No hardcodea ningún selector ni dominio. Genérico para cualquier web.
+   *
+   * @param {object} step         - paso grabado (debe tener .selector y/o .controlRef)
+   * @param {Array}  inventories  - lista de inventarios (macro.meta.pageInventories)
+   * @returns {Array|null}
+   */
+  function findOptionsForStep(step, inventories) {
+    if (!step) return null;
+
+    // 1) Selector exacto del step.
+    const sel = (step.selector || "").trim();
+    let opts = sel ? findOptionsForSelector(sel, inventories) : null;
+    if (opts && opts.length) return opts;
+
+    // 2) controlRef.selector.
+    const refSel = step.controlRef && (step.controlRef.selector || "").trim();
+    if (refSel && refSel !== sel) {
+      opts = findOptionsForSelector(refSel, inventories);
+      if (opts && opts.length) return opts;
+    }
+
+    // 3) controlRef.altSelectors.
+    const alts = (step.controlRef && Array.isArray(step.controlRef.altSelectors))
+      ? step.controlRef.altSelectors : [];
+    for (const alt of alts) {
+      opts = findOptionsForSelector(alt, inventories);
+      if (opts && opts.length) return opts;
+    }
+
+    // 4) Matching cruzado: si el control es input/autocomplete, buscar un
+    //    native-select relacionado en el mismo inventario por label o prefijo de id.
+    const inputKinds = new Set(["text-input", "autocomplete", "datalist", "textarea"]);
+    const controls = _allControls(inventories);
+
+    // Determinar id/label del control objetivo.
+    const stepCtrl = findControlForSelector(sel, inventories)
+      || (refSel ? findControlForSelector(refSel, inventories) : null);
+    const targetKind  = stepCtrl && stepCtrl.controlKind;
+    const targetLabel = (stepCtrl && stepCtrl.label) ? stepCtrl.label.trim().toLowerCase() : "";
+    const targetId    = (stepCtrl && stepCtrl.id)
+      || _idFromSelector(sel)
+      || _idFromSelector(refSel || "");
+
+    // Solo cross-matching si el control es un input o si no se encontró el control.
+    if (!stepCtrl || inputKinds.has(targetKind)) {
+      for (const c of controls) {
+        if (c.controlKind !== "native-select") continue;
+        if (!c.options || c.options.length === 0) continue;
+
+        // 4a. Misma label (no vacía).
+        if (targetLabel && c.label && c.label.trim().toLowerCase() === targetLabel) {
+          return c.options.map((o) => ({
+            index: o.index, value: o.value, text: o.text,
+            selected: !!o.selected, disabled: !!o.disabled
+          }));
+        }
+
+        // 4b. Prefijo común en id (mínimo 4 chars o 50% del id más corto).
+        const cId = (c.id || "").toString();
+        if (targetId && cId) {
+          const minLen = Math.max(4, Math.floor(Math.min(targetId.length, cId.length) * 0.5));
+          if (_commonPrefixLen(targetId, cId) >= minLen) {
+            return c.options.map((o) => ({
+              index: o.index, value: o.value, text: o.text,
+              selected: !!o.selected, disabled: !!o.disabled
+            }));
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
   const api = {
     captureControl,
     captureInventory,
     findControlForSelector,
     findOptionsForSelector,
+    findOptionsForStep,
     buildControlRef,
     associateSteps,
     appendInventory

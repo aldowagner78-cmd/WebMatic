@@ -135,105 +135,182 @@
     }
 
     /**
-     * Inserta un combo amigable de opciones cuando el paso en edición lo admite
-     * (choose_option, input o text) y existen opciones conocidas para su selector.
-     * Las opciones se obtienen primero del <select> real de la página y, si no hay,
-     * del inventario capturado al grabar (macro.meta.pageInventories). Al elegir,
-     * sincroniza los campos manuales `value` (y `text` en choose_option), sin
-     * borrarlos si el valor escrito no está en la lista. Si no hay opciones, no
-     * hace nada (queda el editor manual).
+     * Convierte el campo VALUE en un <select> real cuando el paso en edición tiene
+     * opciones conocidas (choose_option, input, text). Las opciones se obtienen:
+     *   1) del <select> real de la página (live DOM);
+     *   2) del inventario capturado al grabar (exacto o por cross-control).
+     * El <select> resultante tiene data-field="value" (semántica de guardado) y
+     * data-wm-optcombo="1" (marcador E2E). Incluye una opción "✏ valor manual…"
+     * con un input de texto libre compañero. Si no hay opciones, no hace nada
+     * (el editor manual queda intacto). Genérico — no hardcodea ningún selector.
+     *
+     * @param {HTMLElement} fieldsDiv - contenedor de campos del formulario de edición
+     * @param {string}      typeValue - tipo de paso ("choose_option"|"input"|"text")
+     * @param {object}      [step]    - paso actual (para acceder a step.controlRef)
      */
-    _syncOptionPicker(fieldsDiv, typeValue) {
+    _syncOptionPicker(fieldsDiv, typeValue, step) {
       const supported = typeValue === "choose_option" || typeValue === "input" || typeValue === "text";
       if (!fieldsDiv || !supported) return;
-      const prev = fieldsDiv.querySelector("[data-wm-optpicker]");
-      if (prev) prev.remove();
+
+      // --- Limpiar estado previo ---
+      const prevFilter = fieldsDiv.querySelector("[data-wm-optpicker]");
+      if (prevFilter) prevFilter.remove();
+      const prevManual = fieldsDiv.querySelector("[data-wm-manual-input]");
+      if (prevManual) prevManual.remove();
+      // Restaurar input VALUE original si fue reemplazado previamente.
+      const prevValSel = fieldsDiv.querySelector("select[data-field='value'][data-wm-optcombo]");
+      if (prevValSel) {
+        const restored = document.createElement("input");
+        restored.className = "wm-sved-field-input";
+        restored.type = "text";
+        restored.dataset.field = "value";
+        restored.value = prevValSel.dataset.wmPrevVal || "";
+        restored.placeholder = prevValSel.dataset.wmPrevPh || "";
+        prevValSel.parentElement.replaceChild(restored, prevValSel);
+      }
 
       const selInput = fieldsDiv.querySelector("[data-field='selector']");
       if (!selInput) return;
       const selector = (selInput.value || "").trim();
 
-      // 1) Opciones del <select> real de la página. 2) Inventario de la macro.
+      // 1) Live DOM: opciones del <select> real de la página.
       let options = StepEditor.getSelectOptionsForSelector(selector);
+
+      // 2) Inventario: búsqueda exacta → por controlRef → cross-control input→select.
       if ((!options || options.length === 0) && this._inventory && this._inventory.length) {
-        const inv = (typeof globalScope !== "undefined" && globalScope.WebMaticPageInventory) || null;
-        if (inv && typeof inv.findOptionsForSelector === "function") {
-          options = inv.findOptionsForSelector(selector, this._inventory);
+        const invApi = (typeof globalScope !== "undefined" && globalScope.WebMaticPageInventory) || null;
+        if (invApi) {
+          if (typeof invApi.findOptionsForSelector === "function") {
+            options = invApi.findOptionsForSelector(selector, this._inventory);
+          }
+          if ((!options || options.length === 0) && typeof invApi.findOptionsForStep === "function") {
+            const pseudoStep = { selector, controlRef: (step && step.controlRef) || null };
+            options = invApi.findOptionsForStep(pseudoStep, this._inventory);
+          }
         }
       }
+
       if (!options || options.length === 0) return;
 
-      const valInput  = fieldsDiv.querySelector("[data-field='value']");
+      // El campo VALUE debe existir como <input> para poder reemplazarlo.
+      const valInput = fieldsDiv.querySelector("[data-field='value']");
+      if (!valInput || valInput.tagName.toLowerCase() !== "input") return;
+      const parentEl = valInput.parentElement;
+      if (!parentEl) return;
+
+      const curVal  = valInput.value.trim();
+      const curPh   = valInput.placeholder || "";
       const textInput = fieldsDiv.querySelector("[data-field='text']");
-
-      const block = document.createElement("label");
-      block.className = "wm-sved-field-label";
-      block.setAttribute("data-wm-optpicker", "1");
-      block.textContent = "opciones del campo";
-
-      // Filtro local minimo solo para selects grandes (no rediseña la UI).
-      let filterInput = null;
-      if (options.length > 30) {
-        filterInput = document.createElement("input");
-        filterInput.className = "wm-sved-field-input";
-        filterInput.type = "text";
-        filterInput.placeholder = "filtrar opciones\u2026";
-        block.appendChild(filterInput);
-      }
-
-      const combo = document.createElement("select");
-      combo.className = "wm-sved-select";
-      combo.dataset.wmOptcombo = "1";
-
-      const renderOpts = (filter) => {
-        combo.innerHTML = "";
-        const f = (filter || "").toLowerCase();
-        options.forEach((o) => {
-          if (f && !((o.text || "").toLowerCase().includes(f) ||
-                     String(o.value).toLowerCase().includes(f))) return;
-          const opt = document.createElement("option");
-          opt.value = o.value;
-          opt.textContent = o.text || o.value;
-          if (o.disabled) opt.disabled = true;
-          combo.appendChild(opt);
-        });
-      };
-      renderOpts("");
-
-      // Preseleccion: por value actual, si no por text actual, si no por selected real.
-      const curVal  = valInput  ? valInput.value.trim()  : "";
       const curText = textInput ? textInput.value.trim() : "";
+
+      // --- Crear el <select> que reemplaza al input VALUE ---
+      const valueSelect = document.createElement("select");
+      valueSelect.className = "wm-sved-select";
+      valueSelect.dataset.field     = "value";   // semántica de guardado (igual que el input)
+      valueSelect.dataset.wmOptcombo = "1";       // marcador para E2E y tests
+      valueSelect.dataset.wmPrevVal  = curVal;
+      valueSelect.dataset.wmPrevPh   = curPh;
+
+      // Preselección anticipada: calculamos antes de crear opciones para poder
+      // asignar el valor correcto a la opción manual desde el principio.
       let pre = null;
       if (curVal)  pre = options.find((o) => String(o.value) === curVal);
       if (!pre && curText) pre = options.find((o) => (o.text || "").trim() === curText);
-      if (!pre && curVal) pre = options.find((o) => (o.text || "").trim() === curVal);
-      if (!pre) pre = options.find((o) => o.selected);
-      if (pre) combo.value = pre.value;
+      if (!pre && curVal)  pre = options.find((o) => (o.text || "").trim() === curVal);
+      if (!pre && !curVal) pre = options.find((o) => o.selected);
+      const isManualInit = !pre;
 
-      combo.addEventListener("change", () => {
-        const chosen = options.find((o) => String(o.value) === combo.value);
-        if (!chosen) return;
-        if (valInput) {
-          valInput.value = chosen.value;
-          valInput.dispatchEvent(new Event("input", { bubbles: true }));
-        }
-        if (textInput) {
-          textInput.value = chosen.text;
-          textInput.dispatchEvent(new Event("input", { bubbles: true }));
+      // Primera opción: entrada manual (valor se fija después de insertar en DOM).
+      const manualOpt = document.createElement("option");
+      manualOpt.textContent = "\u270F valor manual\u2026";
+      manualOpt.dataset.wmManual = "1";
+      valueSelect.appendChild(manualOpt);
+
+      // Opciones reales.
+      options.forEach((o) => {
+        const opt = document.createElement("option");
+        opt.setAttribute("value", o.value);
+        opt.textContent = o.text || o.value;
+        if (o.disabled) opt.disabled = true;
+        valueSelect.appendChild(opt);
+      });
+
+      // Input de texto libre, compañero de la opción manual (visible solo cuando manual está activo).
+      const manualInput = document.createElement("input");
+      manualInput.className = "wm-sved-field-input";
+      manualInput.type = "text";
+      manualInput.placeholder = curPh || "valor personalizado";
+      manualInput.dataset.wmManualInput = "1";
+      manualInput.style.display = isManualInit ? "" : "none";
+      // Sincronizar la opción manual con el texto escrito (así sel.value devuelve el valor libre).
+      manualInput.addEventListener("input", () => {
+        manualOpt.value = manualInput.value;
+      });
+
+      valueSelect.addEventListener("change", () => {
+        const selOpt = valueSelect.options[valueSelect.selectedIndex];
+        const isManual = !!(selOpt && selOpt.dataset.wmManual);
+        manualInput.style.display = isManual ? "" : "none";
+        if (isManual) {
+          manualInput.focus();
+        } else {
+          // En choose_option: sincronizar campo "text" con el texto de la opción.
+          const tf = fieldsDiv.querySelector("[data-field='text']");
+          if (tf) {
+            const chosen = options.find((o) => String(o.value) === valueSelect.value);
+            if (chosen) {
+              tf.value = chosen.text;
+              tf.dispatchEvent(new Event("input", { bubbles: true }));
+            }
+          }
         }
       });
 
-      if (filterInput) {
-        filterInput.addEventListener("input", () => renderOpts(filterInput.value));
+      // Reemplazar el input VALUE por el select en el mismo lugar del DOM.
+      parentEl.replaceChild(valueSelect, valInput);
+      // Fijar valores DESPUÉS de insertar en el DOM (happy-dom/browsers resetean .value al conectar).
+      if (pre) {
+        valueSelect.value = pre.value;
+      } else if (curVal) {
+        manualOpt.setAttribute("value", curVal);
+        manualOpt.value = curVal;
       }
+      // Agregar el input manual justo después del select (mismo contenedor).
+      parentEl.appendChild(manualInput);
+      // Fijar valor del input manual DESPUÉS de insertar en el DOM.
+      if (isManualInit && curVal) manualInput.value = curVal;
 
-      block.appendChild(combo);
+      // Para listas grandes (>30): agregar bloque de filtro local.
+      if (options.length > 30) {
+        const filterBlock = document.createElement("label");
+        filterBlock.className = "wm-sved-field-label";
+        filterBlock.setAttribute("data-wm-optpicker", "1");
+        filterBlock.textContent = "filtrar opciones";
+        const filterInput = document.createElement("input");
+        filterInput.className = "wm-sved-field-input";
+        filterInput.type = "text";
+        filterInput.placeholder = "filtrar opciones\u2026";
+        filterBlock.appendChild(filterInput);
 
-      // Insertar el combo justo despues del campo selector (mismo layout existente).
-      let anchor = selInput;
-      while (anchor && anchor.parentElement !== fieldsDiv) anchor = anchor.parentElement;
-      if (anchor && anchor.nextSibling) fieldsDiv.insertBefore(block, anchor.nextSibling);
-      else fieldsDiv.appendChild(block);
+        filterInput.addEventListener("input", () => {
+          const f = filterInput.value.toLowerCase();
+          const prevV = valueSelect.value;
+          Array.from(valueSelect.options).forEach((o) => {
+            if (o.dataset.wmManual) return;
+            const matches = !f
+              || (o.textContent || "").toLowerCase().includes(f)
+              || String(o.value).toLowerCase().includes(f);
+            o.style.display = matches ? "" : "none";
+          });
+          if (prevV) valueSelect.value = prevV;
+        });
+
+        // Insertar el bloque de filtro justo después del parent del select.
+        let anchor = valueSelect;
+        while (anchor && anchor.parentElement !== fieldsDiv) anchor = anchor.parentElement;
+        if (anchor && anchor.nextSibling) fieldsDiv.insertBefore(filterBlock, anchor.nextSibling);
+        else fieldsDiv.appendChild(filterBlock);
+      }
     }
 
     setSteps(steps) {
@@ -514,9 +591,9 @@
         const first = fieldsDiv.querySelector("input, select");
         if (first) setTimeout(() => first.focus(), 0);
         // Combo amigable de opciones reales (solo choose_option sobre <select> real)
-        this._syncOptionPicker(fieldsDiv, typeSelect.value);
+        this._syncOptionPicker(fieldsDiv, typeSelect.value, prefill || null);
         const selInp = fieldsDiv.querySelector("[data-field='selector']");
-        if (selInp) selInp.addEventListener("input", () => this._syncOptionPicker(fieldsDiv, typeSelect.value));
+        if (selInp) selInp.addEventListener("input", () => this._syncOptionPicker(fieldsDiv, typeSelect.value, null));
       };
 
       // Pre-fill with current step values; on type change clear fields

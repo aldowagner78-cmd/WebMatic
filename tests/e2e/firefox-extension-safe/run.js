@@ -384,6 +384,8 @@ async function main() {
     iimReflectsEditedValue: false,
     playbackAppliedExpectedValue: false,
     iaposRealDisabled: process.env.IAPOS_E2E_REAL !== "1",
+      valueIsSelectElement: false,
+      delegacionInventoryFindOptionsForStep: false,
     dangerousActionsExecuted: false
   };
 
@@ -587,6 +589,7 @@ async function main() {
     }
 
     // 6) Verificar dropdown VALUE y opciones reales visibles.
+    //    El campo [data-field="value"] debe ser un <select> real (no un input).
     const comboReadyAt = Date.now();
     let comboInfo = null;
     while (Date.now() - comboReadyAt < 10000) {
@@ -595,14 +598,21 @@ async function main() {
         const combo = panel && panel.querySelector(".wm-sved-edit-form [data-wm-optcombo]");
         if (!combo) return { visible: false };
         const options = Array.from(combo.options).map((o) => ({ value: o.value, text: o.textContent || "" }));
-        return { visible: true, options, value: combo.value };
+        const isSelect = combo.tagName && combo.tagName.toLowerCase() === "select";
+        const isValueField = combo.dataset && combo.dataset.field === "value";
+        return { visible: true, options, value: combo.value, isSelect, isValueField };
       `);
       if (comboInfo && comboInfo.visible) break;
       await sleep(200);
     }
     if (!comboInfo || !comboInfo.visible) throw new Error("VALUE no se renderizó como dropdown visible");
     checks.valueDropdownVisible = true;
-    const texts = (comboInfo.options || []).map((o) => String(o.text || "").trim());
+    // Verificar que [data-field="value"] ES el <select> (no un combo separado).
+    if (!comboInfo.isSelect || !comboInfo.isValueField) {
+      throw new Error(`[data-field="value"] no es un <select> real: isSelect=${comboInfo.isSelect}, isValueField=${comboInfo.isValueField}`);
+    }
+    checks.valueIsSelectElement = true;
+    const texts = (comboInfo.options || []).filter((o) => !(o.value === "" || (o.text || "").includes("manual"))).map((o) => String(o.text || "").trim());
     const hasAmb = texts.includes("Ambulatorio");
     const hasInt = texts.includes("Internacion");
     if (!(hasAmb && hasInt)) {
@@ -774,8 +784,54 @@ async function main() {
     }
     checks.playbackAppliedExpectedValue = true;
 
+    // ── Caso Delegación GeneXus-like ──────────────────────────────────────────
+    // Verifica que findOptionsForStep resuelve opciones desde un input visible
+    // (#vDELEGACION) hacia un select nativo oculto relacionado (#vDELEGCOMBO)
+    // por matching cruzado genérico (prefijo de id + misma label).
+    // NO abre IAPOS real. NO habilita IAPOS_E2E_REAL=1.
+    log("Iniciando verificación Delegación GeneXus-like (fixture local)");
+    await wdRequest("POST", `/session/${sessionId}/url`, {
+      url: `http://localhost:${PORT}/genexus-like.html`
+    });
+    await sleep(1500); // dar tiempo al content script para inyectarse
+
+    const inventorySrcFull = fs.readFileSync(
+      path.join(ROOT, "src", "modules", "inventory", "page-inventory.js"),
+      "utf8"
+    );
+    const delegResp = await execSync(sessionId, `
+      ${inventorySrcFull}
+      const api = (typeof globalThis !== "undefined" && globalThis.WebMaticPageInventory)
+                  || window.WebMaticPageInventory;
+      if (!api) return { hasApi: false };
+      const snap = api.captureInventory(document);
+      // Cross-control: #vDELEGACION (input) → opciones de #vDELEGCOMBO (select).
+      const opts = api.findOptionsForStep({ selector: "#vDELEGACION" }, [snap]);
+      return {
+        hasApi: true,
+        controlCount: snap.controls.length,
+        optCount: opts ? opts.length : 0,
+        optTexts: opts ? opts.map((o) => o.text) : [],
+        hasIAP: opts ? opts.some((o) => o.text === "IAPOS SANTA FE") : false,
+        hasRos: opts ? opts.some((o) => o.text === "ROSARIO") : false,
+        hasRaf: opts ? opts.some((o) => o.text === "RAFAELA") : false
+      };
+    `);
+    const delegValue = delegResp && delegResp.value !== undefined ? delegResp.value : delegResp;
+    if (
+      delegValue && delegValue.hasApi &&
+      delegValue.hasIAP && delegValue.hasRos && delegValue.hasRaf
+    ) {
+      checks.delegacionInventoryFindOptionsForStep = true;
+      log(`OK: findOptionsForStep Delegación → ${JSON.stringify(delegValue.optTexts)}`);
+    } else {
+      log(`DIAG delegacion=${JSON.stringify(delegValue)}`);
+      throw new Error("findOptionsForStep no resolvió opciones para el fixture GeneXus-like Delegación");
+    }
+
     checks.visualEditorFlowPassed =
       checks.valueDropdownVisible &&
+      checks.valueIsSelectElement &&
       checks.valueDropdownHasRealOptions &&
       checks.stepUpdatedFromDropdown &&
       checks.iimReflectsEditedValue &&

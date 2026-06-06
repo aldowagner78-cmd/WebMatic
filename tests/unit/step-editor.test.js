@@ -97,20 +97,23 @@ test("getSelectOptionsForSelector: no falla con un <select> grande (>1200 opcion
  */
 function buildFields(stepValue, stepText) {
   const fieldsDiv = win.document.createElement("div");
-  const mkInput = (field, val) => {
+  const mkInput = (field) => {
     const lbl = win.document.createElement("label");
     const inp = win.document.createElement("input");
     inp.type = "text";
     inp.dataset.field = field;
-    if (val != null) inp.value = val;
     lbl.appendChild(inp);
     fieldsDiv.appendChild(lbl);
     return inp;
   };
-  const selInput = mkInput("selector", "#pais");
-  const valInput = mkInput("value", stepValue);
-  const textInput = mkInput("text", stepText);
+  const selInput = mkInput("selector");
+  const valInput = mkInput("value");
+  const textInput = mkInput("text");
+  // Insertar ANTES de asignar valores: happy-dom resetea .value al conectar al DOM.
   win.document.body.appendChild(fieldsDiv);
+  selInput.value = "#pais";
+  if (stepValue != null) valInput.value = stepValue;
+  if (stepText != null) textInput.value = stepText;
   return { fieldsDiv, selInput, valInput, textInput };
 }
 
@@ -121,7 +124,8 @@ test("_syncOptionPicker: inserta el combo cuando el selector resuelve a <select>
   ed._syncOptionPicker(fieldsDiv, "choose_option");
   const combo = fieldsDiv.querySelector("[data-wm-optcombo]");
   assert.ok(combo, "debe insertarse el combo amigable");
-  assert.equal(combo.options.length, 2);
+  // 1 opción manual + 2 opciones reales = 3 total.
+  assert.equal(combo.options.length, 3);
 });
 
 test("_syncOptionPicker: NO inserta combo si el selector no existe (fallback manual)", () => {
@@ -150,15 +154,43 @@ test("_syncOptionPicker: preselecciona el value actual del paso", () => {
   assert.equal(combo.value, "br");
 });
 
+test("_syncOptionPicker: [data-field='value'] es un <select> real cuando hay opciones", () => {
+  resetBody(SIMPLE_SELECT);
+  const ed = new StepEditor();
+  const { fieldsDiv } = buildFields("ar", "");
+  ed._syncOptionPicker(fieldsDiv, "choose_option");
+  const valueEl = fieldsDiv.querySelector("[data-field='value']");
+  assert.ok(valueEl, "debe existir [data-field='value']");
+  assert.equal(valueEl.tagName.toLowerCase(), "select", "VALUE debe ser un <select>");
+  assert.equal(valueEl.dataset.wmOptcombo, "1", "debe tener data-wm-optcombo=1");
+});
+
+test("_syncOptionPicker: value actual no está en opciones → opción manual preseleccionada", () => {
+  resetBody(SIMPLE_SELECT);
+  const ed = new StepEditor();
+  const { fieldsDiv } = buildFields("ZZ", "");  // "ZZ" no es una opción
+  ed._syncOptionPicker(fieldsDiv, "choose_option");
+  const valueEl = fieldsDiv.querySelector("[data-field='value']");
+  // La opción manual debe existir y conservar el valor previo.
+  const manualOpt = Array.from(valueEl.options).find((o) => o.dataset.wmManual === "1");
+  assert.ok(manualOpt, "debe haber una opción manual");
+  assert.equal(manualOpt.value, "ZZ", "la opción manual debe preservar el valor previo");
+  // El input compañero de entrada manual también muestra el valor.
+  const manualInput = fieldsDiv.querySelector("[data-wm-manual-input]");
+  assert.ok(manualInput, "debe haber input manual compañero");
+  assert.equal(manualInput.value, "ZZ", "el input manual debe tener el valor previo");
+});
+
 test("_syncOptionPicker: elegir una opción sincroniza value y text del paso", () => {
   resetBody(SIMPLE_SELECT);
   const ed = new StepEditor();
-  const { fieldsDiv, valInput, textInput } = buildFields("ar", "");
+  const { fieldsDiv, textInput } = buildFields("ar", "");
   ed._syncOptionPicker(fieldsDiv, "choose_option");
   const combo = fieldsDiv.querySelector("[data-wm-optcombo]");
+  // combo ES [data-field="value"] — no hace falta sincronizar un input aparte.
   combo.value = "br";
   combo.dispatchEvent(new win.Event("change", { bubbles: true }));
-  assert.equal(valInput.value, "br");
+  assert.equal(combo.value, "br");
   assert.equal(textInput.value, "Brasil");
 });
 
@@ -169,16 +201,27 @@ test("_syncOptionPicker: combo con muchas opciones agrega filtro local", () => {
   resetBody(html);
   const ed = new StepEditor();
   const fieldsDiv = win.document.createElement("div");
-  const lbl = win.document.createElement("label");
-  const sel = win.document.createElement("input");
-  sel.dataset.field = "selector";
-  sel.value = "#grande";
-  lbl.appendChild(sel);
-  fieldsDiv.appendChild(lbl);
+  // Selector field
+  const lblSel = win.document.createElement("label");
+  const selInp = win.document.createElement("input");
+  selInp.dataset.field = "selector";
+  selInp.value = "#grande";
+  lblSel.appendChild(selInp);
+  fieldsDiv.appendChild(lblSel);
+  // VALUE field (necesario para que _syncOptionPicker pueda reemplazarlo).
+  const lblVal = win.document.createElement("label");
+  const valInp = win.document.createElement("input");
+  valInp.type = "text";
+  valInp.dataset.field = "value";
+  lblVal.appendChild(valInp);
+  fieldsDiv.appendChild(lblVal);
   win.document.body.appendChild(fieldsDiv);
   ed._syncOptionPicker(fieldsDiv, "choose_option");
   const block = fieldsDiv.querySelector("[data-wm-optpicker]");
   assert.ok(block);
   const filter = block.querySelector("input");
   assert.ok(filter, "selects grandes deben mostrar un filtro de texto");
+  // El VALUE debe ser ahora un <select>.
+  const valueEl = fieldsDiv.querySelector("[data-field='value']");
+  assert.equal(valueEl.tagName.toLowerCase(), "select", "VALUE debe ser un <select> real");
 });
