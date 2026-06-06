@@ -10,6 +10,13 @@ webmatic-desktop/test-results/
 # Archivos de desarrollo interno (no van al repo)
 _dev-only/
 
+# Fixtures privados (datos reales de referencia, NO subir)
+docs/private-fixtures/
+docs/private-fixtures/iapos/
+*.private.json
+*private-fixtures*
+webmatic-dom-inventory*.json
+
 # Misc
 *.log
 .DS_Store

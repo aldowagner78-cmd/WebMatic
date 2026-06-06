@@ -101,6 +101,122 @@
       }
     }
 
+    /**
+     * Funcion pura testeable: resuelve un selector contra `root` y, si apunta a un
+     * <select> real, devuelve sus opciones reales. Generico para cualquier web.
+     * Devuelve null si el selector no existe o no apunta a un <select>.
+     * @param {string} selector
+     * @param {Document|Element} [root] - por defecto document
+     * @returns {{index:number,value:string,text:string,selected:boolean,disabled:boolean}[]|null}
+     */
+    static getSelectOptionsForSelector(selector, root) {
+      const doc = root || (typeof document !== "undefined" ? document : null);
+      if (!selector || !doc || typeof doc.querySelector !== "function") return null;
+      let el = null;
+      try { el = doc.querySelector(selector); } catch (e) { return null; }
+      if (!el) return null;
+      const isSelect =
+        (typeof HTMLSelectElement !== "undefined" && el instanceof HTMLSelectElement) ||
+        (el.tagName && el.tagName.toLowerCase() === "select");
+      if (!isSelect || !el.options) return null;
+      return Array.from(el.options).map((o, i) => ({
+        index: i,
+        value: o.value,
+        text: (o.text != null ? o.text : (o.textContent || "")).trim(),
+        selected: !!o.selected,
+        disabled: !!o.disabled
+      }));
+    }
+
+    /**
+     * Si el paso en edicion es choose_option y su selector apunta a un <select>
+     * real de la pagina, inserta un combo amigable con las opciones reales.
+     * Al elegir, sincroniza los campos manuales `value` y `text` existentes.
+     * Si no resuelve a un <select>, no hace nada (queda el editor manual).
+     */
+    _syncOptionPicker(fieldsDiv, typeValue) {
+      if (!fieldsDiv || typeValue !== "choose_option") return;
+      const prev = fieldsDiv.querySelector("[data-wm-optpicker]");
+      if (prev) prev.remove();
+
+      const selInput = fieldsDiv.querySelector("[data-field='selector']");
+      if (!selInput) return;
+      const selector = (selInput.value || "").trim();
+      const options = StepEditor.getSelectOptionsForSelector(selector);
+      if (!options || options.length === 0) return;
+
+      const valInput  = fieldsDiv.querySelector("[data-field='value']");
+      const textInput = fieldsDiv.querySelector("[data-field='text']");
+
+      const block = document.createElement("label");
+      block.className = "wm-sved-field-label";
+      block.setAttribute("data-wm-optpicker", "1");
+      block.textContent = "opciones del campo";
+
+      // Filtro local minimo solo para selects grandes (no rediseña la UI).
+      let filterInput = null;
+      if (options.length > 30) {
+        filterInput = document.createElement("input");
+        filterInput.className = "wm-sved-field-input";
+        filterInput.type = "text";
+        filterInput.placeholder = "filtrar opciones\u2026";
+        block.appendChild(filterInput);
+      }
+
+      const combo = document.createElement("select");
+      combo.className = "wm-sved-select";
+      combo.dataset.wmOptcombo = "1";
+
+      const renderOpts = (filter) => {
+        combo.innerHTML = "";
+        const f = (filter || "").toLowerCase();
+        options.forEach((o) => {
+          if (f && !((o.text || "").toLowerCase().includes(f) ||
+                     String(o.value).toLowerCase().includes(f))) return;
+          const opt = document.createElement("option");
+          opt.value = o.value;
+          opt.textContent = o.text || o.value;
+          if (o.disabled) opt.disabled = true;
+          combo.appendChild(opt);
+        });
+      };
+      renderOpts("");
+
+      // Preseleccion: por value actual, si no por text actual, si no por selected real.
+      const curVal  = valInput  ? valInput.value.trim()  : "";
+      const curText = textInput ? textInput.value.trim() : "";
+      let pre = null;
+      if (curVal)  pre = options.find((o) => String(o.value) === curVal);
+      if (!pre && curText) pre = options.find((o) => (o.text || "").trim() === curText);
+      if (!pre) pre = options.find((o) => o.selected);
+      if (pre) combo.value = pre.value;
+
+      combo.addEventListener("change", () => {
+        const chosen = options.find((o) => String(o.value) === combo.value);
+        if (!chosen) return;
+        if (valInput) {
+          valInput.value = chosen.value;
+          valInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        if (textInput) {
+          textInput.value = chosen.text;
+          textInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      });
+
+      if (filterInput) {
+        filterInput.addEventListener("input", () => renderOpts(filterInput.value));
+      }
+
+      block.appendChild(combo);
+
+      // Insertar el combo justo despues del campo selector (mismo layout existente).
+      let anchor = selInput;
+      while (anchor && anchor.parentElement !== fieldsDiv) anchor = anchor.parentElement;
+      if (anchor && anchor.nextSibling) fieldsDiv.insertBefore(block, anchor.nextSibling);
+      else fieldsDiv.appendChild(block);
+    }
+
     setSteps(steps) {
       this.steps = Array.isArray(steps) ? JSON.parse(JSON.stringify(steps)) : [];
     }
@@ -378,6 +494,10 @@
         });
         const first = fieldsDiv.querySelector("input, select");
         if (first) setTimeout(() => first.focus(), 0);
+        // Combo amigable de opciones reales (solo choose_option sobre <select> real)
+        this._syncOptionPicker(fieldsDiv, typeSelect.value);
+        const selInp = fieldsDiv.querySelector("[data-field='selector']");
+        if (selInp) selInp.addEventListener("input", () => this._syncOptionPicker(fieldsDiv, typeSelect.value));
       };
 
       // Pre-fill with current step values; on type change clear fields
@@ -541,6 +661,10 @@
         });
         const first = fieldsDiv.querySelector("input, select");
         if (first) setTimeout(() => first.focus(), 0);
+        // Combo amigable de opciones reales (solo choose_option sobre <select> real)
+        this._syncOptionPicker(fieldsDiv, typeSelect.value);
+        const selInp = fieldsDiv.querySelector("[data-field='selector']");
+        if (selInp) selInp.addEventListener("input", () => this._syncOptionPicker(fieldsDiv, typeSelect.value));
       };
 
       typeSelect.addEventListener("change", renderFields);
