@@ -255,6 +255,37 @@ test("findOptionsForStep: null cuando no hay evidencia suficiente", () => {
   assert.equal(inv.findOptionsForStep({ selector: "#campoA" }, inventories), null);
 });
 
+test("findOptionsForStep: no cruza a otro combo por prefijo parecido sin evidencia fuerte", () => {
+  const inventories = [{
+    url: "https://example.com/form",
+    controls: [
+      {
+        selector: "#vAUCAESPEFC",
+        altSelectors: [],
+        id: "vAUCAESPEFC",
+        name: "vAUCAESPEFC",
+        label: "Especialidad",
+        controlKind: "autocomplete",
+        options: []
+      },
+      {
+        selector: "#vDELEGCOMBO",
+        altSelectors: [],
+        id: "vDELEGCOMBO",
+        name: "vDELEGCOMBO",
+        label: "Delegacion",
+        controlKind: "native-select",
+        options: [
+          { index: 0, value: "101", text: "CAPITAL", selected: false, disabled: false },
+          { index: 1, value: "102", text: "INTERIOR", selected: false, disabled: false }
+        ]
+      }
+    ]
+  }];
+
+  assert.equal(inv.findOptionsForStep({ selector: "#vAUCAESPEFC" }, inventories), null);
+});
+
 test("findOptionsForStep: fallback GeneXus devuelve opcion sintetica con valor tipeado", () => {
   const inventories = [{
     url: "https://example.com/form",

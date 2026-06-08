@@ -1080,13 +1080,13 @@
       title.className = "webmatic-wm-message";
       title.style.margin = "0";
       title.style.fontWeight = "700";
-      title.textContent = `Selecciona campos para censar (${list.length} detectados)`;
+      title.textContent = `Elige el modo de captura (${list.length} campos detectados)`;
 
       const hint = document.createElement("p");
       hint.className = "webmatic-wm-message";
       hint.style.margin = "0";
       hint.style.opacity = "0.85";
-      hint.textContent = "Solo se consultarán catálogos ocultos en los campos marcados.";
+      hint.textContent = "Rapida: guarda base global visible. Profunda: consulta catalogos ocultos solo en campos marcados.";
 
       const topActions = document.createElement("div");
       topActions.className = "webmatic-wm-btns";
@@ -1207,13 +1207,19 @@
       cancelBtn.type = "button";
       cancelBtn.textContent = "Cancelar";
 
-      const continueBtn = document.createElement("button");
-      continueBtn.className = "webmatic-action-btn";
-      continueBtn.type = "button";
-      continueBtn.textContent = "Continuar";
+      const quickBtn = document.createElement("button");
+      quickBtn.className = "webmatic-action-btn webmatic-btn-ghost";
+      quickBtn.type = "button";
+      quickBtn.textContent = "Captura rapida (global)";
+
+      const deepBtn = document.createElement("button");
+      deepBtn.className = "webmatic-action-btn";
+      deepBtn.type = "button";
+      deepBtn.textContent = "Captura profunda (seleccion)";
 
       bottom.appendChild(cancelBtn);
-      bottom.appendChild(continueBtn);
+      bottom.appendChild(quickBtn);
+      bottom.appendChild(deepBtn);
 
       dialog.appendChild(title);
       dialog.appendChild(hint);
@@ -1396,7 +1402,7 @@
       function refresh() {
         const count = readSelection().length;
         selectedCount.textContent = `${count} seleccionado(s)`;
-        continueBtn.disabled = count === 0;
+        deepBtn.disabled = count === 0;
       }
 
       const cleanup = (value) => {
@@ -1415,7 +1421,8 @@
       });
       btnPickInPage.addEventListener("click", () => startPicking());
       cancelBtn.addEventListener("click", () => cleanup(null));
-      continueBtn.addEventListener("click", () => cleanup(readSelection()));
+      quickBtn.addEventListener("click", () => cleanup({ captureMode: "quick", selectedSelectors: [] }));
+      deepBtn.addEventListener("click", () => cleanup({ captureMode: "deep", selectedSelectors: readSelection() }));
 
       refresh();
     });
@@ -2805,7 +2812,12 @@
     return meta;
   }
 
-  async function _captureAndStoreReusablePageMetadata(selectedSelectors) {
+  async function _captureAndStoreReusablePageMetadata(opts) {
+    const options = opts && typeof opts === "object"
+      ? opts
+      : { selectedSelectors: Array.isArray(opts) ? opts : [] };
+    const selectedSelectors = Array.isArray(options.selectedSelectors) ? options.selectedSelectors : [];
+    const captureMode = options.captureMode === "quick" ? "quick" : "deep";
     const emit = (pct, phase) => {
       if (typeof _captureAndStoreReusablePageMetadata._progressCb === "function") {
         try { _captureAndStoreReusablePageMetadata._progressCb(pct, phase || ""); } catch (e) { /* ignore */ }
@@ -2821,10 +2833,25 @@
     emit(20, "inventory");
     const domSnap = _captureDomElementsSnapshot(document, 12000);
     emit(30, "dom-snapshot");
-    const hiddenCatalogs = await _captureGeneXusHiddenCatalogs(document, (innerPct) => {
-      const p = 30 + Math.round((Math.max(0, Math.min(100, Number(innerPct) || 0)) * 55) / 100);
-      emit(p, "hidden-catalogs");
-    }, selectedSelectors);
+    let hiddenCatalogs = {
+      catalogs: {},
+      summary: {
+        fieldsScanned: 0,
+        fieldsWithOptions: 0,
+        requests: 0,
+        options: 0,
+        elapsedMs: 0,
+        fieldsDetected: 0,
+        fieldsSelected: 0,
+        mode: "quick-visible"
+      }
+    };
+    if (captureMode === "deep") {
+      hiddenCatalogs = await _captureGeneXusHiddenCatalogs(document, (innerPct) => {
+        const p = 30 + Math.round((Math.max(0, Math.min(100, Number(innerPct) || 0)) * 55) / 100);
+        emit(p, "hidden-catalogs");
+      }, selectedSelectors);
+    }
     emit(88, "merge-catalogs");
     const invCatalogs = _catalogsFromInventories([snapshot]);
     const runtimeCatalogs = _serializeAutocompleteCatalogs();
@@ -2854,6 +2881,7 @@
     emit(100, "done");
     return {
       profile,
+      captureMode,
       total: saved.length,
       domElementsTotal: domSnap.total,
       domElementsStored: domSnap.items.length,
@@ -6203,17 +6231,31 @@
           return;
         }
 
-        const selectedSelectors = await _openFieldSelectionModal(detectedFields);
-        if (!Array.isArray(selectedSelectors)) {
+        const captureChoice = await _openFieldSelectionModal(detectedFields);
+        if (!captureChoice) {
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Captura cancelada por el usuario." });
           return;
         }
-        if (selectedSelectors.length === 0) {
+
+        let captureMode = "deep";
+        let selectedSelectors = [];
+        if (Array.isArray(captureChoice)) {
+          // Compatibilidad con retornos previos del modal.
+          captureMode = "deep";
+          selectedSelectors = captureChoice;
+        } else if (captureChoice && typeof captureChoice === "object") {
+          captureMode = captureChoice.captureMode === "quick" ? "quick" : "deep";
+          selectedSelectors = Array.isArray(captureChoice.selectedSelectors) ? captureChoice.selectedSelectors : [];
+        }
+
+        if (captureMode === "deep" && selectedSelectors.length === 0) {
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Debes seleccionar al menos un campo para censar." });
           return;
         }
 
-        const duplicate = _findLikelyDuplicatePageProfile(location && location.href ? location.href : "", selectedSelectors);
+        const duplicate = captureMode === "deep"
+          ? _findLikelyDuplicatePageProfile(location && location.href ? location.href : "", selectedSelectors)
+          : null;
         if (duplicate) {
           const p = duplicate.profile || {};
           const capturedAtIso = Number(p.capturedAt) ? new Date(Number(p.capturedAt)).toLocaleString() : "desconocido";
@@ -6248,7 +6290,7 @@
             _setPageMetaCaptureButtonProgress(pct, true);
             _setPageMetaCaptureOverlayProgress(pct, true, phase || "Capturando");
           };
-          const res = await _captureAndStoreReusablePageMetadata(selectedSelectors);
+          const res = await _captureAndStoreReusablePageMetadata({ captureMode, selectedSelectors });
           const controls = res && res.profile && res.profile.stats ? res.profile.stats.controls : 0;
           const opts = res && res.profile && res.profile.stats ? res.profile.stats.selectorsWithOptions : 0;
           const hidden = (res && res.hiddenCatalogSummary) || {};
@@ -6257,16 +6299,17 @@
           const hiddenOptions = Number(hidden.options) || 0;
           const hiddenMode = String(hidden.mode || "runtime");
           const hiddenSelected = Number(hidden.fieldsSelected) || selectedSelectors.length;
+          const modeLabel = captureMode === "quick" ? "rapida" : "profunda";
           const total = res && Number.isFinite(res.total) ? res.total : (Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles.length : 0);
           store.dispatch({
             type: contracts.ActionTypes.STATUS_MESSAGE_SET,
-            payload: `Captura lista: ${controls} controles, ${opts} selectores y ${hiddenOptions} opciones (${hiddenScanned} campos, modo: ${hiddenMode}). Perfiles: ${total}`
+            payload: `Captura ${modeLabel} lista: ${controls} controles, ${opts} selectores y ${hiddenOptions} opciones (${hiddenScanned} campos, modo: ${hiddenMode}). Perfiles: ${total}`
           });
           // Cerrar overlay ANTES del modal
           _setPageMetaCaptureOverlayProgress(100, false);
           _setPageMetaCaptureButtonProgress(100, false);
           await uiShell.wmModal("alert", {
-            message: `Metadatos guardados correctamente.\nOpciones ocultas capturadas: ${hiddenOptions}\nCampos censados: ${hiddenScanned}\nMétodo: ${hiddenMode}\nPerfiles totales: ${total}`,
+            message: `Metadatos guardados correctamente.\nModo: ${modeLabel}\nOpciones ocultas capturadas: ${hiddenOptions}\nCampos censados: ${hiddenScanned}\nMétodo: ${hiddenMode}\nPerfiles totales: ${total}`,
             okLabel: "Aceptar"
           });
         } catch (err) {

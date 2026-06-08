@@ -204,7 +204,17 @@
         }
       }
       const fromCatalogMeta = this._catalogOptionsForSelector(selector);
-      if (fromCatalogMeta && fromCatalogMeta.length > 0 && (!options || options.length <= 1)) {
+      let sourceCtrl = null;
+      const invApi = (typeof globalScope !== "undefined" && globalScope.WebMaticPageInventory) || null;
+      if (invApi && typeof invApi.findControlForSelector === "function") {
+        sourceCtrl = invApi.findControlForSelector(selector, this._inventory);
+      }
+      const sourceKind = String(sourceCtrl && sourceCtrl.controlKind || "");
+      const isTypedAutocomplete = sourceKind === "autocomplete" || sourceKind === "text-input" || sourceKind === "datalist";
+
+      // Para campos tipeables/autocomplete, el catálogo por selector de metadata
+      // es más confiable que heurísticas de inventario y evita cruces de campo.
+      if (fromCatalogMeta && fromCatalogMeta.length > 0 && (isTypedAutocomplete || !options || options.length <= 1)) {
         options = fromCatalogMeta;
       }
       if (!options || options.length === 0) return;

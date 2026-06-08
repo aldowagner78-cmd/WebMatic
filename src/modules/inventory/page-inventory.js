@@ -551,29 +551,41 @@
     const candidates = controls.filter((c) => Array.isArray(c.options) && c.options.length > 0);
     let bestCtrl = null;
     let bestScore = 0;
+    let bestHasStrongEvidence = false;
 
     for (const cand of candidates) {
       if (cand === sourceCtrl) continue;
       let score = 0;
+      let hasStrongEvidence = false;
       const candLabel = _normalizeToken(cand.label || "");
       const candBase = _idOrNameBase(cand);
 
       if (srcLabel && candLabel) {
-        if (srcLabel === candLabel) score += 8;
-        else if (srcLabel.includes(candLabel) || candLabel.includes(srcLabel)) score += 4;
+        if (srcLabel === candLabel) {
+          score += 8;
+          hasStrongEvidence = true;
+        } else if (srcLabel.includes(candLabel) || candLabel.includes(srcLabel)) {
+          score += 4;
+        }
       }
 
       if (srcBase && candBase) {
-        if (srcBase === candBase) score += 7;
-        else if (srcBase.startsWith(candBase) || candBase.startsWith(srcBase)) score += 5;
+        if (srcBase === candBase) {
+          score += 7;
+          hasStrongEvidence = true;
+        } else if (srcBase.startsWith(candBase) || candBase.startsWith(srcBase)) {
+          score += 5;
+          if (Math.min(srcBase.length, candBase.length) >= 8) hasStrongEvidence = true;
+        }
 
         const pref = _commonPrefixLen(srcBase, candBase);
-        if (pref >= 6) score += 5;
+        if (pref >= 8) score += 2;
 
         const srcShort = srcBase.replace(/(acion|aciones|desc|descripcion|label|text|txt|input)$/i, "");
         const candShort = candBase.replace(/(combo|combobox|select|sel|list|lista|codigo|cod)$/i, "");
         if (srcShort && candShort && (srcShort === candShort || srcShort.startsWith(candShort) || candShort.startsWith(srcShort))) {
           score += 6;
+          hasStrongEvidence = true;
         }
       }
 
@@ -586,17 +598,18 @@
         cand.options && cand.options.length >= 2
       ) {
         const candRaw = _normalizeToken(String(cand.id || cand.name || ""));
-        if (/combo|combobox|select|lista/.test(candRaw)) score += 3;
+        if (/combo|combobox|select|lista/.test(candRaw) && score >= 5) score += 3;
       }
 
       if (score > bestScore) {
         bestScore = score;
         bestCtrl = cand;
+        bestHasStrongEvidence = hasStrongEvidence;
       }
     }
 
     // Exigir un mínimo de evidencia para evitar falsos positivos.
-    if (bestCtrl && bestScore >= 6) {
+    if (bestCtrl && bestScore >= 8 && bestHasStrongEvidence) {
       return _optionsFromControl(bestCtrl);
     }
 

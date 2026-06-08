@@ -213,6 +213,58 @@ test("editor: usa meta.autocompleteCatalogs cuando inventario solo aporta una op
   assert.equal(combo.options[1].value, "IAPOS ROSARIO");
 });
 
+test("editor: en autocomplete prioriza catálogo del selector y evita mezclar opciones de otro campo", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  const contaminatedInventory = [{
+    url: "https://example.com/",
+    title: "Form",
+    capturedAt: Date.now(),
+    controls: [{
+      selector: "#vAUCAESPEFC",
+      altSelectors: [],
+      id: "vAUCAESPEFC",
+      name: "vAUCAESPEFC",
+      label: "Especialidad",
+      tag: "input",
+      controlKind: "autocomplete",
+      options: []
+    }, {
+      selector: "#vDELEGCOMBO",
+      altSelectors: [],
+      id: "vDELEGCOMBO",
+      name: "vDELEGCOMBO",
+      label: "Delegacion",
+      tag: "select",
+      controlKind: "native-select",
+      options: [
+        { index: 0, value: "101", text: "CAPITAL", selected: false, disabled: false },
+        { index: 1, value: "102", text: "INTERIOR", selected: false, disabled: false }
+      ]
+    }]
+  }];
+  ed.setInventory(contaminatedInventory);
+  ed.setAutocompleteCatalogs({
+    "#vAUCAESPEFC": [
+      { value: "ALOJAMIENTO", text: "ALOJAMIENTO" },
+      { value: "ANESTESIOLOGIA", text: "ANESTESIOLOGIA" }
+    ]
+  });
+
+  const { fieldsDiv } = buildFields(["selector", "value", "text"], {
+    selector: "#vAUCAESPEFC",
+    value: "",
+    text: ""
+  });
+  ed._syncOptionPicker(fieldsDiv, "choose_option");
+
+  const combo = fieldsDiv.querySelector("[data-wm-optcombo]");
+  assert.ok(combo);
+  assert.equal(combo.options.length, 2);
+  assert.equal(combo.options[0].value, "ALOJAMIENTO");
+  assert.equal(combo.options[1].value, "ANESTESIOLOGIA");
+});
+
 test("editor: elegir opción del inventario actualiza value (y text en choose_option)", () => {
   resetBody("");
   const ed = new StepEditor();
