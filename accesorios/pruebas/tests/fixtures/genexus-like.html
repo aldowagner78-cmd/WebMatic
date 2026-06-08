@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Fixture GeneXus-like - Delegacion</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+  h1 { font-size: 18px; color: #064e3b; }
+  .campo { margin-top: 14px; }
+  label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+  input[type="text"], select {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 14px;
+  }
+  #vDELEGCOMBO { display: none; }
+  button {
+    margin-top: 20px;
+    padding: 9px 20px;
+    background: #059669;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  #resultado {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f0fdf4;
+    border: 1px solid #a7f3d0;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<h1>Fixture GeneXus-like - Delegacion</h1>
+<p style="font-size:12px;color:#6b7280">
+  Simula un formulario GeneXus donde el campo visible es un input autocomplete
+  (#vDELEGACION) y las opciones viven en un select nativo oculto (#vDELEGCOMBO).
+</p>
+
+<div class="campo">
+  <label for="vDELEGACION">Delegacion</label>
+  <input
+    type="text"
+    id="vDELEGACION"
+    name="vDELEGACION"
+    autocomplete="off"
+    placeholder="Ingrese delegacion..."
+    aria-label="Delegacion"
+  />
+  <select id="vDELEGCOMBO" name="vDELEGCOMBO" aria-label="Delegacion" tabindex="-1">
+    <option value="0">Seleccionar</option>
+    <option value="1">IAPOS SANTA FE</option>
+    <option value="2">ROSARIO</option>
+    <option value="3">RAFAELA</option>
+  </select>
+</div>
+
+<div class="campo">
+  <label for="vAFILNRO">Numero de afiliado</label>
+  <input type="text" id="vAFILNRO" name="vAFILNRO" placeholder="Ej: 12345" />
+</div>
+
+<button id="btn-buscar">Buscar</button>
+
+<div id="resultado">
+  <strong>Resultado:</strong>
+  <span id="resultado-texto"></span>
+</div>
+
+<script>
+  const inputDelegacion = document.getElementById("vDELEGACION");
+  const selectDelegacion = document.getElementById("vDELEGCOMBO");
+
+  document.getElementById("btn-buscar").addEventListener("click", function () {
+    const texto = inputDelegacion.value.trim();
+    const valor = selectDelegacion.value;
+    const res = document.getElementById("resultado");
+    const txt = document.getElementById("resultado-texto");
+    res.style.display = "block";
+    txt.textContent = 'Delegacion texto: "' + texto + '" | valor interno: "' + valor + '"';
+  });
+</script>
+</body>
+</html>

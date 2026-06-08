@@ -248,8 +248,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const filename = folderName
         ? folderName + "/" + message.filename
         : message.filename;
-      // saveAs=false means save silently (backup); saveAs=true or undefined means use dialog when no folder
-      const useSaveAs = message.saveAs === false ? false : !folderName;
+      // saveAs=false: guardar silencioso. saveAs=true: forzar diálogo.
+      // undefined: comportamiento previo (diálogo solo si no hay carpeta configurada).
+      const useSaveAs = message.saveAs === true
+        ? true
+        : (message.saveAs === false ? false : !folderName);
       const bytes = new TextEncoder().encode(message.content);
       const blob = new Blob([bytes], { type: "text/plain;charset=utf-8" });
       const blobUrl = URL.createObjectURL(blob);

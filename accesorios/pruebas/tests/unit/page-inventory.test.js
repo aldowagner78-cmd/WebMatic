@@ -19,7 +19,7 @@ globalThis.HTMLInputElement = win.HTMLInputElement;
 globalThis.HTMLSelectElement = win.HTMLSelectElement;
 globalThis.Event = win.Event;
 
-const inv = require("../../src/modules/inventory/page-inventory.js");
+const inv = require("../../../../src/modules/inventory/page-inventory.js");
 
 function resetBody(html) {
   win.document.body.innerHTML = html;
@@ -122,6 +122,27 @@ test("captureInventory: recorre el documento y devuelve url/title/controls", () 
   assert.ok(typeof snapshot.capturedAt === "number");
 });
 
+test("captureInventory: enriquece options desde runtime GeneXus cuando el input no tiene <select> visible", () => {
+  resetBody('<input id="vAUCAESPEFC" name="vAUCAESPEFC" type="text">');
+  win.gx = {
+    sample: {
+      vAUCAESPEFCCatalog: {
+        v: [
+          ["33", "ALOJAMIENTO"],
+          ["10", "CARDIOLOGIA"]
+        ]
+      }
+    }
+  };
+
+  const snapshot = inv.captureInventory(win.document);
+  const ctrl = snapshot.controls.find((c) => c.selector === "#vAUCAESPEFC");
+  assert.ok(ctrl);
+  assert.ok(Array.isArray(ctrl.options));
+  assert.equal(ctrl.options.length, 2);
+  assert.equal(ctrl.options[0].text, "ALOJAMIENTO");
+});
+
 // ── findControlForSelector / findOptionsForSelector ────────────────────────────
 
 function selectInventory() {
@@ -170,6 +191,165 @@ test("findOptionsForSelector: null para un control sin opciones", () => {
   resetBody('<input id="nombre" type="text">');
   const inventories = [inv.captureInventory(win.document)];
   assert.equal(inv.findOptionsForSelector("#nombre", inventories), null);
+});
+
+test("findOptionsForStep: resuelve opciones desde select relacionado por label", () => {
+  const inventories = [{
+    url: "https://example.com/form",
+    controls: [
+      {
+        selector: "#vDELEGACION",
+        altSelectors: [],
+        id: "vDELEGACION",
+        name: "vDELEGACION",
+        label: "Delegacion",
+        controlKind: "autocomplete",
+        options: []
+      },
+      {
+        selector: "#vDELEGCOMBO",
+        altSelectors: [],
+        id: "vDELEGCOMBO",
+        name: "vDELEGCOMBO",
+        label: "Delegacion",
+        controlKind: "native-select",
+        options: [
+          { index: 0, value: "101", text: "CAPITAL", selected: false, disabled: false },
+          { index: 1, value: "102", text: "INTERIOR", selected: false, disabled: false }
+        ]
+      }
+    ]
+  }];
+
+  const opts = inv.findOptionsForStep({ selector: "#vDELEGACION" }, inventories);
+  assert.ok(Array.isArray(opts));
+  assert.equal(opts.length, 2);
+  assert.equal(opts[0].text, "CAPITAL");
+});
+
+test("findOptionsForStep: null cuando no hay evidencia suficiente", () => {
+  const inventories = [{
+    url: "https://example.com/form",
+    controls: [
+      {
+        selector: "#campoA",
+        altSelectors: [],
+        id: "campoA",
+        name: "campoA",
+        label: "Campo A",
+        controlKind: "text-input",
+        options: []
+      },
+      {
+        selector: "#comboB",
+        altSelectors: [],
+        id: "comboB",
+        name: "comboB",
+        label: "Campo B",
+        controlKind: "native-select",
+        options: [{ index: 0, value: "1", text: "Uno", selected: false, disabled: false }]
+      }
+    ]
+  }];
+
+  assert.equal(inv.findOptionsForStep({ selector: "#campoA" }, inventories), null);
+});
+
+test("findOptionsForStep: fallback GeneXus devuelve opcion sintetica con valor tipeado", () => {
+  const inventories = [{
+    url: "https://example.com/form",
+    controls: [
+      {
+        selector: "#vAUCAESPEFC",
+        altSelectors: [],
+        id: "vAUCAESPEFC",
+        name: "vAUCAESPEFC",
+        label: "vAUCAESPEFC",
+        controlKind: "text-input",
+        options: []
+      },
+      {
+        selector: "#GXHCvAUCAESPEFC_0001",
+        altSelectors: [],
+        id: "GXHCvAUCAESPEFC_0001",
+        name: "GXHCvAUCAESPEFC_0001",
+        label: "GXHCvAUCAESPEFC_0001",
+        controlKind: "text-input",
+        options: []
+      }
+    ]
+  }];
+
+  const opts = inv.findOptionsForStep({ selector: "#vAUCAESPEFC", value: "ALOJAMIENTO" }, inventories);
+  assert.ok(Array.isArray(opts));
+  assert.equal(opts.length, 1);
+  assert.equal(opts[0].value, "ALOJAMIENTO");
+  assert.equal(opts[0].text, "ALOJAMIENTO");
+});
+
+test("findOptionsForStep: fallback GeneXus tambien detecta companion GXH_", () => {
+  const inventories = [{
+    url: "https://example.com/form",
+    controls: [
+      {
+        selector: "#vDELEGACION",
+        altSelectors: [],
+        id: "vDELEGACION",
+        name: "vDELEGACION",
+        label: "vDELEGACION",
+        controlKind: "text-input",
+        options: []
+      },
+      {
+        selector: "#GXH_vDELEGACION",
+        altSelectors: [],
+        id: "GXH_vDELEGACION",
+        name: "GXH_vDELEGACION",
+        label: "GXH_vDELEGACION",
+        controlKind: "text-input",
+        options: []
+      }
+    ]
+  }];
+
+  const opts = inv.findOptionsForStep({ selector: "#vDELEGACION", value: "IAPOS SANTA FE" }, inventories);
+  assert.ok(Array.isArray(opts));
+  assert.equal(opts.length, 1);
+  assert.equal(opts[0].value, "IAPOS SANTA FE");
+  assert.equal(opts[0].text, "IAPOS SANTA FE");
+});
+
+test("findOptionsForStep: fallback GeneXus detecta GXH embebido en currentValue serializado", () => {
+  const inventories = [{
+    url: "https://example.com/form",
+    controls: [
+      {
+        selector: "#vAUCAESPEFC",
+        altSelectors: [],
+        id: "vAUCAESPEFC",
+        name: "vAUCAESPEFC",
+        label: "vAUCAESPEFC",
+        controlKind: "text-input",
+        options: []
+      },
+      {
+        selector: "#GXState",
+        altSelectors: [],
+        id: "GXState",
+        name: "GXState",
+        label: "GXState",
+        controlKind: "text-input",
+        options: [],
+        currentValue: '{"GXH_vAUCAESPEFC":"33","GXH_vDELEGACION":"2"}'
+      }
+    ]
+  }];
+
+  const opts = inv.findOptionsForStep({ selector: "#vAUCAESPEFC", value: "ALOJAMIENTO" }, inventories);
+  assert.ok(Array.isArray(opts));
+  assert.equal(opts.length, 1);
+  assert.equal(opts[0].value, "ALOJAMIENTO");
+  assert.equal(opts[0].text, "ALOJAMIENTO");
 });
 
 // ── buildControlRef / associateSteps ──────────────────────────────────────────

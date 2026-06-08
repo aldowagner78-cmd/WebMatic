@@ -145,10 +145,11 @@
 }
 
 .webmatic-segment {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  padding: 6px 8px 0 8px;
+  display: grid;
+  grid-template-columns: 0.92fr 1.04fr 1.04fr;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
   border-bottom: 2px solid var(--webmatic-border);
   background: var(--webmatic-surface);
 }
@@ -172,6 +173,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.webmatic-mode-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 11px;
+  height: 11px;
+  margin-right: 4px;
+  flex: 0 0 11px;
+  font-size: 11px;
+  line-height: 1;
 }
 
 .webmatic-mode-btn.active {
@@ -180,41 +196,23 @@
   border-color: var(--webmatic-accent);
 }
 
-/* ===  Pestañas de modo (Reproducir / Configurar) === */
+/* === Botones de modo: Grabar / Reproducir / Configurar === */
 .webmatic-mode-btn:not(.webmatic-record-tab) {
   flex: 1;
-  border-radius: 6px 6px 0 0;
-  padding: 6px 4px 7px;
-  background: var(--webmatic-surface-2);
-  color: var(--webmatic-text-muted);
-  font-weight: 600;
-  border: 1px solid var(--webmatic-swatch-border);
-  border-bottom: none;
-  position: relative;
-  bottom: -2px;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.webmatic-mode-btn:not(.webmatic-record-tab):hover {
-  background: var(--webmatic-btn-hover);
-  color: var(--webmatic-text);
-}
-
-.webmatic-mode-btn:not(.webmatic-record-tab).active {
-  background: var(--webmatic-surface) !important;
-  color: var(--webmatic-accent) !important;
-  font-weight: 700;
-  border-color: var(--webmatic-accent) !important;
-  border-top-width: 2px !important;
-  border-bottom: 2px solid var(--webmatic-surface) !important;
+  min-height: 32px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  transition: filter 0.12s, box-shadow 0.12s, background 0.12s, border-color 0.12s;
 }
 
 .webmatic-record-tab {
   background: #dc2626;
   color: #fff;
   border-color: #dc2626;
-  flex-shrink: 0;
-  margin-bottom: 5px;
+  margin-bottom: 0;
 }
 
 .webmatic-record-tab:hover {
@@ -226,6 +224,34 @@
   background: #7f1d1d;
   border-color: #7f1d1d;
   animation: webmatic-pulse-rec 1.2s ease-in-out infinite;
+}
+
+.webmatic-play-tab {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #15803d;
+}
+
+.webmatic-play-tab:hover {
+  background: #15803d;
+  border-color: #166534;
+}
+
+.webmatic-settings-tab {
+  background: #facc15;
+  color: #4a3410;
+  border-color: #eab308;
+}
+
+.webmatic-settings-tab:hover {
+  background: #eab308;
+  border-color: #ca8a04;
+}
+
+.webmatic-play-tab.active,
+.webmatic-settings-tab.active,
+.webmatic-record-tab.active {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
 }
 
 @keyframes webmatic-pulse-rec {

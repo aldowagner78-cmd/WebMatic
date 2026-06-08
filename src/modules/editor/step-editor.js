@@ -83,11 +83,43 @@
       this._pendingRecord = false;  // true mientras la grabación inline está activa
       this._onPickRequest = null;   // callback(fieldName, onPicked) para picker visual
       this._inventory = [];         // inventario de controles capturado al grabar
+      this._autocompleteCatalogs = {}; // meta.autocompleteCatalogs
     }
 
     /** Registra el inventario de controles (macro.meta.pageInventories). */
     setInventory(inventories) {
       this._inventory = Array.isArray(inventories) ? inventories : [];
+    }
+
+    setAutocompleteCatalogs(catalogs) {
+      this._autocompleteCatalogs = (catalogs && typeof catalogs === "object") ? catalogs : {};
+    }
+
+    _catalogOptionsForSelector(selector) {
+      if (!selector) return null;
+      const bag = this._autocompleteCatalogs && typeof this._autocompleteCatalogs === "object"
+        ? this._autocompleteCatalogs
+        : {};
+
+      const keys = [selector.trim()];
+      const idMatch = selector.trim().match(/^#([\w-]+)$/);
+      if (idMatch) {
+        keys.push(`#${idMatch[1]}`);
+        keys.push(`input[name="${idMatch[1]}"]`);
+      }
+
+      for (const key of keys) {
+        const arr = bag[key];
+        if (!Array.isArray(arr) || arr.length === 0) continue;
+        return arr.map((o, idx) => ({
+          index: idx,
+          value: String(o && o.value != null ? o.value : ""),
+          text: String(o && o.text != null ? o.text : ""),
+          selected: !!(o && o.selected),
+          disabled: !!(o && o.disabled)
+        })).filter((o) => o.value || o.text);
+      }
+      return null;
     }
 
     /** Registra el handler que activa la grabación inline desde content.js */
@@ -157,9 +189,23 @@
       let options = StepEditor.getSelectOptionsForSelector(selector);
       if ((!options || options.length === 0) && this._inventory && this._inventory.length) {
         const inv = (typeof globalScope !== "undefined" && globalScope.WebMaticPageInventory) || null;
-        if (inv && typeof inv.findOptionsForSelector === "function") {
+        const valInput  = fieldsDiv.querySelector("[data-field='value']");
+        const textInput = fieldsDiv.querySelector("[data-field='text']");
+        const typedValue = ((valInput && valInput.value) || (textInput && textInput.value) || "").trim();
+        const stepHint = {
+          selector,
+          value: typedValue,
+          text: (textInput && textInput.value ? String(textInput.value).trim() : "")
+        };
+        if (inv && typeof inv.findOptionsForStep === "function") {
+          options = inv.findOptionsForStep(stepHint, this._inventory);
+        } else if (inv && typeof inv.findOptionsForSelector === "function") {
           options = inv.findOptionsForSelector(selector, this._inventory);
         }
+      }
+      const fromCatalogMeta = this._catalogOptionsForSelector(selector);
+      if (fromCatalogMeta && fromCatalogMeta.length > 0 && (!options || options.length <= 1)) {
+        options = fromCatalogMeta;
       }
       if (!options || options.length === 0) return;
 
@@ -171,19 +217,34 @@
       block.setAttribute("data-wm-optpicker", "1");
       block.textContent = "opciones del campo";
 
-      // Filtro local minimo solo para selects grandes (no rediseña la UI).
-      let filterInput = null;
-      if (options.length > 30) {
-        filterInput = document.createElement("input");
-        filterInput.className = "wm-sved-field-input";
-        filterInput.type = "text";
-        filterInput.placeholder = "filtrar opciones\u2026";
-        block.appendChild(filterInput);
-      }
+      // Campo principal de interacción (escribir para filtrar/seleccionar).
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:4px;align-items:center;width:100%";
+
+      const filterInput = document.createElement("input");
+      filterInput.className = "wm-sved-field-input";
+      filterInput.type = "text";
+      filterInput.placeholder = "escribe para filtrar opciones";
+      filterInput.style.flex = "1";
+      row.appendChild(filterInput);
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.type = "button";
+      toggleBtn.textContent = "▾";
+      toggleBtn.title = "Mostrar opciones";
+      toggleBtn.style.cssText = "all:initial;display:inline-flex;align-items:center;justify-content:center;background:#0ea5e9;color:#fff;border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;flex-shrink:0;font-family:system-ui,sans-serif";
+      row.appendChild(toggleBtn);
+
+      block.appendChild(row);
 
       const combo = document.createElement("select");
       combo.className = "wm-sved-select";
       combo.dataset.wmOptcombo = "1";
+      combo.style.display = "none";
+
+      const panel = document.createElement("div");
+      panel.dataset.wmOptpanel = "1";
+      panel.style.cssText = "display:none;max-height:180px;overflow:auto;border:1px solid rgba(14,165,233,0.45);border-radius:6px;background:#fff;margin-top:4px";
 
       const renderOpts = (filter) => {
         combo.innerHTML = "";
@@ -198,7 +259,32 @@
           combo.appendChild(opt);
         });
       };
+
+      const renderPanel = (filter) => {
+        panel.innerHTML = "";
+        const f = (filter || "").toLowerCase();
+        options.forEach((o) => {
+          if (f && !((o.text || "").toLowerCase().includes(f) ||
+                     String(o.value).toLowerCase().includes(f))) return;
+          const item = document.createElement("button");
+          item.type = "button";
+          item.textContent = o.text || o.value;
+          item.style.cssText = "all:initial;display:block;width:100%;box-sizing:border-box;padding:7px 9px;cursor:pointer;font-size:12px;font-family:system-ui,sans-serif;color:#0f172a;border-bottom:1px solid rgba(15,23,42,0.08)";
+          if (o.disabled) {
+            item.disabled = true;
+            item.style.opacity = "0.45";
+            item.style.cursor = "not-allowed";
+          }
+          item.addEventListener("click", () => {
+            combo.value = o.value;
+            combo.dispatchEvent(new Event("change", { bubbles: true }));
+            panel.style.display = "none";
+          });
+          panel.appendChild(item);
+        });
+      };
       renderOpts("");
+      renderPanel("");
 
       // Preseleccion: por value actual, si no por text actual, si no por selected real.
       const curVal  = valInput  ? valInput.value.trim()  : "";
@@ -208,11 +294,17 @@
       if (!pre && curText) pre = options.find((o) => (o.text || "").trim() === curText);
       if (!pre && curVal) pre = options.find((o) => (o.text || "").trim() === curVal);
       if (!pre) pre = options.find((o) => o.selected);
-      if (pre) combo.value = pre.value;
+      if (pre) {
+        combo.value = pre.value;
+        filterInput.value = pre.text || pre.value;
+      }
+
+      let suppressFieldFilter = false;
 
       combo.addEventListener("change", () => {
         const chosen = options.find((o) => String(o.value) === combo.value);
         if (!chosen) return;
+        suppressFieldFilter = true;
         if (valInput) {
           valInput.value = chosen.value;
           valInput.dispatchEvent(new Event("input", { bubbles: true }));
@@ -221,13 +313,49 @@
           textInput.value = chosen.text;
           textInput.dispatchEvent(new Event("input", { bubbles: true }));
         }
+        filterInput.value = chosen.text || chosen.value;
+        suppressFieldFilter = false;
       });
 
-      if (filterInput) {
-        filterInput.addEventListener("input", () => renderOpts(filterInput.value));
-      }
+      // Comportamiento "tipo autocomplete" en editor visual:
+      // al escribir en VALUE/TEXT, se filtra el catálogo del desplegable.
+      const applyFieldFilter = () => {
+        if (suppressFieldFilter) return;
+        const q = String(filterInput.value || "").trim();
+        renderOpts(q);
+        renderPanel(q);
+        panel.style.display = "block";
+        if (valInput) {
+          valInput.value = q;
+          valInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+        if (textInput) {
+          textInput.value = q;
+          textInput.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      };
+      filterInput.addEventListener("input", applyFieldFilter);
+      filterInput.addEventListener("keydown", (ev) => {
+        if (ev.key === "ArrowDown") {
+          ev.preventDefault();
+          renderPanel("");
+          panel.style.display = "block";
+        }
+        if (ev.key === "Escape") panel.style.display = "none";
+      });
+
+      toggleBtn.addEventListener("click", () => {
+        if (panel.style.display === "block") {
+          panel.style.display = "none";
+          return;
+        }
+        renderPanel("");
+        panel.style.display = "block";
+        filterInput.focus();
+      });
 
       block.appendChild(combo);
+      block.appendChild(panel);
 
       // Insertar el combo justo despues del campo selector (mismo layout existente).
       let anchor = selInput;
@@ -426,6 +554,17 @@
         if (!ti) return;
         ti.fields.forEach((field) => {
           const { name, ph } = field;
+          if (typeSelect.value === "choose_option" && (name === "value" || name === "text" || name === "variable")) {
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.dataset.field = name;
+            if (prefill && prefill[name] != null) {
+              const pv = prefill[name];
+              hidden.value = Array.isArray(pv) ? pv.join(", ") : String(pv);
+            }
+            fieldsDiv.appendChild(hidden);
+            return;
+          }
           const lbl = document.createElement("label");
           lbl.className = "wm-sved-field-label";
           lbl.textContent = name;
@@ -604,6 +743,13 @@
         if (!typeInfo) return;
         typeInfo.fields.forEach((field) => {
           const { name, ph } = field;
+          if (typeSelect.value === "choose_option" && (name === "value" || name === "text" || name === "variable")) {
+            const hidden = document.createElement("input");
+            hidden.type = "hidden";
+            hidden.dataset.field = name;
+            fieldsDiv.appendChild(hidden);
+            return;
+          }
           const lbl = document.createElement("label");
           lbl.className = "wm-sved-field-label";
           lbl.textContent = name;

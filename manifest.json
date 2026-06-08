@@ -45,7 +45,10 @@
         "src/modules/inventory/page-inventory.js",
         "src/modules/player/player.js",
         "src/modules/storage/iim-adapter.js",
+        "src/modules/storage/macro-json.js",
+        "src/modules/storage/full-backup.js",
         "src/modules/settings/settings-manager.js",
+        "src/modules/controls/genexus-autocomplete.js",
         "src/content/content.js"
       ],
       "run_at": "document_idle"

@@ -19,7 +19,8 @@
     runtimeDataItems: [],
     runtimeDataTemplates: [],
     runtimeTemplateSelectedId: "",
-    downloadFolder: ""
+    downloadFolder: "",
+    pageMetaMaxProfiles: 60
   });
 
   async function getSettings() {

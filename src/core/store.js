@@ -104,7 +104,8 @@
       runtimeData: "",
       runtimeDataItems: [],
       runtimeDataTemplates: [],
-      runtimeTemplateSelectedId: ""
+      runtimeTemplateSelectedId: "",
+      pageMetaMaxProfiles: 60
     }
   });
 

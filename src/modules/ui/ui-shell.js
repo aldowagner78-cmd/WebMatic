@@ -62,9 +62,9 @@
         <button class="webmatic-close-btn" type="button" data-action="close-panel" aria-label="Cerrar sidebar">&#x2715;</button>
       </header>
       <nav class="webmatic-segment" aria-label="Modos">
-        <button class="webmatic-mode-btn webmatic-record-tab" data-action="record-toggle" data-record-btn>&#9679; Grabar</button>
-        <button class="webmatic-mode-btn" data-mode="play">Reproducir</button>
-        <button class="webmatic-mode-btn" data-mode="settings">Configurar</button>
+        <button class="webmatic-mode-btn webmatic-record-tab" data-action="record-toggle" data-record-btn><span class="webmatic-mode-icon">&#9679;</span><span>Grabar</span></button>
+        <button class="webmatic-mode-btn webmatic-play-tab" data-mode="play"><span class="webmatic-mode-icon">&#9654;</span><span>Reproducir</span></button>
+        <button class="webmatic-mode-btn webmatic-settings-tab" data-mode="settings"><span class="webmatic-mode-icon">&#9881;</span><span>Configurar</span></button>
       </nav>
       <section class="webmatic-content">
         <div class="webmatic-view" data-view="play">
@@ -179,10 +179,28 @@
             <h3>Exportacion y respaldo</h3>
             <p class="webmatic-settings-hint">Exporta la macro seleccionada o un backup completo de todas tus macros.</p>
             <div class="webmatic-actions">
-              <button class="webmatic-action-btn" data-action="macro-export" disabled>&#11123; Exportar seleccionada (.iim)</button>
+              <button class="webmatic-action-btn" data-action="macro-export" disabled>&#11123; Exportar seleccionada (.json)</button>
+              <button class="webmatic-action-btn" data-action="macro-import-json">&#128228; Importar macro (.json)</button>
               <button class="webmatic-action-btn webmatic-btn-backup" data-action="macros-backup-all">&#128190; Backup de todas las macros</button>
               <button class="webmatic-action-btn" data-action="macros-import-all">&#128228; Importar backup (.json)</button>
+              <input type="file" data-import-json-file-input accept=".json,application/json,text/json" style="display:none" />
               <input type="file" data-import-file-input accept=".json,application/json" style="display:none" />
+            </div>
+          </section>
+          <section class="webmatic-settings-card" aria-label="Metadatos de pagina">
+            <h3>Metadatos de pagina</h3>
+            <p class="webmatic-settings-hint">Captura una base reutilizable de controles y opciones de la página actual para potenciar el editor visual.</p>
+            <div class="webmatic-subtitle">Limite de perfiles por extensión</div>
+            <div class="webmatic-slider-row">
+              <input class="webmatic-slider" data-action-input="settings-page-meta-max" type="range" min="10" max="300" step="5" value="60" />
+              <span class="webmatic-slider-label" data-page-meta-max-label>60</span>
+            </div>
+            <div class="webmatic-actions">
+              <button class="webmatic-action-btn" data-action="page-meta-capture">&#128269; Capturar contenido</button>
+              <button class="webmatic-action-btn" data-action="page-meta-export">&#11123; Exportar metadatos (.json)</button>
+              <button class="webmatic-action-btn" data-action="page-meta-import">&#128228; Importar metadatos (.json)</button>
+              <button class="webmatic-action-btn webmatic-btn-ghost" data-action="page-meta-profiles-list">&#128196; Ver perfiles de esta pagina</button>
+              <input type="file" data-import-page-meta-file-input accept=".json,application/json,text/json" style="display:none" />
             </div>
           </section>
         </div>
@@ -383,6 +401,7 @@
     panel.querySelectorAll("[data-action^='macro-']").forEach((btn) => {
       if (btn.dataset.action === "macros-backup-all") return;
       if (btn.dataset.action === "macros-import-all") return;
+      if (btn.dataset.action === "macro-import-json") return;
       if (btn.dataset.action === "macro-edit") return;
       btn.disabled = !hasSelection;
       btn.classList.toggle("webmatic-btn-disabled", !hasSelection);
@@ -498,8 +517,47 @@
     const modeButtons = panel.querySelectorAll(".webmatic-mode-btn");
     const views = panel.querySelectorAll(".webmatic-view");
 
+    const _applyModeBtnStyle = (btn, palette) => {
+      if (!btn) return;
+      const isActive = btn.classList.contains("active");
+      btn.style.background = isActive ? palette.activeBg : palette.bg;
+      btn.style.color = isActive ? palette.activeText : palette.text;
+      btn.style.borderColor = isActive ? palette.activeBorder : palette.border;
+      btn.style.borderRadius = "14px";
+      btn.style.minHeight = "33px";
+      btn.style.fontWeight = "800";
+      btn.style.fontSize = "10.5px";
+      btn.style.letterSpacing = "0.1px";
+      btn.style.textTransform = "none";
+      btn.style.padding = "6px 5px";
+      btn.style.overflow = "hidden";
+      btn.style.textOverflow = "ellipsis";
+      btn.style.whiteSpace = "nowrap";
+      btn.style.boxShadow = isActive
+        ? "inset 0 0 0 1px rgba(255,255,255,0.45), 0 0 0 2px rgba(0,0,0,0.08)"
+        : "inset 0 0 0 1px rgba(255,255,255,0.16)";
+      btn.style.filter = isActive ? "saturate(1.15) brightness(1.02)" : "saturate(0.9)";
+    };
+
     modeButtons.forEach((button) => {
       button.classList.toggle("active", button.dataset.mode === state.ui.mode);
+    });
+
+    const recBtn = panel.querySelector(".webmatic-record-tab");
+    const playBtnMode = panel.querySelector(".webmatic-play-tab");
+    const settingsBtnMode = panel.querySelector(".webmatic-settings-tab");
+
+    _applyModeBtnStyle(recBtn, {
+      bg: "#dc2626", text: "#ffffff", border: "#dc2626",
+      activeBg: "#b91c1c", activeText: "#ffffff", activeBorder: "#7f1d1d"
+    });
+    _applyModeBtnStyle(playBtnMode, {
+      bg: "#16a34a", text: "#ffffff", border: "#15803d",
+      activeBg: "#15803d", activeText: "#ffffff", activeBorder: "#166534"
+    });
+    _applyModeBtnStyle(settingsBtnMode, {
+      bg: "#facc15", text: "#4a3410", border: "#eab308",
+      activeBg: "#eab308", activeText: "#4a3410", activeBorder: "#ca8a04"
     });
 
     views.forEach((view) => {
@@ -558,6 +616,16 @@
     }
     if (waitThresholdLabel) {
       waitThresholdLabel.textContent = `${Number(state.settings.waitThreshold ?? 3)}s`;
+    }
+
+    const pageMetaMaxSlider = panel.querySelector("[data-action-input='settings-page-meta-max']");
+    const pageMetaMaxLabel = panel.querySelector("[data-page-meta-max-label]");
+    const maxProfiles = Number(state.settings.pageMetaMaxProfiles ?? 60);
+    if (pageMetaMaxSlider && document.activeElement !== pageMetaMaxSlider) {
+      pageMetaMaxSlider.value = String(maxProfiles);
+    }
+    if (pageMetaMaxLabel) {
+      pageMetaMaxLabel.textContent = String(maxProfiles);
     }
 
     const playRuntimeEnabled = panel.querySelector("#webmatic-play-runtime-enabled");
@@ -733,10 +801,13 @@
         return;
       }
 
+      const actionEl = target.closest("[data-action]");
+      const modeEl = target.closest("[data-mode]");
+
       // Edit button (pencil) on macro item — must check before macro-item selection
-      if (target.dataset.action === "macro-edit" && target.dataset.macroId) {
+      if (actionEl && actionEl.dataset.action === "macro-edit" && actionEl.dataset.macroId) {
         if (typeof onActionClicked === "function") {
-          onActionClicked("macro-edit", { macroId: target.dataset.macroId });
+          onActionClicked("macro-edit", { macroId: actionEl.dataset.macroId });
         }
         return;
       }
@@ -748,7 +819,7 @@
         return;
       }
 
-      const action = target.dataset.action;
+      const action = actionEl ? actionEl.dataset.action : undefined;
 
       if (action === "save-editor-toggle") {
         const scriptArea = panel.querySelector("[data-save-script]");
@@ -761,7 +832,7 @@
         return;
       }
 
-      const mode = target.dataset.mode;
+      const mode = modeEl ? modeEl.dataset.mode : undefined;
       if (mode) {
         onModeSelected(mode);
         return;
@@ -805,9 +876,9 @@
 
       if (action && typeof onActionClicked === "function") {
         onActionClicked(action, {
-          variant: target.dataset.variant ? Number(target.dataset.variant) : undefined,
-          customLabel: target.dataset.customLabel ? String(target.dataset.customLabel) : undefined,
-          index: typeof target.dataset.index !== "undefined" ? Number(target.dataset.index) : undefined
+          variant: actionEl && actionEl.dataset.variant ? Number(actionEl.dataset.variant) : undefined,
+          customLabel: actionEl && actionEl.dataset.customLabel ? String(actionEl.dataset.customLabel) : undefined,
+          index: actionEl && typeof actionEl.dataset.index !== "undefined" ? Number(actionEl.dataset.index) : undefined
         });
       }
     });

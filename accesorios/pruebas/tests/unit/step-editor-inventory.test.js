@@ -19,9 +19,9 @@ globalThis.HTMLSelectElement = win.HTMLSelectElement;
 globalThis.Event = win.Event;
 
 // page-inventory se registra en globalThis y lo usa step-editor internamente.
-require("../../src/modules/inventory/page-inventory.js");
-const iimAdapter = require("../../src/modules/storage/iim-adapter.js");
-const StepEditor = require("../../src/modules/editor/step-editor.js");
+require("../../../../src/modules/inventory/page-inventory.js");
+const iimAdapter = require("../../../../src/modules/storage/iim-adapter.js");
+const StepEditor = require("../../../../src/modules/editor/step-editor.js");
 
 function resetBody(html) {
   win.document.body.innerHTML = html || "";
@@ -67,6 +67,68 @@ const DATALIST_INVENTORY = [{
   }]
 }];
 
+const LINKED_AUTOCOMPLETE_INVENTORY = [{
+  url: "https://example.com/",
+  title: "Form",
+  capturedAt: Date.now(),
+  controls: [{
+    selector: "#vDELEGACION",
+    altSelectors: [],
+    id: "vDELEGACION",
+    name: "vDELEGACION",
+    label: "Delegacion",
+    tag: "input",
+    controlKind: "autocomplete",
+    options: []
+  }, {
+    selector: "#vDELEGCOMBO",
+    altSelectors: [],
+    id: "vDELEGCOMBO",
+    name: "vDELEGCOMBO",
+    label: "Delegacion",
+    tag: "select",
+    controlKind: "native-select",
+    options: [
+      { index: 0, value: "101", text: "CAPITAL", selected: false, disabled: false },
+      { index: 1, value: "102", text: "INTERIOR", selected: false, disabled: false }
+    ]
+  }]
+}];
+
+const GENE_XUS_STATE_HINT_INVENTORY = [{
+  url: "https://example.com/",
+  title: "Form",
+  capturedAt: Date.now(),
+  controls: [{
+    selector: "#vDELEGACION",
+    altSelectors: [],
+    id: "vDELEGACION",
+    name: "vDELEGACION",
+    label: "vDELEGACION",
+    tag: "input",
+    controlKind: "text-input",
+    options: []
+  }, {
+    selector: "#GXState",
+    altSelectors: [],
+    id: "GXState",
+    name: "GXState",
+    label: "GXState",
+    tag: "input",
+    controlKind: "text-input",
+    options: [],
+    currentValue: '{"GXH_vDELEGACION":"2"}'
+  }]
+}];
+
+const AUTOCOMPLETE_CATALOG_META = {
+  "#vDELEGACION": [
+    { value: "IAPOS SANTA FE", text: "IAPOS SANTA FE" },
+    { value: "IAPOS ROSARIO", text: "IAPOS ROSARIO" },
+    { value: "IAPOS RAFAELA", text: "IAPOS RAFAELA" }
+  ]
+};
+
 function buildFields(fields, values) {
   const fieldsDiv = win.document.createElement("div");
   const made = {};
@@ -106,6 +168,51 @@ test("editor: input también muestra dropdown VALUE desde el inventario", () => 
   assert.deepEqual(Array.from(combo.options).map((o) => o.value), ["Cordoba", "Rosario"]);
 });
 
+test("editor: resuelve dropdown para input autocomplete con select relacionado", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setInventory(LINKED_AUTOCOMPLETE_INVENTORY);
+  const { fieldsDiv } = buildFields(["selector", "value", "text"], { selector: "#vDELEGACION" });
+  ed._syncOptionPicker(fieldsDiv, "choose_option");
+  const combo = fieldsDiv.querySelector("[data-wm-optcombo]");
+  assert.ok(combo);
+  assert.equal(combo.options.length, 2);
+  assert.equal(combo.options[0].textContent, "CAPITAL");
+});
+
+test("editor: choose_option muestra dropdown con fallback GeneXus desde value actual", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setInventory(GENE_XUS_STATE_HINT_INVENTORY);
+  const { fieldsDiv } = buildFields(["selector", "value", "text"], {
+    selector: "#vDELEGACION",
+    value: "IAPOS SANTA FE",
+    text: "IAPOS SANTA FE"
+  });
+  ed._syncOptionPicker(fieldsDiv, "choose_option");
+  const combo = fieldsDiv.querySelector("[data-wm-optcombo]");
+  assert.ok(combo);
+  assert.equal(combo.options.length, 1);
+  assert.equal(combo.options[0].value, "IAPOS SANTA FE");
+});
+
+test("editor: usa meta.autocompleteCatalogs cuando inventario solo aporta una opcion", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setInventory(GENE_XUS_STATE_HINT_INVENTORY);
+  ed.setAutocompleteCatalogs(AUTOCOMPLETE_CATALOG_META);
+  const { fieldsDiv } = buildFields(["selector", "value", "text"], {
+    selector: "#vDELEGACION",
+    value: "IAPOS SANTA FE",
+    text: "IAPOS SANTA FE"
+  });
+  ed._syncOptionPicker(fieldsDiv, "choose_option");
+  const combo = fieldsDiv.querySelector("[data-wm-optcombo]");
+  assert.ok(combo);
+  assert.equal(combo.options.length, 3);
+  assert.equal(combo.options[1].value, "IAPOS ROSARIO");
+});
+
 test("editor: elegir opción del inventario actualiza value (y text en choose_option)", () => {
   resetBody("");
   const ed = new StepEditor();
@@ -117,6 +224,24 @@ test("editor: elegir opción del inventario actualiza value (y text en choose_op
   combo.dispatchEvent(new win.Event("change", { bubbles: true }));
   assert.equal(inputs.value.value, "2");
   assert.equal(inputs.text.value, "Inactivo");
+});
+
+test("editor: escribir en campo de opciones filtra el dropdown", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setInventory(SELECT_INVENTORY);
+  const { fieldsDiv } = buildFields(["selector", "value", "text"], { selector: "#estado" });
+  ed._syncOptionPicker(fieldsDiv, "choose_option");
+  const combo = fieldsDiv.querySelector("[data-wm-optcombo]");
+  const filter = fieldsDiv.querySelector("[data-wm-optpicker] input");
+  assert.ok(combo);
+  assert.ok(filter);
+  assert.equal(combo.options.length, 2);
+
+  filter.value = "inac";
+  filter.dispatchEvent(new win.Event("input", { bubbles: true }));
+  assert.equal(combo.options.length, 1);
+  assert.equal(combo.options[0].value, "2");
 });
 
 test("editor: sin opciones (ni DOM ni inventario) NO inserta combo (editor manual)", () => {

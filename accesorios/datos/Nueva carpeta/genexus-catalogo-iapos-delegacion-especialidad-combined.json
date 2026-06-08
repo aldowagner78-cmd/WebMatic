@@ -1,0 +1,1796 @@
+{
+  "capturedAt": "2026-06-08T13:24:42.700Z",
+  "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?M,0",
+  "source": "Playwright trusted keyboard + GeneXus XHR extraction",
+  "fields": {
+    "especialidad": {
+      "selector": "#vAUCAESPEFC",
+      "total": 122,
+      "options": [
+        {
+          "value": "ACCIDENTE DE TRABAJO",
+          "text": "ACCIDENTE DE TRABAJO",
+          "source": "xhr",
+          "term": "TRA",
+          "capturedAt": "2026-06-08T13:22:07.614Z"
+        },
+        {
+          "value": "ACOMPAÑANTE TERAPEUTICO",
+          "text": "ACOMPAÑANTE TERAPEUTICO",
+          "source": "xhr",
+          "term": "TER",
+          "capturedAt": "2026-06-08T13:22:03.104Z"
+        },
+        {
+          "value": "ALOJAMIENTO",
+          "text": "ALOJAMIENTO",
+          "source": "xhr",
+          "term": "ALO",
+          "capturedAt": "2026-06-08T13:17:47.448Z"
+        },
+        {
+          "value": "ALOJAMIENTO- FUNDACION MATEO ESQUIVO",
+          "text": "ALOJAMIENTO- FUNDACION MATEO ESQUIVO",
+          "source": "xhr",
+          "term": "ALO",
+          "capturedAt": "2026-06-08T13:17:47.448Z"
+        },
+        {
+          "value": "ANATOMIA PATOLOGICA",
+          "text": "ANATOMIA PATOLOGICA",
+          "source": "xhr",
+          "term": "ANA",
+          "capturedAt": "2026-06-08T13:17:54.456Z"
+        },
+        {
+          "value": "ANESTESIA, ANALGESIA Y REANIMACION",
+          "text": "ANESTESIA, ANALGESIA Y REANIMACION",
+          "source": "xhr",
+          "term": "ANA",
+          "capturedAt": "2026-06-08T13:17:54.457Z"
+        },
+        {
+          "value": "ANESTESIOLOGIA",
+          "text": "ANESTESIOLOGIA",
+          "source": "xhr",
+          "term": "ANES",
+          "capturedAt": "2026-06-08T13:17:56.585Z"
+        },
+        {
+          "value": "AUDIFONOS",
+          "text": "AUDIFONOS",
+          "source": "xhr",
+          "term": "FON",
+          "capturedAt": "2026-06-08T13:18:58.208Z"
+        },
+        {
+          "value": "AUDITORIA MEDICA",
+          "text": "AUDITORIA MEDICA",
+          "source": "xhr",
+          "term": "MED",
+          "capturedAt": "2026-06-08T13:19:55.641Z"
+        },
+        {
+          "value": "BACTERIOLOGIA",
+          "text": "BACTERIOLOGIA",
+          "source": "xhr",
+          "term": "TER",
+          "capturedAt": "2026-06-08T13:22:03.105Z"
+        },
+        {
+          "value": "CARDIOLOGIA",
+          "text": "CARDIOLOGIA",
+          "source": "xhr",
+          "term": "CAR",
+          "capturedAt": "2026-06-08T13:18:01.261Z"
+        },
+        {
+          "value": "CARDIOLOGIA PEDIATRICA",
+          "text": "CARDIOLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "CAR",
+          "capturedAt": "2026-06-08T13:18:01.262Z"
+        },
+        {
+          "value": "CIRUGIA",
+          "text": "CIRUGIA",
+          "source": "xhr",
+          "term": "CIR",
+          "capturedAt": "2026-06-08T13:18:10.604Z"
+        },
+        {
+          "value": "CIRUGIA BARIATRICA",
+          "text": "CIRUGIA BARIATRICA",
+          "source": "xhr",
+          "term": "CIR",
+          "capturedAt": "2026-06-08T13:18:10.604Z"
+        },
+        {
+          "value": "CIRUGIA BUCO MAXILO FACIAL",
+          "text": "CIRUGIA BUCO MAXILO FACIAL",
+          "source": "xhr",
+          "term": "CIR",
+          "capturedAt": "2026-06-08T13:18:10.604Z"
+        },
+        {
+          "value": "CIRUGIA CARDIOVASCULAR",
+          "text": "CIRUGIA CARDIOVASCULAR",
+          "source": "xhr",
+          "term": "CAR",
+          "capturedAt": "2026-06-08T13:18:01.262Z"
+        },
+        {
+          "value": "CIRUGIA DE APARATO DIGESTIVO",
+          "text": "CIRUGIA DE APARATO DIGESTIVO",
+          "source": "xhr",
+          "term": "CIR",
+          "capturedAt": "2026-06-08T13:18:10.604Z"
+        },
+        {
+          "value": "CIRUGIA GENERAL",
+          "text": "CIRUGIA GENERAL",
+          "source": "xhr",
+          "term": "GEN",
+          "capturedAt": "2026-06-08T13:19:13.212Z"
+        },
+        {
+          "value": "CIRUGIA INFANTIL",
+          "text": "CIRUGIA INFANTIL",
+          "source": "xhr",
+          "term": "INF",
+          "capturedAt": "2026-06-08T13:19:34.576Z"
+        },
+        {
+          "value": "CITODIAGNOSTICO",
+          "text": "CITODIAGNOSTICO",
+          "source": "xhr",
+          "term": "DIA",
+          "capturedAt": "2026-06-08T13:18:26.147Z"
+        },
+        {
+          "value": "CLINICA GENERAL",
+          "text": "CLINICA GENERAL",
+          "source": "xhr",
+          "term": "CLI",
+          "capturedAt": "2026-06-08T13:18:15.063Z"
+        },
+        {
+          "value": "CLINICA MEDICA",
+          "text": "CLINICA MEDICA",
+          "source": "xhr",
+          "term": "CLI",
+          "capturedAt": "2026-06-08T13:18:15.063Z"
+        },
+        {
+          "value": "CONSULTAS MEDICAS",
+          "text": "CONSULTAS MEDICAS",
+          "source": "xhr",
+          "term": "MED",
+          "capturedAt": "2026-06-08T13:19:55.641Z"
+        },
+        {
+          "value": "DERMATOLOGIA",
+          "text": "DERMATOLOGIA",
+          "source": "xhr",
+          "term": "DER",
+          "capturedAt": "2026-06-08T13:18:19.527Z"
+        },
+        {
+          "value": "DERMATOLOGIA PEDIATRICA",
+          "text": "DERMATOLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "DER",
+          "capturedAt": "2026-06-08T13:18:19.527Z"
+        },
+        {
+          "value": "DIABETES",
+          "text": "DIABETES",
+          "source": "xhr",
+          "term": "DIA",
+          "capturedAt": "2026-06-08T13:18:26.147Z"
+        },
+        {
+          "value": "DIAGNOSTICO POR IMAGENES",
+          "text": "DIAGNOSTICO POR IMAGENES",
+          "source": "xhr",
+          "term": "DIA",
+          "capturedAt": "2026-06-08T13:18:26.147Z"
+        },
+        {
+          "value": "DIAGNOSTICO POR IMAGENES -  ROS.",
+          "text": "DIAGNOSTICO POR IMAGENES -  ROS.",
+          "source": "xhr",
+          "term": "GEN",
+          "capturedAt": "2026-06-08T13:19:13.212Z"
+        },
+        {
+          "value": "ECOCARDIOGRAFIA",
+          "text": "ECOCARDIOGRAFIA",
+          "source": "xhr",
+          "term": "CAR",
+          "capturedAt": "2026-06-08T13:18:01.262Z"
+        },
+        {
+          "value": "ECODOPPLER VASCULAR PERIFERICO",
+          "text": "ECODOPPLER VASCULAR PERIFERICO",
+          "source": "xhr",
+          "term": "ECO",
+          "capturedAt": "2026-06-08T13:18:37.145Z"
+        },
+        {
+          "value": "ECOGRAFIA GENERAL",
+          "text": "ECOGRAFIA GENERAL",
+          "source": "xhr",
+          "term": "ECO",
+          "capturedAt": "2026-06-08T13:18:37.145Z"
+        },
+        {
+          "value": "ELEMENTOS LICITACION",
+          "text": "ELEMENTOS LICITACION",
+          "source": "xhr",
+          "term": "TAC",
+          "capturedAt": "2026-06-08T13:22:01.057Z"
+        },
+        {
+          "value": "ELEMENTOS MEDICOS",
+          "text": "ELEMENTOS MEDICOS",
+          "source": "xhr",
+          "term": "MED",
+          "capturedAt": "2026-06-08T13:19:55.641Z"
+        },
+        {
+          "value": "ELEMENTOS TRAUMATOLOGIA",
+          "text": "ELEMENTOS TRAUMATOLOGIA",
+          "source": "xhr",
+          "term": "TRA",
+          "capturedAt": "2026-06-08T13:22:07.614Z"
+        },
+        {
+          "value": "EMERGENCIA Y TRASLADO",
+          "text": "EMERGENCIA Y TRASLADO",
+          "source": "xhr",
+          "term": "TRA",
+          "capturedAt": "2026-06-08T13:22:07.614Z"
+        },
+        {
+          "value": "ENDOCRINOLOGIA",
+          "text": "ENDOCRINOLOGIA",
+          "source": "xhr",
+          "term": "END",
+          "capturedAt": "2026-06-08T13:18:41.807Z"
+        },
+        {
+          "value": "ENDOCRINOLOGIA PEDIATRICA",
+          "text": "ENDOCRINOLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "END",
+          "capturedAt": "2026-06-08T13:18:41.807Z"
+        },
+        {
+          "value": "ENDOCRINOLOGIA Y NUTRICION",
+          "text": "ENDOCRINOLOGIA Y NUTRICION",
+          "source": "xhr",
+          "term": "END",
+          "capturedAt": "2026-06-08T13:18:41.808Z"
+        },
+        {
+          "value": "ENFERMEDADES DE LA NUTRICION",
+          "text": "ENFERMEDADES DE LA NUTRICION",
+          "source": "xhr",
+          "term": "MED",
+          "capturedAt": "2026-06-08T13:19:55.641Z"
+        },
+        {
+          "value": "FISIATRIA",
+          "text": "FISIATRIA",
+          "source": "xhr",
+          "term": "FIS",
+          "capturedAt": "2026-06-08T13:18:51.333Z"
+        },
+        {
+          "value": "FLEBOLOGIA Y LINFOLOGIA",
+          "text": "FLEBOLOGIA Y LINFOLOGIA",
+          "source": "xhr",
+          "term": "INF",
+          "capturedAt": "2026-06-08T13:19:34.576Z"
+        },
+        {
+          "value": "FONOAUDIOLOGIA",
+          "text": "FONOAUDIOLOGIA",
+          "source": "xhr",
+          "term": "FON",
+          "capturedAt": "2026-06-08T13:18:58.208Z"
+        },
+        {
+          "value": "GASTROENTEROLOGIA",
+          "text": "GASTROENTEROLOGIA",
+          "source": "xhr",
+          "term": "GAS",
+          "capturedAt": "2026-06-08T13:19:05.476Z"
+        },
+        {
+          "value": "GASTROENTEROLOGIA PEDIATRICA",
+          "text": "GASTROENTEROLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "GAS",
+          "capturedAt": "2026-06-08T13:19:05.476Z"
+        },
+        {
+          "value": "GENETICA MEDICA",
+          "text": "GENETICA MEDICA",
+          "source": "xhr",
+          "term": "GENETICA",
+          "capturedAt": "2026-06-08T13:19:15.743Z"
+        },
+        {
+          "value": "GINECOLOGIA",
+          "text": "GINECOLOGIA",
+          "source": "xhr",
+          "term": "ECO",
+          "capturedAt": "2026-06-08T13:18:37.145Z"
+        },
+        {
+          "value": "GINECOLOGIA CLINICA",
+          "text": "GINECOLOGIA CLINICA",
+          "source": "xhr",
+          "term": "CLI",
+          "capturedAt": "2026-06-08T13:18:15.063Z"
+        },
+        {
+          "value": "GINECOLOGIA Y OBSTETRICIA",
+          "text": "GINECOLOGIA Y OBSTETRICIA",
+          "source": "xhr",
+          "term": "GIN",
+          "capturedAt": "2026-06-08T13:19:17.773Z"
+        },
+        {
+          "value": "HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD",
+          "text": "HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD",
+          "source": "xhr",
+          "term": "CAR",
+          "capturedAt": "2026-06-08T13:18:01.262Z"
+        },
+        {
+          "value": "HABILITACION ECOCARDIOGRAFIA NIVEL A",
+          "text": "HABILITACION ECOCARDIOGRAFIA NIVEL A",
+          "source": "xhr",
+          "term": "TAC",
+          "capturedAt": "2026-06-08T13:22:01.057Z"
+        },
+        {
+          "value": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1",
+          "text": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1",
+          "source": "xhr",
+          "term": "TAC",
+          "capturedAt": "2026-06-08T13:22:01.058Z"
+        },
+        {
+          "value": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1-B2",
+          "text": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1-B2",
+          "source": "xhr",
+          "term": "TAC",
+          "capturedAt": "2026-06-08T13:22:01.058Z"
+        },
+        {
+          "value": "HABILITACION ECODOPPLER VASCULAR PERIFERICO",
+          "text": "HABILITACION ECODOPPLER VASCULAR PERIFERICO",
+          "source": "xhr",
+          "term": "ODO",
+          "capturedAt": "2026-06-08T13:20:36.182Z"
+        },
+        {
+          "value": "HABILITACION ECOGRAFIA EN SU ESPECIALIDAD",
+          "text": "HABILITACION ECOGRAFIA EN SU ESPECIALIDAD",
+          "source": "xhr",
+          "term": "ECOGRAFIA",
+          "capturedAt": "2026-06-08T13:18:39.745Z"
+        },
+        {
+          "value": "HABILITACION ECOGRAFIA GENERAL",
+          "text": "HABILITACION ECOGRAFIA GENERAL",
+          "source": "xhr",
+          "term": "ECOGRAFIA",
+          "capturedAt": "2026-06-08T13:18:39.745Z"
+        },
+        {
+          "value": "HABILITACION EN ECOGRAFIA OCULAR",
+          "text": "HABILITACION EN ECOGRAFIA OCULAR",
+          "source": "xhr",
+          "term": "ECOGRAFIA",
+          "capturedAt": "2026-06-08T13:18:39.745Z"
+        },
+        {
+          "value": "HEMATOLOGIA",
+          "text": "HEMATOLOGIA",
+          "source": "xhr",
+          "term": "HEM",
+          "capturedAt": "2026-06-08T13:19:24.775Z"
+        },
+        {
+          "value": "HEMATOLOGIA PEDIATRICA",
+          "text": "HEMATOLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "HEM",
+          "capturedAt": "2026-06-08T13:19:24.775Z"
+        },
+        {
+          "value": "INFECTOLOGIA",
+          "text": "INFECTOLOGIA",
+          "source": "xhr",
+          "term": "INF",
+          "capturedAt": "2026-06-08T13:19:34.576Z"
+        },
+        {
+          "value": "INFECTOLOGIA PEDIATRICA",
+          "text": "INFECTOLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "INF",
+          "capturedAt": "2026-06-08T13:19:34.576Z"
+        },
+        {
+          "value": "KINESIOLOGIA",
+          "text": "KINESIOLOGIA",
+          "source": "xhr",
+          "term": "KIN",
+          "capturedAt": "2026-06-08T13:19:39.509Z"
+        },
+        {
+          "value": "KINESIOLOGIA - CG",
+          "text": "KINESIOLOGIA - CG",
+          "source": "xhr",
+          "term": "KIN",
+          "capturedAt": "2026-06-08T13:19:39.509Z"
+        },
+        {
+          "value": "MEDICA",
+          "text": "MEDICA",
+          "source": "xhr",
+          "term": "MEDICA",
+          "capturedAt": "2026-06-08T13:19:57.969Z"
+        },
+        {
+          "value": "MEDICA CIRUJANA",
+          "text": "MEDICA CIRUJANA",
+          "source": "xhr",
+          "term": "ANA",
+          "capturedAt": "2026-06-08T13:17:54.457Z"
+        },
+        {
+          "value": "MEDICINA DE EMERGENCIAS Y DESASTRES",
+          "text": "MEDICINA DE EMERGENCIAS Y DESASTRES",
+          "source": "xhr",
+          "term": "MEDICINA",
+          "capturedAt": "2026-06-08T13:20:00.489Z"
+        },
+        {
+          "value": "MEDICINA DEL DEPORTE",
+          "text": "MEDICINA DEL DEPORTE",
+          "source": "xhr",
+          "term": "MEDICINA",
+          "capturedAt": "2026-06-08T13:20:00.489Z"
+        },
+        {
+          "value": "MEDICINA DEL TRABAJO",
+          "text": "MEDICINA DEL TRABAJO",
+          "source": "xhr",
+          "term": "MEDICINA",
+          "capturedAt": "2026-06-08T13:20:00.489Z"
+        },
+        {
+          "value": "MEDICINA GENERAL",
+          "text": "MEDICINA GENERAL",
+          "source": "xhr",
+          "term": "MEDICINA",
+          "capturedAt": "2026-06-08T13:20:00.489Z"
+        },
+        {
+          "value": "MEDICINA GENERALISTA Y  DE FAMILIA",
+          "text": "MEDICINA GENERALISTA Y  DE FAMILIA",
+          "source": "xhr",
+          "term": "MEDICINA",
+          "capturedAt": "2026-06-08T13:20:00.489Z"
+        },
+        {
+          "value": "MEDICINA INTERNA",
+          "text": "MEDICINA INTERNA",
+          "source": "xhr",
+          "term": "TER",
+          "capturedAt": "2026-06-08T13:22:03.105Z"
+        },
+        {
+          "value": "MEDICINA TRANSFUSIONAL",
+          "text": "MEDICINA TRANSFUSIONAL",
+          "source": "xhr",
+          "term": "TRA",
+          "capturedAt": "2026-06-08T13:22:07.614Z"
+        },
+        {
+          "value": "MEDICO RADIOTERAPEUTA",
+          "text": "MEDICO RADIOTERAPEUTA",
+          "source": "xhr",
+          "term": "RAD",
+          "capturedAt": "2026-06-08T13:21:29.223Z"
+        },
+        {
+          "value": "NEFROLOGIA",
+          "text": "NEFROLOGIA",
+          "source": "xhr",
+          "term": "NEF",
+          "capturedAt": "2026-06-08T13:20:02.563Z"
+        },
+        {
+          "value": "NEFROLOGIA PEDIATRICA",
+          "text": "NEFROLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "NEF",
+          "capturedAt": "2026-06-08T13:20:02.563Z"
+        },
+        {
+          "value": "NEUMONOLOGIA",
+          "text": "NEUMONOLOGIA",
+          "source": "xhr",
+          "term": "NEU",
+          "capturedAt": "2026-06-08T13:20:09.540Z"
+        },
+        {
+          "value": "NEUMONOLOGIA PEDIATRICA",
+          "text": "NEUMONOLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "NEU",
+          "capturedAt": "2026-06-08T13:20:09.540Z"
+        },
+        {
+          "value": "NEUMONOLOGIA Y TISIOLOGIA",
+          "text": "NEUMONOLOGIA Y TISIOLOGIA",
+          "source": "xhr",
+          "term": "NEU",
+          "capturedAt": "2026-06-08T13:20:09.540Z"
+        },
+        {
+          "value": "NEUROCIRUGIA",
+          "text": "NEUROCIRUGIA",
+          "source": "xhr",
+          "term": "NEU",
+          "capturedAt": "2026-06-08T13:20:09.540Z"
+        },
+        {
+          "value": "NEUROCIRUGIA PEDIATRICA",
+          "text": "NEUROCIRUGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "NEU",
+          "capturedAt": "2026-06-08T13:20:09.540Z"
+        },
+        {
+          "value": "NEUROLOGIA",
+          "text": "NEUROLOGIA",
+          "source": "xhr",
+          "term": "NEURO",
+          "capturedAt": "2026-06-08T13:20:16.893Z"
+        },
+        {
+          "value": "NEUROLOGIA PEDIATRICA",
+          "text": "NEUROLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "NEURO",
+          "capturedAt": "2026-06-08T13:20:16.893Z"
+        },
+        {
+          "value": "NEUROSIQUIATRIA",
+          "text": "NEUROSIQUIATRIA",
+          "source": "xhr",
+          "term": "NEURO",
+          "capturedAt": "2026-06-08T13:20:16.893Z"
+        },
+        {
+          "value": "NUTRICION",
+          "text": "NUTRICION",
+          "source": "xhr",
+          "term": "NUT",
+          "capturedAt": "2026-06-08T13:20:24.545Z"
+        },
+        {
+          "value": "NUTRICION PEDIATRICA",
+          "text": "NUTRICION PEDIATRICA",
+          "source": "xhr",
+          "term": "NUT",
+          "capturedAt": "2026-06-08T13:20:24.545Z"
+        },
+        {
+          "value": "NUTRICIONISTA",
+          "text": "NUTRICIONISTA",
+          "source": "xhr",
+          "term": "NUT",
+          "capturedAt": "2026-06-08T13:20:24.545Z"
+        },
+        {
+          "value": "OBSTETRICIA",
+          "text": "OBSTETRICIA",
+          "source": "xhr",
+          "term": "OBS",
+          "capturedAt": "2026-06-08T13:20:29.175Z"
+        },
+        {
+          "value": "ODONTOLOGIA",
+          "text": "ODONTOLOGIA",
+          "source": "xhr",
+          "term": "ODO",
+          "capturedAt": "2026-06-08T13:20:36.182Z"
+        },
+        {
+          "value": "ODONTOLOGIA PME",
+          "text": "ODONTOLOGIA PME",
+          "source": "xhr",
+          "term": "ODO",
+          "capturedAt": "2026-06-08T13:20:36.182Z"
+        },
+        {
+          "value": "OFTALMOLOGIA",
+          "text": "OFTALMOLOGIA",
+          "source": "xhr",
+          "term": "OFT",
+          "capturedAt": "2026-06-08T13:20:43.181Z"
+        },
+        {
+          "value": "ONCOLOGIA",
+          "text": "ONCOLOGIA",
+          "source": "xhr",
+          "term": "ONC",
+          "capturedAt": "2026-06-08T13:20:50.257Z"
+        },
+        {
+          "value": "ONCOLOGIA MEDICA",
+          "text": "ONCOLOGIA MEDICA",
+          "source": "xhr",
+          "term": "ONC",
+          "capturedAt": "2026-06-08T13:20:50.257Z"
+        },
+        {
+          "value": "ONCOLOGIA PEDIATRICA",
+          "text": "ONCOLOGIA PEDIATRICA",
+          "source": "xhr",
+          "term": "ONC",
+          "capturedAt": "2026-06-08T13:20:50.257Z"
+        },
+        {
+          "value": "ONCOLOGIA QUIRURGICA",
+          "text": "ONCOLOGIA QUIRURGICA",
+          "source": "xhr",
+          "term": "ONC",
+          "capturedAt": "2026-06-08T13:20:50.257Z"
+        },
+        {
+          "value": "ORTOPEDIA BLANDA",
+          "text": "ORTOPEDIA BLANDA",
+          "source": "xhr",
+          "term": "ORT",
+          "capturedAt": "2026-06-08T13:20:59.108Z"
+        },
+        {
+          "value": "ORTOPEDIA Y TRAUMATOLOGIA",
+          "text": "ORTOPEDIA Y TRAUMATOLOGIA",
+          "source": "xhr",
+          "term": "ORT",
+          "capturedAt": "2026-06-08T13:20:59.108Z"
+        },
+        {
+          "value": "ORTOPEDIA Y TRAUMATOLOGIA INFANTIL",
+          "text": "ORTOPEDIA Y TRAUMATOLOGIA INFANTIL",
+          "source": "xhr",
+          "term": "INF",
+          "capturedAt": "2026-06-08T13:19:34.576Z"
+        },
+        {
+          "value": "OTORRINOLARINGOLOGIA",
+          "text": "OTORRINOLARINGOLOGIA",
+          "source": "xhr",
+          "term": "OTO",
+          "capturedAt": "2026-06-08T13:21:03.789Z"
+        },
+        {
+          "value": "OXIGENOTERAPIA",
+          "text": "OXIGENOTERAPIA",
+          "source": "xhr",
+          "term": "TERAPIA",
+          "capturedAt": "2026-06-08T13:22:05.531Z"
+        },
+        {
+          "value": "PEDIATRIA",
+          "text": "PEDIATRIA",
+          "source": "xhr",
+          "term": "PEDIATRIA",
+          "capturedAt": "2026-06-08T13:21:10.941Z"
+        },
+        {
+          "value": "PODOLOGÍA",
+          "text": "PODOLOGÍA",
+          "source": "xhr",
+          "term": "DOL",
+          "capturedAt": "2026-06-08T13:18:32.871Z"
+        },
+        {
+          "value": "PSICOLOGO",
+          "text": "PSICOLOGO",
+          "source": "xhr",
+          "term": "PSI",
+          "capturedAt": "2026-06-08T13:21:12.993Z"
+        },
+        {
+          "value": "PSICOONCOLOGIA",
+          "text": "PSICOONCOLOGIA",
+          "source": "xhr",
+          "term": "ONC",
+          "capturedAt": "2026-06-08T13:20:50.257Z"
+        },
+        {
+          "value": "PSICOPEDAGOGIA",
+          "text": "PSICOPEDAGOGIA",
+          "source": "xhr",
+          "term": "PSI",
+          "capturedAt": "2026-06-08T13:21:12.993Z"
+        },
+        {
+          "value": "PSICOPEDAGOGO - CG",
+          "text": "PSICOPEDAGOGO - CG",
+          "source": "xhr",
+          "term": "PSI",
+          "capturedAt": "2026-06-08T13:21:12.993Z"
+        },
+        {
+          "value": "PSIQUIATRIA",
+          "text": "PSIQUIATRIA",
+          "source": "xhr",
+          "term": "PSI",
+          "capturedAt": "2026-06-08T13:21:12.993Z"
+        },
+        {
+          "value": "PSIQUIATRIA INFANTO JUVENIL",
+          "text": "PSIQUIATRIA INFANTO JUVENIL",
+          "source": "xhr",
+          "term": "PSIQ",
+          "capturedAt": "2026-06-08T13:21:19.983Z"
+        },
+        {
+          "value": "RADIODIAGNOSTICO",
+          "text": "RADIODIAGNOSTICO",
+          "source": "xhr",
+          "term": "RAD",
+          "capturedAt": "2026-06-08T13:21:29.223Z"
+        },
+        {
+          "value": "RADIOLOGIA",
+          "text": "RADIOLOGIA",
+          "source": "xhr",
+          "term": "RAD",
+          "capturedAt": "2026-06-08T13:21:29.223Z"
+        },
+        {
+          "value": "RADIOLOGIA - GREMIAL MEDICA",
+          "text": "RADIOLOGIA - GREMIAL MEDICA",
+          "source": "xhr",
+          "term": "RAD",
+          "capturedAt": "2026-06-08T13:21:29.223Z"
+        },
+        {
+          "value": "RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR",
+          "text": "RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR",
+          "source": "xhr",
+          "term": "RAD",
+          "capturedAt": "2026-06-08T13:21:29.223Z"
+        },
+        {
+          "value": "RADIOTERAPIA",
+          "text": "RADIOTERAPIA",
+          "source": "xhr",
+          "term": "RADIOTERAPIA",
+          "capturedAt": "2026-06-08T13:21:37.035Z"
+        },
+        {
+          "value": "REHABILITACION - DISCAPACIDAD",
+          "text": "REHABILITACION - DISCAPACIDAD",
+          "source": "xhr",
+          "term": "REH",
+          "capturedAt": "2026-06-08T13:21:39.090Z"
+        },
+        {
+          "value": "REHABILITACION NEUROLOGICA",
+          "text": "REHABILITACION NEUROLOGICA",
+          "source": "xhr",
+          "term": "REH",
+          "capturedAt": "2026-06-08T13:21:39.090Z"
+        },
+        {
+          "value": "REUMATOLOGIA",
+          "text": "REUMATOLOGIA",
+          "source": "xhr",
+          "term": "REU",
+          "capturedAt": "2026-06-08T13:21:48.967Z"
+        },
+        {
+          "value": "SANATORIOS",
+          "text": "SANATORIOS",
+          "source": "xhr",
+          "term": "ANA",
+          "capturedAt": "2026-06-08T13:17:54.457Z"
+        },
+        {
+          "value": "SOPORTE NUTRICIONAL",
+          "text": "SOPORTE NUTRICIONAL",
+          "source": "xhr",
+          "term": "ORT",
+          "capturedAt": "2026-06-08T13:20:59.108Z"
+        },
+        {
+          "value": "TERAPIA INTENSIVA",
+          "text": "TERAPIA INTENSIVA",
+          "source": "xhr",
+          "term": "TERAPIA",
+          "capturedAt": "2026-06-08T13:22:05.531Z"
+        },
+        {
+          "value": "TERAPIA INTENSIVA PEDIATRICA",
+          "text": "TERAPIA INTENSIVA PEDIATRICA",
+          "source": "xhr",
+          "term": "TERAPIA",
+          "capturedAt": "2026-06-08T13:22:05.531Z"
+        },
+        {
+          "value": "TOCOGINECOLOGIA",
+          "text": "TOCOGINECOLOGIA",
+          "source": "xhr",
+          "term": "GIN",
+          "capturedAt": "2026-06-08T13:19:17.774Z"
+        },
+        {
+          "value": "TRAUMATOLOGIA Y ORTOPEDIA",
+          "text": "TRAUMATOLOGIA Y ORTOPEDIA",
+          "source": "xhr",
+          "term": "ORTOPEDIA",
+          "capturedAt": "2026-06-08T13:21:01.716Z"
+        },
+        {
+          "value": "TRAUMATOLOGO",
+          "text": "TRAUMATOLOGO",
+          "source": "xhr",
+          "term": "TRAU",
+          "capturedAt": "2026-06-08T13:22:09.738Z"
+        },
+        {
+          "value": "UROLOGIA",
+          "text": "UROLOGIA",
+          "source": "xhr",
+          "term": "UROLOGIA",
+          "capturedAt": "2026-06-08T13:22:19.631Z"
+        }
+      ],
+      "validationsTotal": 12,
+      "validations": [
+        {
+          "code": "0",
+          "text": "",
+          "raw": "[\"0\",\"\",\"[]\"]",
+          "term": "ALO",
+          "capturedAt": "2026-06-08T13:17:46.489Z"
+        },
+        {
+          "code": "152",
+          "text": "ANESTESIA, ANALGESIA Y REANIMACION",
+          "raw": "[\"152\",\"ANESTESIA, ANALGESIA Y REANIMACION\",\"[]\"]",
+          "term": "ANESTESIA",
+          "capturedAt": "2026-06-08T13:17:59.233Z"
+        },
+        {
+          "code": "106",
+          "text": "DIABETES",
+          "raw": "[\"106\",\"DIABETES\",\"[]\"]",
+          "term": "DIAB",
+          "capturedAt": "2026-06-08T13:18:28.312Z"
+        },
+        {
+          "code": "38",
+          "text": "FISIATRIA",
+          "raw": "[\"38\",\"FISIATRIA\",\"[]\"]",
+          "term": "FIS",
+          "capturedAt": "2026-06-08T13:18:51.333Z"
+        },
+        {
+          "code": "12",
+          "text": "FONOAUDIOLOGIA",
+          "raw": "[\"12\",\"FONOAUDIOLOGIA\",\"[]\"]",
+          "term": "FONOAUDIOLOGIA",
+          "capturedAt": "2026-06-08T13:19:03.427Z"
+        },
+        {
+          "code": "173",
+          "text": "GENETICA MEDICA",
+          "raw": "[\"173\",\"GENETICA MEDICA\",\"[]\"]",
+          "term": "GENETICA",
+          "capturedAt": "2026-06-08T13:19:15.744Z"
+        },
+        {
+          "code": "192",
+          "text": "MEDICINA DE EMERGENCIAS Y DESASTRES",
+          "raw": "[\"192\",\"MEDICINA DE EMERGENCIAS Y DESASTRES\",\"[]\"]",
+          "term": "RES",
+          "capturedAt": "2026-06-08T13:21:44.220Z"
+        },
+        {
+          "code": "3",
+          "text": "OFTALMOLOGIA",
+          "raw": "[\"3\",\"OFTALMOLOGIA\",\"[]\"]",
+          "term": "OFT",
+          "capturedAt": "2026-06-08T13:20:43.182Z"
+        },
+        {
+          "code": "22",
+          "text": "OTORRINOLARINGOLOGIA",
+          "raw": "[\"22\",\"OTORRINOLARINGOLOGIA\",\"[]\"]",
+          "term": "OTO",
+          "capturedAt": "2026-06-08T13:21:03.789Z"
+        },
+        {
+          "code": "29",
+          "text": "PEDIATRIA",
+          "raw": "[\"29\",\"PEDIATRIA\",\"[]\"]",
+          "term": "PEDIATRIA",
+          "capturedAt": "2026-06-08T13:21:10.941Z"
+        },
+        {
+          "code": "24",
+          "text": "PODOLOGÍA",
+          "raw": "[\"24\",\"PODOLOGÍA\",\"[]\"]",
+          "term": "DOL",
+          "capturedAt": "2026-06-08T13:18:32.871Z"
+        },
+        {
+          "code": "23",
+          "text": "REUMATOLOGIA",
+          "raw": "[\"23\",\"REUMATOLOGIA\",\"[]\"]",
+          "term": "REU",
+          "capturedAt": "2026-06-08T13:21:48.967Z"
+        }
+      ]
+    },
+    "delegacion": {
+      "selector": "#vDELEGACION",
+      "total": 106,
+      "options": [
+        {
+          "value": "******** (BAJA) 4-02-011.US.FT",
+          "text": "******** (BAJA) 4-02-011.US.FT",
+          "source": "xhr",
+          "term": "US",
+          "capturedAt": "2026-06-08T13:23:27.376Z"
+        },
+        {
+          "value": "******4-15-344.US.MM--ERROR NO USAR",
+          "text": "******4-15-344.US.MM--ERROR NO USAR",
+          "source": "xhr",
+          "term": "NO USAR",
+          "capturedAt": "2026-06-08T13:23:29.798Z"
+        },
+        {
+          "value": ">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<",
+          "text": ">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<",
+          "source": "xhr",
+          "term": "US",
+          "capturedAt": "2026-06-08T13:23:27.376Z"
+        },
+        {
+          "value": ">>>> NO USAR >>>>",
+          "text": ">>>> NO USAR >>>>",
+          "source": "xhr",
+          "term": "US",
+          "capturedAt": "2026-06-08T13:23:27.376Z"
+        },
+        {
+          "value": "1-02-001.BE CASILDA DELEGACIÓ",
+          "text": "1-02-001.BE CASILDA DELEGACIÓ",
+          "source": "xhr",
+          "term": "CAS",
+          "capturedAt": "2026-06-08T13:22:49.073Z"
+        },
+        {
+          "value": "1-09-001.BE CASA CENTRAL",
+          "text": "1-09-001.BE CASA CENTRAL",
+          "source": "xhr",
+          "term": "CENTRAL",
+          "capturedAt": "2026-06-08T13:22:26.709Z"
+        },
+        {
+          "value": "1-09-002.BE CENTRO CIVICO SANTA FE",
+          "text": "1-09-002.BE CENTRO CIVICO SANTA FE",
+          "source": "xhr",
+          "term": "SANTA",
+          "capturedAt": "2026-06-08T13:23:23.459Z"
+        },
+        {
+          "value": "1-09-003.BE RIESGOS DEL TRABAJO",
+          "text": "1-09-003.BE RIESGOS DEL TRABAJO",
+          "source": "xhr",
+          "term": "BE",
+          "capturedAt": "2026-06-08T13:23:25.413Z"
+        },
+        {
+          "value": "1-09-008.BE LAS FLORES II - SANTA FE",
+          "text": "1-09-008.BE LAS FLORES II - SANTA FE",
+          "source": "xhr",
+          "term": "BE",
+          "capturedAt": "2026-06-08T13:23:25.413Z"
+        },
+        {
+          "value": "1-12-013.BE DELEG. ROSARIO",
+          "text": "1-12-013.BE DELEG. ROSARIO",
+          "source": "xhr",
+          "term": "ROS",
+          "capturedAt": "2026-06-08T13:22:30.933Z"
+        },
+        {
+          "value": "1-20-015.BE DELEG BUENOS AIRES",
+          "text": "1-20-015.BE DELEG BUENOS AIRES",
+          "source": "xhr",
+          "term": "BUENOS",
+          "capturedAt": "2026-06-08T13:23:36.611Z"
+        },
+        {
+          "value": "2-03-002.BE ASOC. TRIBUNALES - RAFAELA",
+          "text": "2-03-002.BE ASOC. TRIBUNALES - RAFAELA",
+          "source": "xhr",
+          "term": "RAF",
+          "capturedAt": "2026-06-08T13:22:35.373Z"
+        },
+        {
+          "value": "2-03-003.BE SOEM SUNCHALES",
+          "text": "2-03-003.BE SOEM SUNCHALES",
+          "source": "xhr",
+          "term": "SUNCHALES",
+          "capturedAt": "2026-06-08T13:24:10.726Z"
+        },
+        {
+          "value": "2-04-001.BE VILLA CONSTITUCION",
+          "text": "2-04-001.BE VILLA CONSTITUCION",
+          "source": "xhr",
+          "term": "VILLA",
+          "capturedAt": "2026-06-08T13:24:32.257Z"
+        },
+        {
+          "value": "2-04-002.BE MUTUAL V CONST",
+          "text": "2-04-002.BE MUTUAL V CONST",
+          "source": "xhr",
+          "term": "MUTUAL",
+          "capturedAt": "2026-06-08T13:24:25.350Z"
+        },
+        {
+          "value": "2-04-004 BE AMSAFE - VILLA CONSTITUCION",
+          "text": "2-04-004 BE AMSAFE - VILLA CONSTITUCION",
+          "source": "xhr",
+          "term": "AMSAFE",
+          "capturedAt": "2026-06-08T13:23:07.238Z"
+        },
+        {
+          "value": "2-05-002.BE AMSAFE - HELVECIA",
+          "text": "2-05-002.BE AMSAFE - HELVECIA",
+          "source": "xhr",
+          "term": "AMSAFE",
+          "capturedAt": "2026-06-08T13:23:07.239Z"
+        },
+        {
+          "value": "2-06-022.BE AMSAFE - FIRMAT",
+          "text": "2-06-022.BE AMSAFE - FIRMAT",
+          "source": "xhr",
+          "term": "AMSAFE",
+          "capturedAt": "2026-06-08T13:23:07.239Z"
+        },
+        {
+          "value": "2-06-023.BE AMSAFE - VENADO TUERTO",
+          "text": "2-06-023.BE AMSAFE - VENADO TUERTO",
+          "source": "xhr",
+          "term": "VEN",
+          "capturedAt": "2026-06-08T13:22:44.693Z"
+        },
+        {
+          "value": "2-06-024.BE AMSAFE - RUFINO",
+          "text": "2-06-024.BE AMSAFE - RUFINO",
+          "source": "xhr",
+          "term": "AMSAFE",
+          "capturedAt": "2026-06-08T13:23:07.239Z"
+        },
+        {
+          "value": "2-07-004.BE AMSAFE - RECONQUISTA",
+          "text": "2-07-004.BE AMSAFE - RECONQUISTA",
+          "source": "xhr",
+          "term": "REC",
+          "capturedAt": "2026-06-08T13:22:39.864Z"
+        },
+        {
+          "value": "2-07-005.BE AMSAFE - VILLA OCAMPO",
+          "text": "2-07-005.BE AMSAFE - VILLA OCAMPO",
+          "source": "xhr",
+          "term": "VILLA",
+          "capturedAt": "2026-06-08T13:24:32.257Z"
+        },
+        {
+          "value": "2-07-006.BE ASOC.TRIB.RECONQU",
+          "text": "2-07-006.BE ASOC.TRIB.RECONQU",
+          "source": "xhr",
+          "term": "REC",
+          "capturedAt": "2026-06-08T13:22:39.864Z"
+        },
+        {
+          "value": "2-07-007.BE MUTUAL ESC \"PRO JUVENTUD\" VILLA GUILLE",
+          "text": "2-07-007.BE MUTUAL ESC \"PRO JUVENTUD\" VILLA GUILLE",
+          "source": "xhr",
+          "term": "VEN",
+          "capturedAt": "2026-06-08T13:22:44.693Z"
+        },
+        {
+          "value": "2-08-002.BE AMSAFE - CAÑADA DE GOMEZ",
+          "text": "2-08-002.BE AMSAFE - CAÑADA DE GOMEZ",
+          "source": "xhr",
+          "term": "CAÑ",
+          "capturedAt": "2026-06-08T13:22:53.449Z"
+        },
+        {
+          "value": "2-09-005.BE HOSPITAL PSIQUIATR",
+          "text": "2-09-005.BE HOSPITAL PSIQUIATR",
+          "source": "xhr",
+          "term": "HOSP",
+          "capturedAt": "2026-06-08T13:24:27.501Z"
+        },
+        {
+          "value": "2-09-008.BE CASA DE GOBIERNO",
+          "text": "2-09-008.BE CASA DE GOBIERNO",
+          "source": "xhr",
+          "term": "CASA",
+          "capturedAt": "2026-06-08T13:22:28.852Z"
+        },
+        {
+          "value": "2-09-011.BE MUTUAL CIRC POL SF",
+          "text": "2-09-011.BE MUTUAL CIRC POL SF",
+          "source": "xhr",
+          "term": "MUTUAL",
+          "capturedAt": "2026-06-08T13:24:25.350Z"
+        },
+        {
+          "value": "2-09-012.BE HOSP VERA CAND SF",
+          "text": "2-09-012.BE HOSP VERA CAND SF",
+          "source": "xhr",
+          "term": "HOSP",
+          "capturedAt": "2026-06-08T13:24:27.501Z"
+        },
+        {
+          "value": "2-09-030.BE HOSP DE NIÑO SF",
+          "text": "2-09-030.BE HOSP DE NIÑO SF",
+          "source": "xhr",
+          "term": "HOSP",
+          "capturedAt": "2026-06-08T13:24:27.502Z"
+        },
+        {
+          "value": "2-09-034.BE MUTUAL BANCO PROV",
+          "text": "2-09-034.BE MUTUAL BANCO PROV",
+          "source": "xhr",
+          "term": "MUTUAL",
+          "capturedAt": "2026-06-08T13:24:25.350Z"
+        },
+        {
+          "value": "2-09-037.BE HOSP SAYAGO SF",
+          "text": "2-09-037.BE HOSP SAYAGO SF",
+          "source": "xhr",
+          "term": "HOSP",
+          "capturedAt": "2026-06-08T13:24:27.502Z"
+        },
+        {
+          "value": "2-09-042.BE HOSPITAL ITURRASPE",
+          "text": "2-09-042.BE HOSPITAL ITURRASPE",
+          "source": "xhr",
+          "term": "HOSP",
+          "capturedAt": "2026-06-08T13:24:27.502Z"
+        },
+        {
+          "value": "2-12-003.BE SITRAM - ROSARIO",
+          "text": "2-12-003.BE SITRAM - ROSARIO",
+          "source": "xhr",
+          "term": "ROSARIO",
+          "capturedAt": "2026-06-08T13:22:33.325Z"
+        },
+        {
+          "value": "2-12-013.BE SITRAM GALVEZ",
+          "text": "2-12-013.BE SITRAM GALVEZ",
+          "source": "xhr",
+          "term": "GAL",
+          "capturedAt": "2026-06-08T13:22:57.925Z"
+        },
+        {
+          "value": "2-14-001.BE AMSAFE SAN JAVIER",
+          "text": "2-14-001.BE AMSAFE SAN JAVIER",
+          "source": "xhr",
+          "term": "JAVIER",
+          "capturedAt": "2026-06-08T13:23:53.566Z"
+        },
+        {
+          "value": "2-17-004.BE AMEN - SAN LORENZO",
+          "text": "2-17-004.BE AMEN - SAN LORENZO",
+          "source": "xhr",
+          "term": "LORENZO",
+          "capturedAt": "2026-06-08T13:23:51.242Z"
+        },
+        {
+          "value": "2-17-005.BE SITRAM SAN LORENZO",
+          "text": "2-17-005.BE SITRAM SAN LORENZO",
+          "source": "xhr",
+          "term": "LORENZO",
+          "capturedAt": "2026-06-08T13:23:51.242Z"
+        },
+        {
+          "value": "2-17-390.BE SITRAM PTO GRAL SMN",
+          "text": "2-17-390.BE SITRAM PTO GRAL SMN",
+          "source": "xhr",
+          "term": "SITRAM",
+          "capturedAt": "2026-06-08T13:24:15.748Z"
+        },
+        {
+          "value": "4-01-004.BE LAS ROSAS",
+          "text": "4-01-004.BE LAS ROSAS",
+          "source": "xhr",
+          "term": "LAS ROSAS",
+          "capturedAt": "2026-06-08T13:23:48.815Z"
+        },
+        {
+          "value": "4-02-017.BE GODEKEN",
+          "text": "4-02-017.BE GODEKEN",
+          "source": "xhr",
+          "term": "GODEKEN",
+          "capturedAt": "2026-06-08T13:24:34.686Z"
+        },
+        {
+          "value": "4-03-060.BE RAFAELA",
+          "text": "4-03-060.BE RAFAELA",
+          "source": "xhr",
+          "term": "RAF",
+          "capturedAt": "2026-06-08T13:22:35.373Z"
+        },
+        {
+          "value": "4-03-066.BE SUNCHALES",
+          "text": "4-03-066.BE SUNCHALES",
+          "source": "xhr",
+          "term": "SUNCHALES",
+          "capturedAt": "2026-06-08T13:24:10.726Z"
+        },
+        {
+          "value": "4-03-072.BE ZENON PEREYRA",
+          "text": "4-03-072.BE ZENON PEREYRA",
+          "source": "xhr",
+          "term": "ZENON",
+          "capturedAt": "2026-06-08T13:24:36.920Z"
+        },
+        {
+          "value": "4-04-079.BE ALCORTA SUBDELEG",
+          "text": "4-04-079.BE ALCORTA SUBDELEG",
+          "source": "xhr",
+          "term": "ALC",
+          "capturedAt": "2026-06-08T13:23:31.862Z"
+        },
+        {
+          "value": "4-04-089.BE MAXIMO PAZ",
+          "text": "4-04-089.BE MAXIMO PAZ",
+          "source": "xhr",
+          "term": "MAXIMO",
+          "capturedAt": "2026-06-08T13:24:39.244Z"
+        },
+        {
+          "value": "4-05-102.BE HELVECIA",
+          "text": "4-05-102.BE HELVECIA",
+          "source": "xhr",
+          "term": "HELVECIA",
+          "capturedAt": "2026-06-08T13:23:43.882Z"
+        },
+        {
+          "value": "4-05-103.BE STA ROSA CALCHINES",
+          "text": "4-05-103.BE STA ROSA CALCHINES",
+          "source": "xhr",
+          "term": "ALC",
+          "capturedAt": "2026-06-08T13:23:31.862Z"
+        },
+        {
+          "value": "4-06-021.BE FIRMAT",
+          "text": "4-06-021.BE FIRMAT",
+          "source": "xhr",
+          "term": "FIRMAT",
+          "capturedAt": "2026-06-08T13:23:41.358Z"
+        },
+        {
+          "value": "4-06-136.BE VENADO TUERTO",
+          "text": "4-06-136.BE VENADO TUERTO",
+          "source": "xhr",
+          "term": "VENADO",
+          "capturedAt": "2026-06-08T13:22:47.017Z"
+        },
+        {
+          "value": "4-07-163.BE RECONQUISTA",
+          "text": "4-07-163.BE RECONQUISTA",
+          "source": "xhr",
+          "term": "REC",
+          "capturedAt": "2026-06-08T13:22:39.864Z"
+        },
+        {
+          "value": "4-07-166.BE TARTAGAL",
+          "text": "4-07-166.BE TARTAGAL",
+          "source": "xhr",
+          "term": "GAL",
+          "capturedAt": "2026-06-08T13:22:57.925Z"
+        },
+        {
+          "value": "4-08-177.BE CAÑADA DE GOMEZ",
+          "text": "4-08-177.BE CAÑADA DE GOMEZ",
+          "source": "xhr",
+          "term": "CAÑ",
+          "capturedAt": "2026-06-08T13:22:53.449Z"
+        },
+        {
+          "value": "4-09-195.BE LAGUNA PAIVA",
+          "text": "4-09-195.BE LAGUNA PAIVA",
+          "source": "xhr",
+          "term": "LAGUNA",
+          "capturedAt": "2026-06-08T13:23:46.204Z"
+        },
+        {
+          "value": "4-09-199.BE RECREO",
+          "text": "4-09-199.BE RECREO",
+          "source": "xhr",
+          "term": "REC",
+          "capturedAt": "2026-06-08T13:22:39.864Z"
+        },
+        {
+          "value": "4-10-210.BE ESPERANZA",
+          "text": "4-10-210.BE ESPERANZA",
+          "source": "xhr",
+          "term": "ESP",
+          "capturedAt": "2026-06-08T13:23:02.307Z"
+        },
+        {
+          "value": "4-10-212.BE FRANCK",
+          "text": "4-10-212.BE FRANCK",
+          "source": "xhr",
+          "term": "FRANCK",
+          "capturedAt": "2026-06-08T13:24:05.611Z"
+        },
+        {
+          "value": "4-10-230.BE SAN CARLOS CENTRO",
+          "text": "4-10-230.BE SAN CARLOS CENTRO",
+          "source": "xhr",
+          "term": "CARLOS",
+          "capturedAt": "2026-06-08T13:23:55.903Z"
+        },
+        {
+          "value": "4-10-231.BE SAN CARLOS NORTE",
+          "text": "4-10-231.BE SAN CARLOS NORTE",
+          "source": "xhr",
+          "term": "CARLOS",
+          "capturedAt": "2026-06-08T13:23:55.903Z"
+        },
+        {
+          "value": "4-10-232.BE SAN CARLOS SUR",
+          "text": "4-10-232.BE SAN CARLOS SUR",
+          "source": "xhr",
+          "term": "CARLOS",
+          "capturedAt": "2026-06-08T13:23:55.903Z"
+        },
+        {
+          "value": "4-12-281.BE - VILLA GOBERNADOR GALVEZ",
+          "text": "4-12-281.BE - VILLA GOBERNADOR GALVEZ",
+          "source": "xhr",
+          "term": "GAL",
+          "capturedAt": "2026-06-08T13:22:57.925Z"
+        },
+        {
+          "value": "4-14-328.BE SAN JAVIER",
+          "text": "4-14-328.BE SAN JAVIER",
+          "source": "xhr",
+          "term": "JAVIER",
+          "capturedAt": "2026-06-08T13:23:53.566Z"
+        },
+        {
+          "value": "4-15-337.BE CASALEGNO",
+          "text": "4-15-337.BE CASALEGNO",
+          "source": "xhr",
+          "term": "CASA",
+          "capturedAt": "2026-06-08T13:22:28.852Z"
+        },
+        {
+          "value": "4-15-344.BE GALVEZ",
+          "text": "4-15-344.BE GALVEZ",
+          "source": "xhr",
+          "term": "GAL",
+          "capturedAt": "2026-06-08T13:22:57.925Z"
+        },
+        {
+          "value": "4-16-364.BE GOBERNADOR CRESPO",
+          "text": "4-16-364.BE GOBERNADOR CRESPO",
+          "source": "xhr",
+          "term": "ESP",
+          "capturedAt": "2026-06-08T13:23:02.307Z"
+        },
+        {
+          "value": "4-17-395.BE SAN LORENZO",
+          "text": "4-17-395.BE SAN LORENZO",
+          "source": "xhr",
+          "term": "LORENZO",
+          "capturedAt": "2026-06-08T13:23:51.242Z"
+        },
+        {
+          "value": "4-18-401.BE CAÑADA ROSQUIN",
+          "text": "4-18-401.BE CAÑADA ROSQUIN",
+          "source": "xhr",
+          "term": "CAÑ",
+          "capturedAt": "2026-06-08T13:22:53.449Z"
+        },
+        {
+          "value": "4-18-402.BE CARLOS PELLEGRINI",
+          "text": "4-18-402.BE CARLOS PELLEGRINI",
+          "source": "xhr",
+          "term": "CARLOS",
+          "capturedAt": "2026-06-08T13:23:55.903Z"
+        },
+        {
+          "value": "4-19-421.BE CALCHAQUI",
+          "text": "4-19-421.BE CALCHAQUI",
+          "source": "xhr",
+          "term": "ALC",
+          "capturedAt": "2026-06-08T13:23:31.862Z"
+        },
+        {
+          "value": "BIOQUIMICOS SAN JERONIMO",
+          "text": "BIOQUIMICOS SAN JERONIMO",
+          "source": "xhr",
+          "term": "BIO",
+          "capturedAt": "2026-06-08T13:23:16.384Z"
+        },
+        {
+          "value": "CARTERA 9 DE JULIO",
+          "text": "CARTERA 9 DE JULIO",
+          "source": "xhr",
+          "term": "CARTERA",
+          "capturedAt": "2026-06-08T13:24:18.186Z"
+        },
+        {
+          "value": "CARTERA SAN CRISTOBAL",
+          "text": "CARTERA SAN CRISTOBAL",
+          "source": "xhr",
+          "term": "SAN",
+          "capturedAt": "2026-06-08T13:23:21.238Z"
+        },
+        {
+          "value": "CASA CENTRAL",
+          "text": "CASA CENTRAL",
+          "source": "xhr",
+          "term": "CENTRAL",
+          "capturedAt": "2026-06-08T13:22:26.709Z"
+        },
+        {
+          "value": "CENTRAL IAPOS",
+          "text": "CENTRAL IAPOS",
+          "source": "xhr",
+          "term": "IAP",
+          "capturedAt": "2026-06-08T13:22:22.060Z"
+        },
+        {
+          "value": "CONVENIO PSICORED",
+          "text": "CONVENIO PSICORED",
+          "source": "xhr",
+          "term": "VEN",
+          "capturedAt": "2026-06-08T13:22:44.692Z"
+        },
+        {
+          "value": "CONVENIO RIAM",
+          "text": "CONVENIO RIAM",
+          "source": "xhr",
+          "term": "VEN",
+          "capturedAt": "2026-06-08T13:22:44.693Z"
+        },
+        {
+          "value": "DIPART",
+          "text": "DIPART",
+          "source": "xhr",
+          "term": "DIPART",
+          "capturedAt": "2026-06-08T13:23:09.570Z"
+        },
+        {
+          "value": "DIPART - ROSARIO",
+          "text": "DIPART - ROSARIO",
+          "source": "xhr",
+          "term": "ROS",
+          "capturedAt": "2026-06-08T13:22:30.932Z"
+        },
+        {
+          "value": "DIPART - SANTA FE",
+          "text": "DIPART - SANTA FE",
+          "source": "xhr",
+          "term": "DIPART",
+          "capturedAt": "2026-06-08T13:23:09.570Z"
+        },
+        {
+          "value": "DIPART ROSARIO",
+          "text": "DIPART ROSARIO",
+          "source": "xhr",
+          "term": "ROS",
+          "capturedAt": "2026-06-08T13:22:30.932Z"
+        },
+        {
+          "value": "DIPART SANTA FE",
+          "text": "DIPART SANTA FE",
+          "source": "xhr",
+          "term": "DIPART",
+          "capturedAt": "2026-06-08T13:23:09.570Z"
+        },
+        {
+          "value": "GERENCIA MEDICA",
+          "text": "GERENCIA MEDICA",
+          "source": "xhr",
+          "term": "GERENCIA",
+          "capturedAt": "2026-06-08T13:24:20.700Z"
+        },
+        {
+          "value": "IAPOS ALCORTA",
+          "text": "IAPOS ALCORTA",
+          "source": "xhr",
+          "term": "IAP",
+          "capturedAt": "2026-06-08T13:22:22.060Z"
+        },
+        {
+          "value": "IAPOS BUENOS AIRES",
+          "text": "IAPOS BUENOS AIRES",
+          "source": "xhr",
+          "term": "IAP",
+          "capturedAt": "2026-06-08T13:22:22.060Z"
+        },
+        {
+          "value": "IAPOS CAÑADA DE GOMEZ",
+          "text": "IAPOS CAÑADA DE GOMEZ",
+          "source": "xhr",
+          "term": "IAP",
+          "capturedAt": "2026-06-08T13:22:22.060Z"
+        },
+        {
+          "value": "IAPOS CASILDA",
+          "text": "IAPOS CASILDA",
+          "source": "xhr",
+          "term": "IAP",
+          "capturedAt": "2026-06-08T13:22:22.060Z"
+        },
+        {
+          "value": "IAPOS CORDOBA",
+          "text": "IAPOS CORDOBA",
+          "source": "xhr",
+          "term": "CORDOBA",
+          "capturedAt": "2026-06-08T13:23:39.036Z"
+        },
+        {
+          "value": "IAPOS ESPERANZA",
+          "text": "IAPOS ESPERANZA",
+          "source": "xhr",
+          "term": "ESP",
+          "capturedAt": "2026-06-08T13:23:02.306Z"
+        },
+        {
+          "value": "IAPOS FIRMAT",
+          "text": "IAPOS FIRMAT",
+          "source": "xhr",
+          "term": "FIRMAT",
+          "capturedAt": "2026-06-08T13:23:41.358Z"
+        },
+        {
+          "value": "IAPOS GALVEZ",
+          "text": "IAPOS GALVEZ",
+          "source": "xhr",
+          "term": "GAL",
+          "capturedAt": "2026-06-08T13:22:57.925Z"
+        },
+        {
+          "value": "IAPOS HELVECIA",
+          "text": "IAPOS HELVECIA",
+          "source": "xhr",
+          "term": "HELVECIA",
+          "capturedAt": "2026-06-08T13:23:43.882Z"
+        },
+        {
+          "value": "IAPOS LAGUNA PAIVA",
+          "text": "IAPOS LAGUNA PAIVA",
+          "source": "xhr",
+          "term": "LAGUNA",
+          "capturedAt": "2026-06-08T13:23:46.204Z"
+        },
+        {
+          "value": "IAPOS LAS ROSAS",
+          "text": "IAPOS LAS ROSAS",
+          "source": "xhr",
+          "term": "ROS",
+          "capturedAt": "2026-06-08T13:22:30.933Z"
+        },
+        {
+          "value": "IAPOS RAFAELA",
+          "text": "IAPOS RAFAELA",
+          "source": "xhr",
+          "term": "RAF",
+          "capturedAt": "2026-06-08T13:22:35.373Z"
+        },
+        {
+          "value": "IAPOS RECONQUISTA",
+          "text": "IAPOS RECONQUISTA",
+          "source": "xhr",
+          "term": "REC",
+          "capturedAt": "2026-06-08T13:22:39.864Z"
+        },
+        {
+          "value": "IAPOS ROSARIO",
+          "text": "IAPOS ROSARIO",
+          "source": "xhr",
+          "term": "ROS",
+          "capturedAt": "2026-06-08T13:22:30.933Z"
+        },
+        {
+          "value": "IAPOS SAN CARLOS CENTRO",
+          "text": "IAPOS SAN CARLOS CENTRO",
+          "source": "xhr",
+          "term": "SAN",
+          "capturedAt": "2026-06-08T13:23:21.238Z"
+        },
+        {
+          "value": "IAPOS SAN JAVIER",
+          "text": "IAPOS SAN JAVIER",
+          "source": "xhr",
+          "term": "JAVIER",
+          "capturedAt": "2026-06-08T13:23:53.566Z"
+        },
+        {
+          "value": "IAPOS SAN JUSTO",
+          "text": "IAPOS SAN JUSTO",
+          "source": "xhr",
+          "term": "US",
+          "capturedAt": "2026-06-08T13:23:27.376Z"
+        },
+        {
+          "value": "IAPOS SAN LORENZO",
+          "text": "IAPOS SAN LORENZO",
+          "source": "xhr",
+          "term": "LORENZO",
+          "capturedAt": "2026-06-08T13:23:51.242Z"
+        },
+        {
+          "value": "IAPOS SANTA FE",
+          "text": "IAPOS SANTA FE",
+          "source": "xhr",
+          "term": "SANTA",
+          "capturedAt": "2026-06-08T13:23:23.459Z"
+        },
+        {
+          "value": "IAPOS VENADO TUERTO",
+          "text": "IAPOS VENADO TUERTO",
+          "source": "xhr",
+          "term": "VEN",
+          "capturedAt": "2026-06-08T13:22:44.693Z"
+        },
+        {
+          "value": "IAPOS VILLA CONSTITUCION",
+          "text": "IAPOS VILLA CONSTITUCION",
+          "source": "xhr",
+          "term": "VILLA",
+          "capturedAt": "2026-06-08T13:24:32.257Z"
+        },
+        {
+          "value": "LIBRE PARA USAR",
+          "text": "LIBRE PARA USAR",
+          "source": "xhr",
+          "term": "US",
+          "capturedAt": "2026-06-08T13:23:27.376Z"
+        },
+        {
+          "value": "NO USAR",
+          "text": "NO USAR",
+          "source": "xhr",
+          "term": "NO USAR",
+          "capturedAt": "2026-06-08T13:23:29.798Z"
+        },
+        {
+          "value": "SOFSA SANTA FE",
+          "text": "SOFSA SANTA FE",
+          "source": "xhr",
+          "term": "SOFSA",
+          "capturedAt": "2026-06-08T13:23:14.352Z"
+        }
+      ],
+      "validationsTotal": 13,
+      "validations": [
+        {
+          "code": "27",
+          "text": "2-03-002.BE ASOC. TRIBUNALES - RAFAELA",
+          "raw": "[\"27\",\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\",\"[]\"]",
+          "term": "TRIBUNALES",
+          "capturedAt": "2026-06-08T13:24:13.432Z"
+        },
+        {
+          "code": "112",
+          "text": "2-09-008.BE CASA DE GOBIERNO",
+          "raw": "[\"112\",\"2-09-008.BE CASA DE GOBIERNO\",\"[]\"]",
+          "term": "GOBIERNO",
+          "capturedAt": "2026-06-08T13:24:30.034Z"
+        },
+        {
+          "code": "232",
+          "text": "4-02-017.BE GODEKEN",
+          "raw": "[\"232\",\"4-02-017.BE GODEKEN\",\"[]\"]",
+          "term": "GODEKEN",
+          "capturedAt": "2026-06-08T13:24:34.686Z"
+        },
+        {
+          "code": "387",
+          "text": "4-03-072.BE ZENON PEREYRA",
+          "raw": "[\"387\",\"4-03-072.BE ZENON PEREYRA\",\"[]\"]",
+          "term": "ZENON",
+          "capturedAt": "2026-06-08T13:24:36.920Z"
+        },
+        {
+          "code": "277",
+          "text": "4-04-089.BE MAXIMO PAZ",
+          "raw": "[\"277\",\"4-04-089.BE MAXIMO PAZ\",\"[]\"]",
+          "term": "MAXIMO",
+          "capturedAt": "2026-06-08T13:24:39.244Z"
+        },
+        {
+          "code": "357",
+          "text": "4-07-166.BE TARTAGAL",
+          "raw": "[\"357\",\"4-07-166.BE TARTAGAL\",\"[]\"]",
+          "term": "TARTAGAL",
+          "capturedAt": "2026-06-08T13:24:08.128Z"
+        },
+        {
+          "code": "300",
+          "text": "4-09-199.BE RECREO",
+          "raw": "[\"300\",\"4-09-199.BE RECREO\",\"[]\"]",
+          "term": "RECREO",
+          "capturedAt": "2026-06-08T13:24:03.278Z"
+        },
+        {
+          "code": "119",
+          "text": "4-10-212.BE FRANCK",
+          "raw": "[\"119\",\"4-10-212.BE FRANCK\",\"[]\"]",
+          "term": "FRANCK",
+          "capturedAt": "2026-06-08T13:24:05.612Z"
+        },
+        {
+          "code": "231",
+          "text": "4-16-364.BE GOBERNADOR CRESPO",
+          "raw": "[\"231\",\"4-16-364.BE GOBERNADOR CRESPO\",\"[]\"]",
+          "term": "CRESPO",
+          "capturedAt": "2026-06-08T13:24:00.941Z"
+        },
+        {
+          "code": "730",
+          "text": "BIOQUIMICOS SAN JERONIMO",
+          "raw": "[\"730\",\"BIOQUIMICOS SAN JERONIMO\",\"[]\"]",
+          "term": "BIO",
+          "capturedAt": "2026-06-08T13:23:16.385Z"
+        },
+        {
+          "code": "570",
+          "text": "GERENCIA MEDICA",
+          "raw": "[\"570\",\"GERENCIA MEDICA\",\"[]\"]",
+          "term": "GERENCIA",
+          "capturedAt": "2026-06-08T13:24:20.700Z"
+        },
+        {
+          "code": "444",
+          "text": "IAPOS CORDOBA",
+          "raw": "[\"444\",\"IAPOS CORDOBA\",\"[]\"]",
+          "term": "CORDOBA",
+          "capturedAt": "2026-06-08T13:23:39.037Z"
+        },
+        {
+          "code": "460",
+          "text": "SOFSA SANTA FE",
+          "raw": "[\"460\",\"SOFSA SANTA FE\",\"[]\"]",
+          "term": "SOFSA",
+          "capturedAt": "2026-06-08T13:23:14.352Z"
+        }
+      ]
+    }
+  }
+}

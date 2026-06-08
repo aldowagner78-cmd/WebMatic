@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const geometry = require("../../src/modules/docking/geometry-manager.js");
+const geometry = require("../../../../src/modules/docking/geometry-manager.js");
 
 test("Geometry: left layout usa ancho restante exacto", () => {
   const layout = geometry.calculateLayout(1920, 1080, 300, "left");

@@ -1,8 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const contracts = require("../../src/core/contracts.js");
-const storeApi = require("../../src/core/store.js");
+const contracts = require("../../../../src/core/contracts.js");
+const storeApi = require("../../../../src/core/store.js");
 
 test("Store: toggle panel cambia panelVisible", () => {
   const store = storeApi.createStore();

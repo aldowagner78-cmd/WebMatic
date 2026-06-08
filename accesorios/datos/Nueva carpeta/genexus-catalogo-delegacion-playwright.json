@@ -1,0 +1,1566 @@
+{
+  "capturedAt": "2026-06-08T13:24:42.706Z",
+  "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?M,0",
+  "field": "#vDELEGACION",
+  "fieldName": "delegacion",
+  "source": "Playwright trusted keyboard + GeneXus XHR extraction",
+  "total": 106,
+  "options": [
+    {
+      "value": "******** (BAJA) 4-02-011.US.FT",
+      "text": "******** (BAJA) 4-02-011.US.FT",
+      "source": "xhr",
+      "term": "US",
+      "capturedAt": "2026-06-08T13:23:27.376Z"
+    },
+    {
+      "value": "******4-15-344.US.MM--ERROR NO USAR",
+      "text": "******4-15-344.US.MM--ERROR NO USAR",
+      "source": "xhr",
+      "term": "NO USAR",
+      "capturedAt": "2026-06-08T13:23:29.798Z"
+    },
+    {
+      "value": ">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<",
+      "text": ">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<",
+      "source": "xhr",
+      "term": "US",
+      "capturedAt": "2026-06-08T13:23:27.376Z"
+    },
+    {
+      "value": ">>>> NO USAR >>>>",
+      "text": ">>>> NO USAR >>>>",
+      "source": "xhr",
+      "term": "US",
+      "capturedAt": "2026-06-08T13:23:27.376Z"
+    },
+    {
+      "value": "1-02-001.BE CASILDA DELEGACIÓ",
+      "text": "1-02-001.BE CASILDA DELEGACIÓ",
+      "source": "xhr",
+      "term": "CAS",
+      "capturedAt": "2026-06-08T13:22:49.073Z"
+    },
+    {
+      "value": "1-09-001.BE CASA CENTRAL",
+      "text": "1-09-001.BE CASA CENTRAL",
+      "source": "xhr",
+      "term": "CENTRAL",
+      "capturedAt": "2026-06-08T13:22:26.709Z"
+    },
+    {
+      "value": "1-09-002.BE CENTRO CIVICO SANTA FE",
+      "text": "1-09-002.BE CENTRO CIVICO SANTA FE",
+      "source": "xhr",
+      "term": "SANTA",
+      "capturedAt": "2026-06-08T13:23:23.459Z"
+    },
+    {
+      "value": "1-09-003.BE RIESGOS DEL TRABAJO",
+      "text": "1-09-003.BE RIESGOS DEL TRABAJO",
+      "source": "xhr",
+      "term": "BE",
+      "capturedAt": "2026-06-08T13:23:25.413Z"
+    },
+    {
+      "value": "1-09-008.BE LAS FLORES II - SANTA FE",
+      "text": "1-09-008.BE LAS FLORES II - SANTA FE",
+      "source": "xhr",
+      "term": "BE",
+      "capturedAt": "2026-06-08T13:23:25.413Z"
+    },
+    {
+      "value": "1-12-013.BE DELEG. ROSARIO",
+      "text": "1-12-013.BE DELEG. ROSARIO",
+      "source": "xhr",
+      "term": "ROS",
+      "capturedAt": "2026-06-08T13:22:30.933Z"
+    },
+    {
+      "value": "1-20-015.BE DELEG BUENOS AIRES",
+      "text": "1-20-015.BE DELEG BUENOS AIRES",
+      "source": "xhr",
+      "term": "BUENOS",
+      "capturedAt": "2026-06-08T13:23:36.611Z"
+    },
+    {
+      "value": "2-03-002.BE ASOC. TRIBUNALES - RAFAELA",
+      "text": "2-03-002.BE ASOC. TRIBUNALES - RAFAELA",
+      "source": "xhr",
+      "term": "RAF",
+      "capturedAt": "2026-06-08T13:22:35.373Z"
+    },
+    {
+      "value": "2-03-003.BE SOEM SUNCHALES",
+      "text": "2-03-003.BE SOEM SUNCHALES",
+      "source": "xhr",
+      "term": "SUNCHALES",
+      "capturedAt": "2026-06-08T13:24:10.726Z"
+    },
+    {
+      "value": "2-04-001.BE VILLA CONSTITUCION",
+      "text": "2-04-001.BE VILLA CONSTITUCION",
+      "source": "xhr",
+      "term": "VILLA",
+      "capturedAt": "2026-06-08T13:24:32.257Z"
+    },
+    {
+      "value": "2-04-002.BE MUTUAL V CONST",
+      "text": "2-04-002.BE MUTUAL V CONST",
+      "source": "xhr",
+      "term": "MUTUAL",
+      "capturedAt": "2026-06-08T13:24:25.350Z"
+    },
+    {
+      "value": "2-04-004 BE AMSAFE - VILLA CONSTITUCION",
+      "text": "2-04-004 BE AMSAFE - VILLA CONSTITUCION",
+      "source": "xhr",
+      "term": "AMSAFE",
+      "capturedAt": "2026-06-08T13:23:07.238Z"
+    },
+    {
+      "value": "2-05-002.BE AMSAFE - HELVECIA",
+      "text": "2-05-002.BE AMSAFE - HELVECIA",
+      "source": "xhr",
+      "term": "AMSAFE",
+      "capturedAt": "2026-06-08T13:23:07.239Z"
+    },
+    {
+      "value": "2-06-022.BE AMSAFE - FIRMAT",
+      "text": "2-06-022.BE AMSAFE - FIRMAT",
+      "source": "xhr",
+      "term": "AMSAFE",
+      "capturedAt": "2026-06-08T13:23:07.239Z"
+    },
+    {
+      "value": "2-06-023.BE AMSAFE - VENADO TUERTO",
+      "text": "2-06-023.BE AMSAFE - VENADO TUERTO",
+      "source": "xhr",
+      "term": "VEN",
+      "capturedAt": "2026-06-08T13:22:44.693Z"
+    },
+    {
+      "value": "2-06-024.BE AMSAFE - RUFINO",
+      "text": "2-06-024.BE AMSAFE - RUFINO",
+      "source": "xhr",
+      "term": "AMSAFE",
+      "capturedAt": "2026-06-08T13:23:07.239Z"
+    },
+    {
+      "value": "2-07-004.BE AMSAFE - RECONQUISTA",
+      "text": "2-07-004.BE AMSAFE - RECONQUISTA",
+      "source": "xhr",
+      "term": "REC",
+      "capturedAt": "2026-06-08T13:22:39.864Z"
+    },
+    {
+      "value": "2-07-005.BE AMSAFE - VILLA OCAMPO",
+      "text": "2-07-005.BE AMSAFE - VILLA OCAMPO",
+      "source": "xhr",
+      "term": "VILLA",
+      "capturedAt": "2026-06-08T13:24:32.257Z"
+    },
+    {
+      "value": "2-07-006.BE ASOC.TRIB.RECONQU",
+      "text": "2-07-006.BE ASOC.TRIB.RECONQU",
+      "source": "xhr",
+      "term": "REC",
+      "capturedAt": "2026-06-08T13:22:39.864Z"
+    },
+    {
+      "value": "2-07-007.BE MUTUAL ESC \"PRO JUVENTUD\" VILLA GUILLE",
+      "text": "2-07-007.BE MUTUAL ESC \"PRO JUVENTUD\" VILLA GUILLE",
+      "source": "xhr",
+      "term": "VEN",
+      "capturedAt": "2026-06-08T13:22:44.693Z"
+    },
+    {
+      "value": "2-08-002.BE AMSAFE - CAÑADA DE GOMEZ",
+      "text": "2-08-002.BE AMSAFE - CAÑADA DE GOMEZ",
+      "source": "xhr",
+      "term": "CAÑ",
+      "capturedAt": "2026-06-08T13:22:53.449Z"
+    },
+    {
+      "value": "2-09-005.BE HOSPITAL PSIQUIATR",
+      "text": "2-09-005.BE HOSPITAL PSIQUIATR",
+      "source": "xhr",
+      "term": "HOSP",
+      "capturedAt": "2026-06-08T13:24:27.501Z"
+    },
+    {
+      "value": "2-09-008.BE CASA DE GOBIERNO",
+      "text": "2-09-008.BE CASA DE GOBIERNO",
+      "source": "xhr",
+      "term": "CASA",
+      "capturedAt": "2026-06-08T13:22:28.852Z"
+    },
+    {
+      "value": "2-09-011.BE MUTUAL CIRC POL SF",
+      "text": "2-09-011.BE MUTUAL CIRC POL SF",
+      "source": "xhr",
+      "term": "MUTUAL",
+      "capturedAt": "2026-06-08T13:24:25.350Z"
+    },
+    {
+      "value": "2-09-012.BE HOSP VERA CAND SF",
+      "text": "2-09-012.BE HOSP VERA CAND SF",
+      "source": "xhr",
+      "term": "HOSP",
+      "capturedAt": "2026-06-08T13:24:27.501Z"
+    },
+    {
+      "value": "2-09-030.BE HOSP DE NIÑO SF",
+      "text": "2-09-030.BE HOSP DE NIÑO SF",
+      "source": "xhr",
+      "term": "HOSP",
+      "capturedAt": "2026-06-08T13:24:27.502Z"
+    },
+    {
+      "value": "2-09-034.BE MUTUAL BANCO PROV",
+      "text": "2-09-034.BE MUTUAL BANCO PROV",
+      "source": "xhr",
+      "term": "MUTUAL",
+      "capturedAt": "2026-06-08T13:24:25.350Z"
+    },
+    {
+      "value": "2-09-037.BE HOSP SAYAGO SF",
+      "text": "2-09-037.BE HOSP SAYAGO SF",
+      "source": "xhr",
+      "term": "HOSP",
+      "capturedAt": "2026-06-08T13:24:27.502Z"
+    },
+    {
+      "value": "2-09-042.BE HOSPITAL ITURRASPE",
+      "text": "2-09-042.BE HOSPITAL ITURRASPE",
+      "source": "xhr",
+      "term": "HOSP",
+      "capturedAt": "2026-06-08T13:24:27.502Z"
+    },
+    {
+      "value": "2-12-003.BE SITRAM - ROSARIO",
+      "text": "2-12-003.BE SITRAM - ROSARIO",
+      "source": "xhr",
+      "term": "ROSARIO",
+      "capturedAt": "2026-06-08T13:22:33.325Z"
+    },
+    {
+      "value": "2-12-013.BE SITRAM GALVEZ",
+      "text": "2-12-013.BE SITRAM GALVEZ",
+      "source": "xhr",
+      "term": "GAL",
+      "capturedAt": "2026-06-08T13:22:57.925Z"
+    },
+    {
+      "value": "2-14-001.BE AMSAFE SAN JAVIER",
+      "text": "2-14-001.BE AMSAFE SAN JAVIER",
+      "source": "xhr",
+      "term": "JAVIER",
+      "capturedAt": "2026-06-08T13:23:53.566Z"
+    },
+    {
+      "value": "2-17-004.BE AMEN - SAN LORENZO",
+      "text": "2-17-004.BE AMEN - SAN LORENZO",
+      "source": "xhr",
+      "term": "LORENZO",
+      "capturedAt": "2026-06-08T13:23:51.242Z"
+    },
+    {
+      "value": "2-17-005.BE SITRAM SAN LORENZO",
+      "text": "2-17-005.BE SITRAM SAN LORENZO",
+      "source": "xhr",
+      "term": "LORENZO",
+      "capturedAt": "2026-06-08T13:23:51.242Z"
+    },
+    {
+      "value": "2-17-390.BE SITRAM PTO GRAL SMN",
+      "text": "2-17-390.BE SITRAM PTO GRAL SMN",
+      "source": "xhr",
+      "term": "SITRAM",
+      "capturedAt": "2026-06-08T13:24:15.748Z"
+    },
+    {
+      "value": "4-01-004.BE LAS ROSAS",
+      "text": "4-01-004.BE LAS ROSAS",
+      "source": "xhr",
+      "term": "LAS ROSAS",
+      "capturedAt": "2026-06-08T13:23:48.815Z"
+    },
+    {
+      "value": "4-02-017.BE GODEKEN",
+      "text": "4-02-017.BE GODEKEN",
+      "source": "xhr",
+      "term": "GODEKEN",
+      "capturedAt": "2026-06-08T13:24:34.686Z"
+    },
+    {
+      "value": "4-03-060.BE RAFAELA",
+      "text": "4-03-060.BE RAFAELA",
+      "source": "xhr",
+      "term": "RAF",
+      "capturedAt": "2026-06-08T13:22:35.373Z"
+    },
+    {
+      "value": "4-03-066.BE SUNCHALES",
+      "text": "4-03-066.BE SUNCHALES",
+      "source": "xhr",
+      "term": "SUNCHALES",
+      "capturedAt": "2026-06-08T13:24:10.726Z"
+    },
+    {
+      "value": "4-03-072.BE ZENON PEREYRA",
+      "text": "4-03-072.BE ZENON PEREYRA",
+      "source": "xhr",
+      "term": "ZENON",
+      "capturedAt": "2026-06-08T13:24:36.920Z"
+    },
+    {
+      "value": "4-04-079.BE ALCORTA SUBDELEG",
+      "text": "4-04-079.BE ALCORTA SUBDELEG",
+      "source": "xhr",
+      "term": "ALC",
+      "capturedAt": "2026-06-08T13:23:31.862Z"
+    },
+    {
+      "value": "4-04-089.BE MAXIMO PAZ",
+      "text": "4-04-089.BE MAXIMO PAZ",
+      "source": "xhr",
+      "term": "MAXIMO",
+      "capturedAt": "2026-06-08T13:24:39.244Z"
+    },
+    {
+      "value": "4-05-102.BE HELVECIA",
+      "text": "4-05-102.BE HELVECIA",
+      "source": "xhr",
+      "term": "HELVECIA",
+      "capturedAt": "2026-06-08T13:23:43.882Z"
+    },
+    {
+      "value": "4-05-103.BE STA ROSA CALCHINES",
+      "text": "4-05-103.BE STA ROSA CALCHINES",
+      "source": "xhr",
+      "term": "ALC",
+      "capturedAt": "2026-06-08T13:23:31.862Z"
+    },
+    {
+      "value": "4-06-021.BE FIRMAT",
+      "text": "4-06-021.BE FIRMAT",
+      "source": "xhr",
+      "term": "FIRMAT",
+      "capturedAt": "2026-06-08T13:23:41.358Z"
+    },
+    {
+      "value": "4-06-136.BE VENADO TUERTO",
+      "text": "4-06-136.BE VENADO TUERTO",
+      "source": "xhr",
+      "term": "VENADO",
+      "capturedAt": "2026-06-08T13:22:47.017Z"
+    },
+    {
+      "value": "4-07-163.BE RECONQUISTA",
+      "text": "4-07-163.BE RECONQUISTA",
+      "source": "xhr",
+      "term": "REC",
+      "capturedAt": "2026-06-08T13:22:39.864Z"
+    },
+    {
+      "value": "4-07-166.BE TARTAGAL",
+      "text": "4-07-166.BE TARTAGAL",
+      "source": "xhr",
+      "term": "GAL",
+      "capturedAt": "2026-06-08T13:22:57.925Z"
+    },
+    {
+      "value": "4-08-177.BE CAÑADA DE GOMEZ",
+      "text": "4-08-177.BE CAÑADA DE GOMEZ",
+      "source": "xhr",
+      "term": "CAÑ",
+      "capturedAt": "2026-06-08T13:22:53.449Z"
+    },
+    {
+      "value": "4-09-195.BE LAGUNA PAIVA",
+      "text": "4-09-195.BE LAGUNA PAIVA",
+      "source": "xhr",
+      "term": "LAGUNA",
+      "capturedAt": "2026-06-08T13:23:46.204Z"
+    },
+    {
+      "value": "4-09-199.BE RECREO",
+      "text": "4-09-199.BE RECREO",
+      "source": "xhr",
+      "term": "REC",
+      "capturedAt": "2026-06-08T13:22:39.864Z"
+    },
+    {
+      "value": "4-10-210.BE ESPERANZA",
+      "text": "4-10-210.BE ESPERANZA",
+      "source": "xhr",
+      "term": "ESP",
+      "capturedAt": "2026-06-08T13:23:02.307Z"
+    },
+    {
+      "value": "4-10-212.BE FRANCK",
+      "text": "4-10-212.BE FRANCK",
+      "source": "xhr",
+      "term": "FRANCK",
+      "capturedAt": "2026-06-08T13:24:05.611Z"
+    },
+    {
+      "value": "4-10-230.BE SAN CARLOS CENTRO",
+      "text": "4-10-230.BE SAN CARLOS CENTRO",
+      "source": "xhr",
+      "term": "CARLOS",
+      "capturedAt": "2026-06-08T13:23:55.903Z"
+    },
+    {
+      "value": "4-10-231.BE SAN CARLOS NORTE",
+      "text": "4-10-231.BE SAN CARLOS NORTE",
+      "source": "xhr",
+      "term": "CARLOS",
+      "capturedAt": "2026-06-08T13:23:55.903Z"
+    },
+    {
+      "value": "4-10-232.BE SAN CARLOS SUR",
+      "text": "4-10-232.BE SAN CARLOS SUR",
+      "source": "xhr",
+      "term": "CARLOS",
+      "capturedAt": "2026-06-08T13:23:55.903Z"
+    },
+    {
+      "value": "4-12-281.BE - VILLA GOBERNADOR GALVEZ",
+      "text": "4-12-281.BE - VILLA GOBERNADOR GALVEZ",
+      "source": "xhr",
+      "term": "GAL",
+      "capturedAt": "2026-06-08T13:22:57.925Z"
+    },
+    {
+      "value": "4-14-328.BE SAN JAVIER",
+      "text": "4-14-328.BE SAN JAVIER",
+      "source": "xhr",
+      "term": "JAVIER",
+      "capturedAt": "2026-06-08T13:23:53.566Z"
+    },
+    {
+      "value": "4-15-337.BE CASALEGNO",
+      "text": "4-15-337.BE CASALEGNO",
+      "source": "xhr",
+      "term": "CASA",
+      "capturedAt": "2026-06-08T13:22:28.852Z"
+    },
+    {
+      "value": "4-15-344.BE GALVEZ",
+      "text": "4-15-344.BE GALVEZ",
+      "source": "xhr",
+      "term": "GAL",
+      "capturedAt": "2026-06-08T13:22:57.925Z"
+    },
+    {
+      "value": "4-16-364.BE GOBERNADOR CRESPO",
+      "text": "4-16-364.BE GOBERNADOR CRESPO",
+      "source": "xhr",
+      "term": "ESP",
+      "capturedAt": "2026-06-08T13:23:02.307Z"
+    },
+    {
+      "value": "4-17-395.BE SAN LORENZO",
+      "text": "4-17-395.BE SAN LORENZO",
+      "source": "xhr",
+      "term": "LORENZO",
+      "capturedAt": "2026-06-08T13:23:51.242Z"
+    },
+    {
+      "value": "4-18-401.BE CAÑADA ROSQUIN",
+      "text": "4-18-401.BE CAÑADA ROSQUIN",
+      "source": "xhr",
+      "term": "CAÑ",
+      "capturedAt": "2026-06-08T13:22:53.449Z"
+    },
+    {
+      "value": "4-18-402.BE CARLOS PELLEGRINI",
+      "text": "4-18-402.BE CARLOS PELLEGRINI",
+      "source": "xhr",
+      "term": "CARLOS",
+      "capturedAt": "2026-06-08T13:23:55.903Z"
+    },
+    {
+      "value": "4-19-421.BE CALCHAQUI",
+      "text": "4-19-421.BE CALCHAQUI",
+      "source": "xhr",
+      "term": "ALC",
+      "capturedAt": "2026-06-08T13:23:31.862Z"
+    },
+    {
+      "value": "BIOQUIMICOS SAN JERONIMO",
+      "text": "BIOQUIMICOS SAN JERONIMO",
+      "source": "xhr",
+      "term": "BIO",
+      "capturedAt": "2026-06-08T13:23:16.384Z"
+    },
+    {
+      "value": "CARTERA 9 DE JULIO",
+      "text": "CARTERA 9 DE JULIO",
+      "source": "xhr",
+      "term": "CARTERA",
+      "capturedAt": "2026-06-08T13:24:18.186Z"
+    },
+    {
+      "value": "CARTERA SAN CRISTOBAL",
+      "text": "CARTERA SAN CRISTOBAL",
+      "source": "xhr",
+      "term": "SAN",
+      "capturedAt": "2026-06-08T13:23:21.238Z"
+    },
+    {
+      "value": "CASA CENTRAL",
+      "text": "CASA CENTRAL",
+      "source": "xhr",
+      "term": "CENTRAL",
+      "capturedAt": "2026-06-08T13:22:26.709Z"
+    },
+    {
+      "value": "CENTRAL IAPOS",
+      "text": "CENTRAL IAPOS",
+      "source": "xhr",
+      "term": "IAP",
+      "capturedAt": "2026-06-08T13:22:22.060Z"
+    },
+    {
+      "value": "CONVENIO PSICORED",
+      "text": "CONVENIO PSICORED",
+      "source": "xhr",
+      "term": "VEN",
+      "capturedAt": "2026-06-08T13:22:44.692Z"
+    },
+    {
+      "value": "CONVENIO RIAM",
+      "text": "CONVENIO RIAM",
+      "source": "xhr",
+      "term": "VEN",
+      "capturedAt": "2026-06-08T13:22:44.693Z"
+    },
+    {
+      "value": "DIPART",
+      "text": "DIPART",
+      "source": "xhr",
+      "term": "DIPART",
+      "capturedAt": "2026-06-08T13:23:09.570Z"
+    },
+    {
+      "value": "DIPART - ROSARIO",
+      "text": "DIPART - ROSARIO",
+      "source": "xhr",
+      "term": "ROS",
+      "capturedAt": "2026-06-08T13:22:30.932Z"
+    },
+    {
+      "value": "DIPART - SANTA FE",
+      "text": "DIPART - SANTA FE",
+      "source": "xhr",
+      "term": "DIPART",
+      "capturedAt": "2026-06-08T13:23:09.570Z"
+    },
+    {
+      "value": "DIPART ROSARIO",
+      "text": "DIPART ROSARIO",
+      "source": "xhr",
+      "term": "ROS",
+      "capturedAt": "2026-06-08T13:22:30.932Z"
+    },
+    {
+      "value": "DIPART SANTA FE",
+      "text": "DIPART SANTA FE",
+      "source": "xhr",
+      "term": "DIPART",
+      "capturedAt": "2026-06-08T13:23:09.570Z"
+    },
+    {
+      "value": "GERENCIA MEDICA",
+      "text": "GERENCIA MEDICA",
+      "source": "xhr",
+      "term": "GERENCIA",
+      "capturedAt": "2026-06-08T13:24:20.700Z"
+    },
+    {
+      "value": "IAPOS ALCORTA",
+      "text": "IAPOS ALCORTA",
+      "source": "xhr",
+      "term": "IAP",
+      "capturedAt": "2026-06-08T13:22:22.060Z"
+    },
+    {
+      "value": "IAPOS BUENOS AIRES",
+      "text": "IAPOS BUENOS AIRES",
+      "source": "xhr",
+      "term": "IAP",
+      "capturedAt": "2026-06-08T13:22:22.060Z"
+    },
+    {
+      "value": "IAPOS CAÑADA DE GOMEZ",
+      "text": "IAPOS CAÑADA DE GOMEZ",
+      "source": "xhr",
+      "term": "IAP",
+      "capturedAt": "2026-06-08T13:22:22.060Z"
+    },
+    {
+      "value": "IAPOS CASILDA",
+      "text": "IAPOS CASILDA",
+      "source": "xhr",
+      "term": "IAP",
+      "capturedAt": "2026-06-08T13:22:22.060Z"
+    },
+    {
+      "value": "IAPOS CORDOBA",
+      "text": "IAPOS CORDOBA",
+      "source": "xhr",
+      "term": "CORDOBA",
+      "capturedAt": "2026-06-08T13:23:39.036Z"
+    },
+    {
+      "value": "IAPOS ESPERANZA",
+      "text": "IAPOS ESPERANZA",
+      "source": "xhr",
+      "term": "ESP",
+      "capturedAt": "2026-06-08T13:23:02.306Z"
+    },
+    {
+      "value": "IAPOS FIRMAT",
+      "text": "IAPOS FIRMAT",
+      "source": "xhr",
+      "term": "FIRMAT",
+      "capturedAt": "2026-06-08T13:23:41.358Z"
+    },
+    {
+      "value": "IAPOS GALVEZ",
+      "text": "IAPOS GALVEZ",
+      "source": "xhr",
+      "term": "GAL",
+      "capturedAt": "2026-06-08T13:22:57.925Z"
+    },
+    {
+      "value": "IAPOS HELVECIA",
+      "text": "IAPOS HELVECIA",
+      "source": "xhr",
+      "term": "HELVECIA",
+      "capturedAt": "2026-06-08T13:23:43.882Z"
+    },
+    {
+      "value": "IAPOS LAGUNA PAIVA",
+      "text": "IAPOS LAGUNA PAIVA",
+      "source": "xhr",
+      "term": "LAGUNA",
+      "capturedAt": "2026-06-08T13:23:46.204Z"
+    },
+    {
+      "value": "IAPOS LAS ROSAS",
+      "text": "IAPOS LAS ROSAS",
+      "source": "xhr",
+      "term": "ROS",
+      "capturedAt": "2026-06-08T13:22:30.933Z"
+    },
+    {
+      "value": "IAPOS RAFAELA",
+      "text": "IAPOS RAFAELA",
+      "source": "xhr",
+      "term": "RAF",
+      "capturedAt": "2026-06-08T13:22:35.373Z"
+    },
+    {
+      "value": "IAPOS RECONQUISTA",
+      "text": "IAPOS RECONQUISTA",
+      "source": "xhr",
+      "term": "REC",
+      "capturedAt": "2026-06-08T13:22:39.864Z"
+    },
+    {
+      "value": "IAPOS ROSARIO",
+      "text": "IAPOS ROSARIO",
+      "source": "xhr",
+      "term": "ROS",
+      "capturedAt": "2026-06-08T13:22:30.933Z"
+    },
+    {
+      "value": "IAPOS SAN CARLOS CENTRO",
+      "text": "IAPOS SAN CARLOS CENTRO",
+      "source": "xhr",
+      "term": "SAN",
+      "capturedAt": "2026-06-08T13:23:21.238Z"
+    },
+    {
+      "value": "IAPOS SAN JAVIER",
+      "text": "IAPOS SAN JAVIER",
+      "source": "xhr",
+      "term": "JAVIER",
+      "capturedAt": "2026-06-08T13:23:53.566Z"
+    },
+    {
+      "value": "IAPOS SAN JUSTO",
+      "text": "IAPOS SAN JUSTO",
+      "source": "xhr",
+      "term": "US",
+      "capturedAt": "2026-06-08T13:23:27.376Z"
+    },
+    {
+      "value": "IAPOS SAN LORENZO",
+      "text": "IAPOS SAN LORENZO",
+      "source": "xhr",
+      "term": "LORENZO",
+      "capturedAt": "2026-06-08T13:23:51.242Z"
+    },
+    {
+      "value": "IAPOS SANTA FE",
+      "text": "IAPOS SANTA FE",
+      "source": "xhr",
+      "term": "SANTA",
+      "capturedAt": "2026-06-08T13:23:23.459Z"
+    },
+    {
+      "value": "IAPOS VENADO TUERTO",
+      "text": "IAPOS VENADO TUERTO",
+      "source": "xhr",
+      "term": "VEN",
+      "capturedAt": "2026-06-08T13:22:44.693Z"
+    },
+    {
+      "value": "IAPOS VILLA CONSTITUCION",
+      "text": "IAPOS VILLA CONSTITUCION",
+      "source": "xhr",
+      "term": "VILLA",
+      "capturedAt": "2026-06-08T13:24:32.257Z"
+    },
+    {
+      "value": "LIBRE PARA USAR",
+      "text": "LIBRE PARA USAR",
+      "source": "xhr",
+      "term": "US",
+      "capturedAt": "2026-06-08T13:23:27.376Z"
+    },
+    {
+      "value": "NO USAR",
+      "text": "NO USAR",
+      "source": "xhr",
+      "term": "NO USAR",
+      "capturedAt": "2026-06-08T13:23:29.798Z"
+    },
+    {
+      "value": "SOFSA SANTA FE",
+      "text": "SOFSA SANTA FE",
+      "source": "xhr",
+      "term": "SOFSA",
+      "capturedAt": "2026-06-08T13:23:14.352Z"
+    }
+  ],
+  "validationsTotal": 13,
+  "validations": [
+    {
+      "code": "27",
+      "text": "2-03-002.BE ASOC. TRIBUNALES - RAFAELA",
+      "raw": "[\"27\",\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\",\"[]\"]",
+      "term": "TRIBUNALES",
+      "capturedAt": "2026-06-08T13:24:13.432Z"
+    },
+    {
+      "code": "112",
+      "text": "2-09-008.BE CASA DE GOBIERNO",
+      "raw": "[\"112\",\"2-09-008.BE CASA DE GOBIERNO\",\"[]\"]",
+      "term": "GOBIERNO",
+      "capturedAt": "2026-06-08T13:24:30.034Z"
+    },
+    {
+      "code": "232",
+      "text": "4-02-017.BE GODEKEN",
+      "raw": "[\"232\",\"4-02-017.BE GODEKEN\",\"[]\"]",
+      "term": "GODEKEN",
+      "capturedAt": "2026-06-08T13:24:34.686Z"
+    },
+    {
+      "code": "387",
+      "text": "4-03-072.BE ZENON PEREYRA",
+      "raw": "[\"387\",\"4-03-072.BE ZENON PEREYRA\",\"[]\"]",
+      "term": "ZENON",
+      "capturedAt": "2026-06-08T13:24:36.920Z"
+    },
+    {
+      "code": "277",
+      "text": "4-04-089.BE MAXIMO PAZ",
+      "raw": "[\"277\",\"4-04-089.BE MAXIMO PAZ\",\"[]\"]",
+      "term": "MAXIMO",
+      "capturedAt": "2026-06-08T13:24:39.244Z"
+    },
+    {
+      "code": "357",
+      "text": "4-07-166.BE TARTAGAL",
+      "raw": "[\"357\",\"4-07-166.BE TARTAGAL\",\"[]\"]",
+      "term": "TARTAGAL",
+      "capturedAt": "2026-06-08T13:24:08.128Z"
+    },
+    {
+      "code": "300",
+      "text": "4-09-199.BE RECREO",
+      "raw": "[\"300\",\"4-09-199.BE RECREO\",\"[]\"]",
+      "term": "RECREO",
+      "capturedAt": "2026-06-08T13:24:03.278Z"
+    },
+    {
+      "code": "119",
+      "text": "4-10-212.BE FRANCK",
+      "raw": "[\"119\",\"4-10-212.BE FRANCK\",\"[]\"]",
+      "term": "FRANCK",
+      "capturedAt": "2026-06-08T13:24:05.612Z"
+    },
+    {
+      "code": "231",
+      "text": "4-16-364.BE GOBERNADOR CRESPO",
+      "raw": "[\"231\",\"4-16-364.BE GOBERNADOR CRESPO\",\"[]\"]",
+      "term": "CRESPO",
+      "capturedAt": "2026-06-08T13:24:00.941Z"
+    },
+    {
+      "code": "730",
+      "text": "BIOQUIMICOS SAN JERONIMO",
+      "raw": "[\"730\",\"BIOQUIMICOS SAN JERONIMO\",\"[]\"]",
+      "term": "BIO",
+      "capturedAt": "2026-06-08T13:23:16.385Z"
+    },
+    {
+      "code": "570",
+      "text": "GERENCIA MEDICA",
+      "raw": "[\"570\",\"GERENCIA MEDICA\",\"[]\"]",
+      "term": "GERENCIA",
+      "capturedAt": "2026-06-08T13:24:20.700Z"
+    },
+    {
+      "code": "444",
+      "text": "IAPOS CORDOBA",
+      "raw": "[\"444\",\"IAPOS CORDOBA\",\"[]\"]",
+      "term": "CORDOBA",
+      "capturedAt": "2026-06-08T13:23:39.037Z"
+    },
+    {
+      "code": "460",
+      "text": "SOFSA SANTA FE",
+      "raw": "[\"460\",\"SOFSA SANTA FE\",\"[]\"]",
+      "term": "SOFSA",
+      "capturedAt": "2026-06-08T13:23:14.352Z"
+    }
+  ],
+  "logs": [
+    {
+      "at": "2026-06-08T13:22:22.060Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be24f916a88aa936b919c6846b7de08615,gx-no-cache=1780924942046",
+      "status": 200,
+      "term": "IAP",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CENTRAL IAPOS\",d:\"CENTRAL IAPOS\"},{c:\"IAPOS ALCORTA\",d:\"IAPOS ALCORTA\"},{c:\"IAPOS BUENOS AIRES\",d:\"IAPOS BUENOS AIRES\"},{c:\"IAPOS CAÑADA DE GOMEZ\",d:\"IAPOS CAÑADA DE GOMEZ\"},{c:\"IAPOS CASILDA\",d:\"IAPOS CASILDA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:24.292Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be07c2b97150806fefdea2b76a5ebf3d90,gx-no-cache=1780924944279",
+      "status": 200,
+      "term": "IAPOS",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CENTRAL IAPOS\",d:\"CENTRAL IAPOS\"},{c:\"IAPOS ALCORTA\",d:\"IAPOS ALCORTA\"},{c:\"IAPOS BUENOS AIRES\",d:\"IAPOS BUENOS AIRES\"},{c:\"IAPOS CAÑADA DE GOMEZ\",d:\"IAPOS CAÑADA DE GOMEZ\"},{c:\"IAPOS CASILDA\",d:\"IAPOS CASILDA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:26.709Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be283d484057f8ff92214acad691cf9d661e4652e9f4952c27cd7d3ef34bdbbd73,gx-no-cache=1780924946697",
+      "status": 200,
+      "term": "CENTRAL",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CASA CENTRAL\",d:\"CASA CENTRAL\"},{c:\"CENTRAL IAPOS\",d:\"CENTRAL IAPOS\"},{c:\"1-09-001.BE CASA CENTRAL\",d:\"1-09-001.BE CASA CENTRAL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:28.852Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beac35523508be26ddba74f8bf83c25c66,gx-no-cache=1780924948836",
+      "status": 200,
+      "term": "CASA",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CASA CENTRAL\",d:\"CASA CENTRAL\"},{c:\"1-09-001.BE CASA CENTRAL\",d:\"1-09-001.BE CASA CENTRAL\"},{c:\"2-09-008.BE CASA DE GOBIERNO\",d:\"2-09-008.BE CASA DE GOBIERNO\"},{c:\"4-15-337.BE CASALEGNO\",d:\"4-15-337.BE CASALEGNO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:30.933Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beb82ae86862bae3d5b634c3c5fc532bad,gx-no-cache=1780924950895",
+      "status": 200,
+      "term": "ROS",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DIPART - ROSARIO\",d:\"DIPART - ROSARIO\"},{c:\"DIPART ROSARIO\",d:\"DIPART ROSARIO\"},{c:\"IAPOS LAS ROSAS\",d:\"IAPOS LAS ROSAS\"},{c:\"IAPOS ROSARIO\",d:\"IAPOS ROSARIO\"},{c:\"1-12-013.BE DELEG. ROSARIO\",d:\"1-12-013.BE DELEG. ROSARIO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:33.325Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be93700cb8d61846c48f855adec03891c345ecf77b1657015c7c24ff11bc9e1d17,gx-no-cache=1780924953312",
+      "status": 200,
+      "term": "ROSARIO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DIPART - ROSARIO\",d:\"DIPART - ROSARIO\"},{c:\"DIPART ROSARIO\",d:\"DIPART ROSARIO\"},{c:\"IAPOS ROSARIO\",d:\"IAPOS ROSARIO\"},{c:\"1-12-013.BE DELEG. ROSARIO\",d:\"1-12-013.BE DELEG. ROSARIO\"},{c:\"2-12-003.BE SITRAM - ROSARIO\",d:\"2-12-003.BE SITRAM - ROSARIO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:35.373Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beefa2c62a1a6b03f184270e16c7acfe91,gx-no-cache=1780924955361",
+      "status": 200,
+      "term": "RAF",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS RAFAELA\",d:\"IAPOS RAFAELA\"},{c:\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\",d:\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\"},{c:\"4-03-060.BE RAFAELA\",d:\"4-03-060.BE RAFAELA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:37.791Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beac3e34c07b354663c01d60a2fd87d3c0f6649c501c719db41196bc0730f0ae56,gx-no-cache=1780924957779",
+      "status": 200,
+      "term": "RAFAELA",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS RAFAELA\",d:\"IAPOS RAFAELA\"},{c:\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\",d:\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\"},{c:\"4-03-060.BE RAFAELA\",d:\"4-03-060.BE RAFAELA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:39.865Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be0755a614225b264a364057d14a5c56c9,gx-no-cache=1780924959828",
+      "status": 200,
+      "term": "REC",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS RECONQUISTA\",d:\"IAPOS RECONQUISTA\"},{c:\"2-07-004.BE AMSAFE - RECONQUISTA\",d:\"2-07-004.BE AMSAFE - RECONQUISTA\"},{c:\"2-07-006.BE ASOC.TRIB.RECONQU\",d:\"2-07-006.BE ASOC.TRIB.RECONQU\"},{c:\"4-07-163.BE RECONQUISTA\",d:\"4-07-163.BE RECONQUISTA\"},{c:\"4-09-199.BE RECREO\",d:\"4-09-199.BE RECREO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:42.632Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be5434db4d7d7f4eee4059713062239574d3306371e8c061ab8ed6fad34a813f13,gx-no-cache=1780924962619",
+      "status": 200,
+      "term": "RECONQUISTA",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS RECONQUISTA\",d:\"IAPOS RECONQUISTA\"},{c:\"2-07-004.BE AMSAFE - RECONQUISTA\",d:\"2-07-004.BE AMSAFE - RECONQUISTA\"},{c:\"4-07-163.BE RECONQUISTA\",d:\"4-07-163.BE RECONQUISTA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:44.693Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be24a37dd520531886a4f709bb8d08ded2,gx-no-cache=1780924964681",
+      "status": 200,
+      "term": "VEN",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CONVENIO PSICORED\",d:\"CONVENIO PSICORED\"},{c:\"CONVENIO RIAM\",d:\"CONVENIO RIAM\"},{c:\"IAPOS VENADO TUERTO\",d:\"IAPOS VENADO TUERTO\"},{c:\"2-06-023.BE AMSAFE - VENADO TUERTO\",d:\"2-06-023.BE AMSAFE - VENADO TUERTO\"},{c:\"2-07-007.BE MUTUAL ESC \\042PRO JUVENTUD\\042 VILLA GUILLE\",d:\"2-07-007.BE MUTUAL ESC \\042PRO JUVENTUD\\042 VILLA GUILLE\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:47.017Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be1fa5a6fb056175492cfbf51e6c5086d1,gx-no-cache=1780924967005",
+      "status": 200,
+      "term": "VENADO",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS VENADO TUERTO\",d:\"IAPOS VENADO TUERTO\"},{c:\"2-06-023.BE AMSAFE - VENADO TUERTO\",d:\"2-06-023.BE AMSAFE - VENADO TUERTO\"},{c:\"4-06-136.BE VENADO TUERTO\",d:\"4-06-136.BE VENADO TUERTO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:49.073Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bedf77c7e48559001dd63c2fb140b9e770,gx-no-cache=1780924969062",
+      "status": 200,
+      "term": "CAS",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CASA CENTRAL\",d:\"CASA CENTRAL\"},{c:\"IAPOS CASILDA\",d:\"IAPOS CASILDA\"},{c:\"1-02-001.BE CASILDA DELEGACIÓ\",d:\"1-02-001.BE CASILDA DELEGACIÓ\"},{c:\"1-09-001.BE CASA CENTRAL\",d:\"1-09-001.BE CASA CENTRAL\"},{c:\"2-09-008.BE CASA DE GOBIERNO\",d:\"2-09-008.BE CASA DE GOBIERNO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:51.495Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be4d4e6dfc6b888644f4a32384205c618ef6649c501c719db41196bc0730f0ae56,gx-no-cache=1780924971482",
+      "status": 200,
+      "term": "CASILDA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS CASILDA\",d:\"IAPOS CASILDA\"},{c:\"1-02-001.BE CASILDA DELEGACIÓ\",d:\"1-02-001.BE CASILDA DELEGACIÓ\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:53.449Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be6ba0f654e8a8e1771b8c1b1b6239dc9681edee6ac2ff6ac40240af4847293a25,gx-no-cache=1780924973436",
+      "status": 200,
+      "term": "CAÑ",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS CAÑADA DE GOMEZ\",d:\"IAPOS CAÑADA DE GOMEZ\"},{c:\"2-08-002.BE AMSAFE - CAÑADA DE GOMEZ\",d:\"2-08-002.BE AMSAFE - CAÑADA DE GOMEZ\"},{c:\"4-08-177.BE CAÑADA DE GOMEZ\",d:\"4-08-177.BE CAÑADA DE GOMEZ\"},{c:\"4-18-401.BE CAÑADA ROSQUIN\",d:\"4-18-401.BE CAÑADA ROSQUIN\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:55.868Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be6ba0f654e8a8e1771b8c1b1b6239dc96e91db3e12d50216f93721e7a9340c9c5,gx-no-cache=1780924975855",
+      "status": 200,
+      "term": "CAÑADA",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS CAÑADA DE GOMEZ\",d:\"IAPOS CAÑADA DE GOMEZ\"},{c:\"2-08-002.BE AMSAFE - CAÑADA DE GOMEZ\",d:\"2-08-002.BE AMSAFE - CAÑADA DE GOMEZ\"},{c:\"4-08-177.BE CAÑADA DE GOMEZ\",d:\"4-08-177.BE CAÑADA DE GOMEZ\"},{c:\"4-18-401.BE CAÑADA ROSQUIN\",d:\"4-18-401.BE CAÑADA ROSQUIN\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:57.925Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beb827fd46556b1e08efe12329cba15625,gx-no-cache=1780924977912",
+      "status": 200,
+      "term": "GAL",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS GALVEZ\",d:\"IAPOS GALVEZ\"},{c:\"2-12-013.BE SITRAM GALVEZ\",d:\"2-12-013.BE SITRAM GALVEZ\"},{c:\"4-07-166.BE TARTAGAL\",d:\"4-07-166.BE TARTAGAL\"},{c:\"4-12-281.BE - VILLA GOBERNADOR GALVEZ\",d:\"4-12-281.BE - VILLA GOBERNADOR GALVEZ\"},{c:\"4-15-344.BE GALVEZ\",d:\"4-15-344.BE GALVEZ\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:00.254Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be2b683c27c8608ab8d938b088eeee7970,gx-no-cache=1780924980240",
+      "status": 200,
+      "term": "GALVEZ",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS GALVEZ\",d:\"IAPOS GALVEZ\"},{c:\"2-12-013.BE SITRAM GALVEZ\",d:\"2-12-013.BE SITRAM GALVEZ\"},{c:\"4-12-281.BE - VILLA GOBERNADOR GALVEZ\",d:\"4-12-281.BE - VILLA GOBERNADOR GALVEZ\"},{c:\"4-15-344.BE GALVEZ\",d:\"4-15-344.BE GALVEZ\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:02.307Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beb2afd7b6cfd5cf4671923b31cbdf5f52,gx-no-cache=1780924982294",
+      "status": 200,
+      "term": "ESP",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS ESPERANZA\",d:\"IAPOS ESPERANZA\"},{c:\"4-10-210.BE ESPERANZA\",d:\"4-10-210.BE ESPERANZA\"},{c:\"4-16-364.BE GOBERNADOR CRESPO\",d:\"4-16-364.BE GOBERNADOR CRESPO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:04.911Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bef621b691ea03c4500548686037b45920b1b19e0594945d30422154e7b2e5f7a4,gx-no-cache=1780924984899",
+      "status": 200,
+      "term": "ESPERANZA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS ESPERANZA\",d:\"IAPOS ESPERANZA\"},{c:\"4-10-210.BE ESPERANZA\",d:\"4-10-210.BE ESPERANZA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:07.239Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be3845db876b6fbc690b555e43bb2c4421,gx-no-cache=1780924987222",
+      "status": 200,
+      "term": "AMSAFE",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"2-04-004 BE AMSAFE - VILLA CONSTITUCION\",d:\"2-04-004 BE AMSAFE - VILLA CONSTITUCION\"},{c:\"2-05-002.BE AMSAFE - HELVECIA\",d:\"2-05-002.BE AMSAFE - HELVECIA\"},{c:\"2-06-022.BE AMSAFE - FIRMAT\",d:\"2-06-022.BE AMSAFE - FIRMAT\"},{c:\"2-06-023.BE AMSAFE - VENADO TUERTO\",d:\"2-06-023.BE AMSAFE - VENADO TUERTO\"},{c:\"2-06-024.BE AMSAFE - RUFINO\",d:\"2-06-024.BE AMSAFE - RUFINO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:09.570Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be0d590aad4beee5b93df80dfaf5b9f19d,gx-no-cache=1780924989558",
+      "status": 200,
+      "term": "DIPART",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DIPART\",d:\"DIPART\"},{c:\"DIPART - ROSARIO\",d:\"DIPART - ROSARIO\"},{c:\"DIPART - SANTA FE\",d:\"DIPART - SANTA FE\"},{c:\"DIPART ROSARIO\",d:\"DIPART ROSARIO\"},{c:\"DIPART SANTA FE\",d:\"DIPART SANTA FE\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:12.121Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be8c9971354f74ace41ce0afdd5e1e04bf2247a650a72fdd695a1b408d81946f80,gx-no-cache=1780924992075",
+      "status": 200,
+      "term": "CONVENIO",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CONVENIO PSICORED\",d:\"CONVENIO PSICORED\"},{c:\"CONVENIO RIAM\",d:\"CONVENIO RIAM\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:14.352Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be2be8aeb5b76f3d3d106a1f61edd168a3,gx-no-cache=1780924994312",
+      "status": 200,
+      "term": "SOFSA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"SOFSA SANTA FE\",d:\"SOFSA SANTA FE\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:14.352Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b2c90b440ae0058511550538e3f206f288e7717807e1bccb73a9361ba92023457,gx-no-cache=1780924994336",
+      "status": 200,
+      "term": "SOFSA",
+      "optionsCount": 0,
+      "validation": {
+        "code": "460",
+        "text": "SOFSA SANTA FE",
+        "raw": "[\"460\",\"SOFSA SANTA FE\",\"[]\"]"
+      },
+      "responsePreview": "[\"460\",\"SOFSA SANTA FE\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:23:16.385Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bec0a7fa5a6caf6b01e4df47782598ab74,gx-no-cache=1780924996359",
+      "status": 200,
+      "term": "BIO",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"BIOQUIMICOS SAN JERONIMO\",d:\"BIOQUIMICOS SAN JERONIMO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:16.385Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189be0ee6fe9510bec5865080829ed2ad803de203cc7e73ab3839425ffc521918788ed8a9d3ea690ccb200e7489568091b04,gx-no-cache=1780924996372",
+      "status": 200,
+      "term": "BIO",
+      "optionsCount": 0,
+      "validation": {
+        "code": "730",
+        "text": "BIOQUIMICOS SAN JERONIMO",
+        "raw": "[\"730\",\"BIOQUIMICOS SAN JERONIMO\",\"[]\"]"
+      },
+      "responsePreview": "[\"730\",\"BIOQUIMICOS SAN JERONIMO\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:23:19.163Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1becf5e234803774a062a3e5527283074b5d28ed86dce58d52ba30a92f7b558d294,gx-no-cache=1780924999150",
+      "status": 200,
+      "term": "BIOQUIMICOS",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"BIOQUIMICOS SAN JERONIMO\",d:\"BIOQUIMICOS SAN JERONIMO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:21.238Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be69af2b7497125dfc7e5f644724c81bab,gx-no-cache=1780925001212",
+      "status": 200,
+      "term": "SAN",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"BIOQUIMICOS SAN JERONIMO\",d:\"BIOQUIMICOS SAN JERONIMO\"},{c:\"CARTERA SAN CRISTOBAL\",d:\"CARTERA SAN CRISTOBAL\"},{c:\"DIPART - SANTA FE\",d:\"DIPART - SANTA FE\"},{c:\"DIPART SANTA FE\",d:\"DIPART SANTA FE\"},{c:\"IAPOS SAN CARLOS CENTRO\",d:\"IAPOS SAN CARLOS CENTRO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:23.459Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bef916ac7abe6eadfb2772364cf5e139de,gx-no-cache=1780925003445",
+      "status": 200,
+      "term": "SANTA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DIPART - SANTA FE\",d:\"DIPART - SANTA FE\"},{c:\"DIPART SANTA FE\",d:\"DIPART SANTA FE\"},{c:\"IAPOS SANTA FE\",d:\"IAPOS SANTA FE\"},{c:\"SOFSA SANTA FE\",d:\"SOFSA SANTA FE\"},{c:\"1-09-002.BE CENTRO CIVICO SANTA FE\",d:\"1-09-002.BE CENTRO CIVICO SANTA FE\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:25.413Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beb4d52fe1fca56a0a4d09b9e015381244,gx-no-cache=1780925005402",
+      "status": 200,
+      "term": "BE",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"1-02-001.BE CASILDA DELEGACIÓ\",d:\"1-02-001.BE CASILDA DELEGACIÓ\"},{c:\"1-09-001.BE CASA CENTRAL\",d:\"1-09-001.BE CASA CENTRAL\"},{c:\"1-09-002.BE CENTRO CIVICO SANTA FE\",d:\"1-09-002.BE CENTRO CIVICO SANTA FE\"},{c:\"1-09-003.BE RIESGOS DEL TRABAJO\",d:\"1-09-003.BE RIESGOS DEL TRABAJO\"},{c:\"1-09-008.BE LAS FLORES II - SANTA FE\",d:\"1-09-008.BE LAS FLORES II - SANTA FE\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:27.376Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be1cc60f17e8268e62d1afc64501561350,gx-no-cache=1780925007353",
+      "status": 200,
+      "term": "US",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"******** (BAJA) 4-02-011.US.FT\",d:\"******** (BAJA) 4-02-011.US.FT\"},{c:\">>>> NO USAR >>>>\",d:\">>>> NO USAR >>>>\"},{c:\">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<\",d:\">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<\"},{c:\"IAPOS SAN JUSTO\",d:\"IAPOS SAN JUSTO\"},{c:\"LIBRE PARA USAR\",d:\"LIBRE PARA USAR\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:29.798Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be5297d7270dcb47e79c378a479884c70af5e586ab6a5a5014d738eed6a49ea3d9,gx-no-cache=1780925009783",
+      "status": 200,
+      "term": "NO USAR",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\">>>> NO USAR >>>>\",d:\">>>> NO USAR >>>>\"},{c:\">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<\",d:\">>> NO USAR <<< |4-16-364.US.JM| >>> NO USAR <<<\"},{c:\"NO USAR\",d:\"NO USAR\"},{c:\"******4-15-344.US.MM--ERROR NO USAR\",d:\"******4-15-344.US.MM--ERROR NO USAR\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:31.862Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be5bd4a43742a0195bbc3237b3984bba0e,gx-no-cache=1780925011845",
+      "status": 200,
+      "term": "ALC",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS ALCORTA\",d:\"IAPOS ALCORTA\"},{c:\"4-04-079.BE ALCORTA SUBDELEG\",d:\"4-04-079.BE ALCORTA SUBDELEG\"},{c:\"4-05-103.BE STA ROSA CALCHINES\",d:\"4-05-103.BE STA ROSA CALCHINES\"},{c:\"4-19-421.BE CALCHAQUI\",d:\"4-19-421.BE CALCHAQUI\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:34.287Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be6cd455fa77252a5381221939203958eaf6649c501c719db41196bc0730f0ae56,gx-no-cache=1780925014263",
+      "status": 200,
+      "term": "ALCORTA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS ALCORTA\",d:\"IAPOS ALCORTA\"},{c:\"4-04-079.BE ALCORTA SUBDELEG\",d:\"4-04-079.BE ALCORTA SUBDELEG\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:36.611Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be06a99c1431581ee7292f428140b4e8c1,gx-no-cache=1780925016587",
+      "status": 200,
+      "term": "BUENOS",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS BUENOS AIRES\",d:\"IAPOS BUENOS AIRES\"},{c:\"1-20-015.BE DELEG BUENOS AIRES\",d:\"1-20-015.BE DELEG BUENOS AIRES\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:39.037Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be3dc25906bead9fe3a3453f1b0f4df741f6649c501c719db41196bc0730f0ae56,gx-no-cache=1780925019013",
+      "status": 200,
+      "term": "CORDOBA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS CORDOBA\",d:\"IAPOS CORDOBA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:39.037Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189bcfdff5a6ca407a2e17fae130af88048259cdc3ea727f8ed5b2ec763b1e6fde86,gx-no-cache=1780925019024",
+      "status": 200,
+      "term": "CORDOBA",
+      "optionsCount": 0,
+      "validation": {
+        "code": "444",
+        "text": "IAPOS CORDOBA",
+        "raw": "[\"444\",\"IAPOS CORDOBA\",\"[]\"]"
+      },
+      "responsePreview": "[\"444\",\"IAPOS CORDOBA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:23:41.358Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be4f9f465a33d83583c2fdf001e950f3db,gx-no-cache=1780925021345",
+      "status": 200,
+      "term": "FIRMAT",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS FIRMAT\",d:\"IAPOS FIRMAT\"},{c:\"2-06-022.BE AMSAFE - FIRMAT\",d:\"2-06-022.BE AMSAFE - FIRMAT\"},{c:\"4-06-021.BE FIRMAT\",d:\"4-06-021.BE FIRMAT\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:43.882Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be1775c17ad826c86c8bfb518dcab014f686fe4cd120ce2daf72af2c56b89d4256,gx-no-cache=1780925023854",
+      "status": 200,
+      "term": "HELVECIA",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS HELVECIA\",d:\"IAPOS HELVECIA\"},{c:\"2-05-002.BE AMSAFE - HELVECIA\",d:\"2-05-002.BE AMSAFE - HELVECIA\"},{c:\"4-05-102.BE HELVECIA\",d:\"4-05-102.BE HELVECIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:46.204Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be5282084aa687d26c1c12002023d2809c,gx-no-cache=1780925026189",
+      "status": 200,
+      "term": "LAGUNA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS LAGUNA PAIVA\",d:\"IAPOS LAGUNA PAIVA\"},{c:\"4-09-195.BE LAGUNA PAIVA\",d:\"4-09-195.BE LAGUNA PAIVA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:48.815Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be1ccd3e201d3fa63af41a678e7a45855f78869710b244e7107d0689a3470a5763,gx-no-cache=1780925028801",
+      "status": 200,
+      "term": "LAS ROSAS",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS LAS ROSAS\",d:\"IAPOS LAS ROSAS\"},{c:\"4-01-004.BE LAS ROSAS\",d:\"4-01-004.BE LAS ROSAS\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:51.242Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be02199b5bd62c92a4812e1b4adda2deaa45ecf77b1657015c7c24ff11bc9e1d17,gx-no-cache=1780925031230",
+      "status": 200,
+      "term": "LORENZO",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS SAN LORENZO\",d:\"IAPOS SAN LORENZO\"},{c:\"2-17-004.BE AMEN - SAN LORENZO\",d:\"2-17-004.BE AMEN - SAN LORENZO\"},{c:\"2-17-005.BE SITRAM SAN LORENZO\",d:\"2-17-005.BE SITRAM SAN LORENZO\"},{c:\"4-17-395.BE SAN LORENZO\",d:\"4-17-395.BE SAN LORENZO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:53.566Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be28b7feb935fdef012601ac9ac3949577,gx-no-cache=1780925033554",
+      "status": 200,
+      "term": "JAVIER",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS SAN JAVIER\",d:\"IAPOS SAN JAVIER\"},{c:\"2-14-001.BE AMSAFE SAN JAVIER\",d:\"2-14-001.BE AMSAFE SAN JAVIER\"},{c:\"4-14-328.BE SAN JAVIER\",d:\"4-14-328.BE SAN JAVIER\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:55.903Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be1d1b0f955843f8810f416a23f82dc02f,gx-no-cache=1780925035889",
+      "status": 200,
+      "term": "CARLOS",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS SAN CARLOS CENTRO\",d:\"IAPOS SAN CARLOS CENTRO\"},{c:\"4-10-230.BE SAN CARLOS CENTRO\",d:\"4-10-230.BE SAN CARLOS CENTRO\"},{c:\"4-10-231.BE SAN CARLOS NORTE\",d:\"4-10-231.BE SAN CARLOS NORTE\"},{c:\"4-10-232.BE SAN CARLOS SUR\",d:\"4-10-232.BE SAN CARLOS SUR\"},{c:\"4-18-402.BE CARLOS PELLEGRINI\",d:\"4-18-402.BE CARLOS PELLEGRINI\"})))"
+    },
+    {
+      "at": "2026-06-08T13:23:58.607Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be75e2d573cccd2263d3fcf6d23e9f9f99c549691c1878622643aa2507aee855a1,gx-no-cache=1780925038594",
+      "status": 200,
+      "term": "GOBERNADOR",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-12-281.BE - VILLA GOBERNADOR GALVEZ\",d:\"4-12-281.BE - VILLA GOBERNADOR GALVEZ\"},{c:\"4-16-364.BE GOBERNADOR CRESPO\",d:\"4-16-364.BE GOBERNADOR CRESPO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:00.940Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be0d959051075a61920cbaa834ada834b1,gx-no-cache=1780925040919",
+      "status": 200,
+      "term": "CRESPO",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-16-364.BE GOBERNADOR CRESPO\",d:\"4-16-364.BE GOBERNADOR CRESPO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:00.941Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b91d4fb2a28eea6f29828447739343c240dd59f973f18d7f4ea01f08995e09017351c09cfd5a567c2897af64704c2ee58,gx-no-cache=1780925040930",
+      "status": 200,
+      "term": "CRESPO",
+      "optionsCount": 0,
+      "validation": {
+        "code": "231",
+        "text": "4-16-364.BE GOBERNADOR CRESPO",
+        "raw": "[\"231\",\"4-16-364.BE GOBERNADOR CRESPO\",\"[]\"]"
+      },
+      "responsePreview": "[\"231\",\"4-16-364.BE GOBERNADOR CRESPO\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:03.278Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beeb6f31c4decf46fc698d4f5ee2a64bd4,gx-no-cache=1780925043255",
+      "status": 200,
+      "term": "RECREO",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-09-199.BE RECREO\",d:\"4-09-199.BE RECREO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:03.278Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b054d60f129b76e5ea142846b3d24a816121bbcb9b5a53e7eedf8496a65f5d19c8f19fdfcb995ef343f054ee6bb94e90e,gx-no-cache=1780925043264",
+      "status": 200,
+      "term": "RECREO",
+      "optionsCount": 0,
+      "validation": {
+        "code": "300",
+        "text": "4-09-199.BE RECREO",
+        "raw": "[\"300\",\"4-09-199.BE RECREO\",\"[]\"]"
+      },
+      "responsePreview": "[\"300\",\"4-09-199.BE RECREO\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:05.612Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1beeb37a239e205c08f70aae0ccd587330c,gx-no-cache=1780925045589",
+      "status": 200,
+      "term": "FRANCK",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-10-212.BE FRANCK\",d:\"4-10-212.BE FRANCK\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:05.612Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189bf3d3df7f4a9f91dff604ca50fc5602fcd30cd0c3b54a792788d25df4e7b753aa62cd026c1dd7acac56562c71ef5b7255,gx-no-cache=1780925045600",
+      "status": 200,
+      "term": "FRANCK",
+      "optionsCount": 0,
+      "validation": {
+        "code": "119",
+        "text": "4-10-212.BE FRANCK",
+        "raw": "[\"119\",\"4-10-212.BE FRANCK\",\"[]\"]"
+      },
+      "responsePreview": "[\"119\",\"4-10-212.BE FRANCK\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:08.128Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be4e7c2d7ccfab715524f2bccbafefc4cdedbf15fbc87c17d84a5497d906ac73e6,gx-no-cache=1780925048108",
+      "status": 200,
+      "term": "TARTAGAL",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-07-166.BE TARTAGAL\",d:\"4-07-166.BE TARTAGAL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:08.128Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b4da49890fd3e949aebe0a8ba821e112487e943b2182a89213162954307947c677d9f998be71654009adf2497ab274367,gx-no-cache=1780925048118",
+      "status": 200,
+      "term": "TARTAGAL",
+      "optionsCount": 0,
+      "validation": {
+        "code": "357",
+        "text": "4-07-166.BE TARTAGAL",
+        "raw": "[\"357\",\"4-07-166.BE TARTAGAL\",\"[]\"]"
+      },
+      "responsePreview": "[\"357\",\"4-07-166.BE TARTAGAL\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:10.726Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be63325a14f39364dfedf38752a6afbf64bb00c309b1a86d6b33d712e8ed4557cc,gx-no-cache=1780925050715",
+      "status": 200,
+      "term": "SUNCHALES",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"2-03-003.BE SOEM SUNCHALES\",d:\"2-03-003.BE SOEM SUNCHALES\"},{c:\"4-03-066.BE SUNCHALES\",d:\"4-03-066.BE SUNCHALES\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:13.432Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be95d18e42129bc2b384fb83d20bd0c981449005ed94fd1d3e8ce075ec3e43f241,gx-no-cache=1780925053409",
+      "status": 200,
+      "term": "TRIBUNALES",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\",d:\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:13.432Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b27e0789d358ed3c8e7eeabb4a096ed2fc11af730245a0497a9a823a9ab5884d93321610768a9ffdbba4aaa90cf0b8c889e567436097f722cd8006a5164928f26,gx-no-cache=1780925053419",
+      "status": 200,
+      "term": "TRIBUNALES",
+      "optionsCount": 0,
+      "validation": {
+        "code": "27",
+        "text": "2-03-002.BE ASOC. TRIBUNALES - RAFAELA",
+        "raw": "[\"27\",\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\",\"[]\"]"
+      },
+      "responsePreview": "[\"27\",\"2-03-002.BE ASOC. TRIBUNALES - RAFAELA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:15.748Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bef04471fd527c99b0c8349f6cb2f46b88,gx-no-cache=1780925055737",
+      "status": 200,
+      "term": "SITRAM",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"2-12-003.BE SITRAM - ROSARIO\",d:\"2-12-003.BE SITRAM - ROSARIO\"},{c:\"2-12-013.BE SITRAM GALVEZ\",d:\"2-12-013.BE SITRAM GALVEZ\"},{c:\"2-17-005.BE SITRAM SAN LORENZO\",d:\"2-17-005.BE SITRAM SAN LORENZO\"},{c:\"2-17-390.BE SITRAM PTO GRAL SMN\",d:\"2-17-390.BE SITRAM PTO GRAL SMN\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:18.186Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be6913b7a3f50363b953bb6988850fcf78f6649c501c719db41196bc0730f0ae56,gx-no-cache=1780925058164",
+      "status": 200,
+      "term": "CARTERA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CARTERA SAN CRISTOBAL\",d:\"CARTERA SAN CRISTOBAL\"},{c:\"CARTERA 9 DE JULIO\",d:\"CARTERA 9 DE JULIO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:20.700Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bec1bb8ad529148265f814d46fb039a3aa86fe4cd120ce2daf72af2c56b89d4256,gx-no-cache=1780925060673",
+      "status": 200,
+      "term": "GERENCIA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GERENCIA MEDICA\",d:\"GERENCIA MEDICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:20.700Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189bf9a104705f2bd5139925aaae0f0d6bddd6425a6712250c190abbc6577d223484,gx-no-cache=1780925060688",
+      "status": 200,
+      "term": "GERENCIA",
+      "optionsCount": 0,
+      "validation": {
+        "code": "570",
+        "text": "GERENCIA MEDICA",
+        "raw": "[\"570\",\"GERENCIA MEDICA\",\"[]\"]"
+      },
+      "responsePreview": "[\"570\",\"GERENCIA MEDICA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:23.024Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be632d97789eff936b2312a394fa36da7c,gx-no-cache=1780925063006",
+      "status": 200,
+      "term": "MEDICA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GERENCIA MEDICA\",d:\"GERENCIA MEDICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:25.350Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be7de8478151a80fd45e4569321881fc4c,gx-no-cache=1780925065337",
+      "status": 200,
+      "term": "MUTUAL",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"2-04-002.BE MUTUAL V CONST\",d:\"2-04-002.BE MUTUAL V CONST\"},{c:\"2-07-007.BE MUTUAL ESC \\042PRO JUVENTUD\\042 VILLA GUILLE\",d:\"2-07-007.BE MUTUAL ESC \\042PRO JUVENTUD\\042 VILLA GUILLE\"},{c:\"2-09-011.BE MUTUAL CIRC POL SF\",d:\"2-09-011.BE MUTUAL CIRC POL SF\"},{c:\"2-09-034.BE MUTUAL BANCO PROV\",d:\"2-09-034.BE MUTUAL BANCO PROV\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:27.502Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be28e846b007fb648af59e0904b085c5e4,gx-no-cache=1780925067485",
+      "status": 200,
+      "term": "HOSP",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"2-09-005.BE HOSPITAL PSIQUIATR\",d:\"2-09-005.BE HOSPITAL PSIQUIATR\"},{c:\"2-09-012.BE HOSP VERA CAND SF\",d:\"2-09-012.BE HOSP VERA CAND SF\"},{c:\"2-09-030.BE HOSP DE NIÑO SF\",d:\"2-09-030.BE HOSP DE NIÑO SF\"},{c:\"2-09-037.BE HOSP SAYAGO SF\",d:\"2-09-037.BE HOSP SAYAGO SF\"},{c:\"2-09-042.BE HOSPITAL ITURRASPE\",d:\"2-09-042.BE HOSPITAL ITURRASPE\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:30.034Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bebd807175e1c4cb9ca37210f1605576abd899e0144787bfa5759cb40743eafc3b,gx-no-cache=1780925070008",
+      "status": 200,
+      "term": "GOBIERNO",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"2-09-008.BE CASA DE GOBIERNO\",d:\"2-09-008.BE CASA DE GOBIERNO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:30.034Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189bcfa9c26bb3878d609288a8795af71f16c9a376282ed016dd1444a8b31be1d25f6fc230f8fe5445eb8ca3e41c80e12cd5e9c95c19b4aa0629c8d85c8287157763,gx-no-cache=1780925070021",
+      "status": 200,
+      "term": "GOBIERNO",
+      "optionsCount": 0,
+      "validation": {
+        "code": "112",
+        "text": "2-09-008.BE CASA DE GOBIERNO",
+        "raw": "[\"112\",\"2-09-008.BE CASA DE GOBIERNO\",\"[]\"]"
+      },
+      "responsePreview": "[\"112\",\"2-09-008.BE CASA DE GOBIERNO\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:32.257Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be20097f2f3a47c5851f774f13bbb68427,gx-no-cache=1780925072245",
+      "status": 200,
+      "term": "VILLA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"IAPOS VILLA CONSTITUCION\",d:\"IAPOS VILLA CONSTITUCION\"},{c:\"2-04-001.BE VILLA CONSTITUCION\",d:\"2-04-001.BE VILLA CONSTITUCION\"},{c:\"2-04-004 BE AMSAFE - VILLA CONSTITUCION\",d:\"2-04-004 BE AMSAFE - VILLA CONSTITUCION\"},{c:\"2-07-005.BE AMSAFE - VILLA OCAMPO\",d:\"2-07-005.BE AMSAFE - VILLA OCAMPO\"},{c:\"2-07-007.BE MUTUAL ESC \\042PRO JUVENTUD\\042 VILLA GUILLE\",d:\"2-07-007.BE MUTUAL ESC \\042PRO JUVENTUD\\042 VILLA GUILLE\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:34.686Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be8509cb9a569274f321cda0d322fa94b16b0221cfd14340547db5a8592ee8e599,gx-no-cache=1780925074662",
+      "status": 200,
+      "term": "GODEKEN",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-02-017.BE GODEKEN\",d:\"4-02-017.BE GODEKEN\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:34.686Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189bc2d998fb8f7938d1e37970b48672ae27fe2be94a32b42aec391729096b8745b3b29733041334685766862964857479e4,gx-no-cache=1780925074674",
+      "status": 200,
+      "term": "GODEKEN",
+      "optionsCount": 0,
+      "validation": {
+        "code": "232",
+        "text": "4-02-017.BE GODEKEN",
+        "raw": "[\"232\",\"4-02-017.BE GODEKEN\",\"[]\"]"
+      },
+      "responsePreview": "[\"232\",\"4-02-017.BE GODEKEN\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:36.920Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be27732d685a43448b501272e86cc6acaf,gx-no-cache=1780925076897",
+      "status": 200,
+      "term": "ZENON",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-03-072.BE ZENON PEREYRA\",d:\"4-03-072.BE ZENON PEREYRA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:36.920Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b0b8a52728ee82db7a85695c8b35478307e44ee2f3d64ebe011d7e6026234bbc8aaaf009dd60230707025fb621fb76b1a,gx-no-cache=1780925076908",
+      "status": 200,
+      "term": "ZENON",
+      "optionsCount": 0,
+      "validation": {
+        "code": "387",
+        "text": "4-03-072.BE ZENON PEREYRA",
+        "raw": "[\"387\",\"4-03-072.BE ZENON PEREYRA\",\"[]\"]"
+      },
+      "responsePreview": "[\"387\",\"4-03-072.BE ZENON PEREYRA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:39.244Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1bed7a6f8acc32c8824a8461b832de7aded,gx-no-cache=1780925079223",
+      "status": 200,
+      "term": "MAXIMO",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-04-089.BE MAXIMO PAZ\",d:\"4-04-089.BE MAXIMO PAZ\"})))"
+    },
+    {
+      "at": "2026-06-08T13:24:39.244Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b64a112ea55b1bdc35e379974caa71b02e7764f420e8acdf1082f7bd4a9d647ad6b2f48ef91fd9d85907928cd25179ffb,gx-no-cache=1780925079233",
+      "status": 200,
+      "term": "MAXIMO",
+      "optionsCount": 0,
+      "validation": {
+        "code": "277",
+        "text": "4-04-089.BE MAXIMO PAZ",
+        "raw": "[\"277\",\"4-04-089.BE MAXIMO PAZ\",\"[]\"]"
+      },
+      "responsePreview": "[\"277\",\"4-04-089.BE MAXIMO PAZ\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:24:41.292Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?656807f0424bad0777999c128077d1be2539a75669cdd281c83cf9a6398f9ce3,gx-no-cache=1780925081278",
+      "status": 200,
+      "term": "PAZ",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"4-04-089.BE MAXIMO PAZ\",d:\"4-04-089.BE MAXIMO PAZ\"})))"
+    }
+  ]
+}

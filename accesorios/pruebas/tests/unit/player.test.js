@@ -50,7 +50,7 @@ globalThis.chrome = {
 };
 
 // Importar Player
-const Player = require("../../src/modules/player/player.js");
+const Player = require("../../../../src/modules/player/player.js");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -530,7 +530,7 @@ test("navigate: URL vacía se trata como no-op y llama onDone", async () => {
 test("navigate: URL vacía como no-op permite que pasos siguientes ejecuten", async () => {
   resetBody('<div></div>');
   const vars = {};
-  const Player2 = require("../../src/modules/player/player.js");
+  const Player2 = require("../../../../src/modules/player/player.js");
   const p = new Player2({ retryMs: 20, timeoutMs: 500 });
   const steps = [
     { type: "navigate", url: "" },
@@ -550,7 +550,7 @@ test("navigate: URL vacía como no-op permite que pasos siguientes ejecuten", as
 test("navigate: misma URL como no-op permite que pasos siguientes ejecuten", async () => {
   resetBody('<div></div>');
   const vars = {};
-  const Player3 = require("../../src/modules/player/player.js");
+  const Player3 = require("../../../../src/modules/player/player.js");
   const p = new Player3({ retryMs: 20, timeoutMs: 500 });
   const steps = [
     { type: "navigate", url: "https://example.com/" },
@@ -651,6 +651,18 @@ test("input sobre <select> por texto visible (macro legacy) sigue funcionando", 
   assert.equal(win.document.getElementById("pais").value, "uy");
 });
 
+test("choose_option con inputMode=autocomplete funciona sobre <input>", async () => {
+  resetBody('<input id="delegacion" type="text" value="">');
+  const result = await runStep({
+    type: "choose_option",
+    selector: "#delegacion",
+    inputMode: "autocomplete",
+    text: "CAPITAL"
+  });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("delegacion").value, "CAPITAL");
+});
+
 // ── capture_defaults: opt-in, no altera macros que no lo usan ─────────────────────
 
 const TWO_SELECTS_HTML = `
@@ -674,7 +686,7 @@ test("capture_defaults: NO se auto-inyecta por defecto (no resetea otros campos)
     resetBody(TWO_SELECTS_HTML);
     // #other tiene un valor distinto al default ("a"); la macro sólo toca #trigger.
     win.document.getElementById("other").value = "b";
-    const Player2 = require("../../src/modules/player/player.js");
+    const Player2 = require("../../../../src/modules/player/player.js");
     const p = new Player2({ retryMs: 20, timeoutMs: 500 });
     await new Promise((resolve) => {
       p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
@@ -691,7 +703,7 @@ test("capture_defaults: con autoCaptureDefaults=true sí normaliza los defaults"
   await withVisibleLayout(async () => {
     resetBody(TWO_SELECTS_HTML);
     win.document.getElementById("other").value = "b";
-    const Player2 = require("../../src/modules/player/player.js");
+    const Player2 = require("../../../../src/modules/player/player.js");
     const p = new Player2({ retryMs: 20, timeoutMs: 500 });
     await new Promise((resolve) => {
       p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
@@ -704,11 +716,31 @@ test("capture_defaults: con autoCaptureDefaults=true sí normaliza los defaults"
   });
 });
 
+test("capture_defaults auto (_fast) no dispara onStep extra", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(TWO_SELECTS_HTML);
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    const seen = [];
+    await new Promise((resolve) => {
+      p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
+        vars: {},
+        speed: 1,
+        autoCaptureDefaults: true,
+        onStep: (step) => seen.push(step.type),
+        onDone: resolve,
+        onError: resolve
+      });
+    });
+    assert.deepEqual(seen, ["choose_option"]);
+  });
+});
+
 test("capture_defaults explícito sigue ejecutándose (normaliza al default)", async () => {
   await withVisibleLayout(async () => {
     resetBody(TWO_SELECTS_HTML);
     win.document.getElementById("other").value = "b";
-    const Player2 = require("../../src/modules/player/player.js");
+    const Player2 = require("../../../../src/modules/player/player.js");
     const p = new Player2({ retryMs: 20, timeoutMs: 500 });
     await new Promise((resolve) => {
       p.play([

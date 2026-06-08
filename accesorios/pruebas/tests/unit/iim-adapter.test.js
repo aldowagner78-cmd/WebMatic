@@ -9,7 +9,7 @@ const assert = require("node:assert/strict");
 const G = global;
 G.globalThis = G;
 
-require("../../src/modules/storage/iim-adapter.js");
+require("../../../../src/modules/storage/iim-adapter.js");
 const adapter = G.WebMaticIimAdapter;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

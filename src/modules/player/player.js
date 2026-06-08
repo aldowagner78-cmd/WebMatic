@@ -183,12 +183,15 @@
   function setInputValue(el, value) {
     const tag = (el.tagName || "").toLowerCase();
     const str = String(value == null ? "" : value);
+    const canExecCommand = typeof document !== "undefined" && typeof document.execCommand === "function";
 
     // contenteditable elements do not have a .value — set innerText instead
     if (el.isContentEditable) {
       el.focus();
-      document.execCommand("selectAll", false, null);
-      if (!document.execCommand("insertText", false, str)) {
+      if (canExecCommand) {
+        document.execCommand("selectAll", false, null);
+      }
+      if (!canExecCommand || !document.execCommand("insertText", false, str)) {
         el.innerText = str;
       }
       el.dispatchEvent(new Event("input",  { bubbles: true }));
@@ -217,7 +220,7 @@
     try { el.select(); } catch (_) {}
 
     // Attempt 1: execCommand fires beforeinput/input natively in Firefox
-    if (document.execCommand("insertText", false, str)) {
+    if (canExecCommand && document.execCommand("insertText", false, str)) {
       el.dispatchEvent(new Event("change", { bubbles: true }));
       return;
     }
@@ -236,7 +239,11 @@
       el.dispatchEvent(new KeyboardEvent("keydown",  kOpts));
       el.dispatchEvent(new KeyboardEvent("keypress", kOpts));
       nativeSet(el.value + char);
-      el.dispatchEvent(new InputEvent("input", { data: char, inputType: "insertText", bubbles: true }));
+      if (typeof InputEvent !== "undefined") {
+        el.dispatchEvent(new InputEvent("input", { data: char, inputType: "insertText", bubbles: true }));
+      } else {
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+      }
       el.dispatchEvent(new KeyboardEvent("keyup", kOpts));
     }
 
@@ -470,13 +477,32 @@
           });
         } else if (step.type === "choose_option") {
           _highlightElement(el);
-          if (!(el instanceof HTMLSelectElement)) {
-            reject(new Error(`choose_option requiere un <select>: ${selector}`));
-            return;
-          }
-
           const _resolvedValue = expandVariables(step.value || "", vars);
           const _resolvedText = expandVariables(step.text || "", vars);
+          const _inputMode = String(step.inputMode || "").toLowerCase();
+          const _isSelect = el instanceof HTMLSelectElement;
+
+          // choose_option también soporta inputs con autocomplete cuando
+          // el grabador promovió input/text a choose_option (inputMode=autocomplete).
+          if (!_isSelect) {
+            if (_inputMode !== "autocomplete") {
+              reject(new Error(`choose_option requiere un <select> o inputMode=autocomplete: ${selector}`));
+              return;
+            }
+            const _typed = _resolvedText || _resolvedValue;
+            if (!_typed) {
+              reject(new Error(`choose_option: falta value/text para autocomplete en ${selector}`));
+              return;
+            }
+            el.focus();
+            setInputValue(el, _typed);
+            _tryClickAutocomplete(_typed).then(() => {
+              try { el.blur(); } catch (_) {}
+              if (step.variable) vars[step.variable] = _typed;
+              resolve();
+            });
+            return;
+          }
 
           // Resuelve la opción: primero por value, luego por texto visible exacto.
           const _findOption = (needle) => {
@@ -948,6 +974,7 @@
           if (!autoCaptureDone && (step.type === "input" || step.type === "text" || step.type === "check" || step.type === "choose_option")) {
             const autoStep = {
               type: "capture_defaults",
+              _fast: true,
               _preserveSelectors: Array.from(_collectModifiedSelectors(steps, i))
             };
             await executeStep(autoStep, vars, this.retryMs, this.timeoutMs, this._speed);
@@ -958,7 +985,7 @@
             ? Array.from(_collectModifiedSelectors(steps, i + 1))
             : null;
           const runnableStep = capturePreserve ? { ...step, _preserveSelectors: capturePreserve } : step;
-          if (typeof options.onStep === "function") options.onStep(step, i);
+          if (typeof options.onStep === "function" && !runnableStep._fast) options.onStep(step, i);
 
           // Save resumption state BEFORE every step — if a navigation happens at any
           // point during this step (or any sleep/wait afterwards), the new page can

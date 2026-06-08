@@ -1,0 +1,2027 @@
+{
+  "capturedAt": "2026-06-08T13:24:42.705Z",
+  "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?M,0",
+  "field": "#vAUCAESPEFC",
+  "fieldName": "especialidad",
+  "source": "Playwright trusted keyboard + GeneXus XHR extraction",
+  "total": 122,
+  "options": [
+    {
+      "value": "ACCIDENTE DE TRABAJO",
+      "text": "ACCIDENTE DE TRABAJO",
+      "source": "xhr",
+      "term": "TRA",
+      "capturedAt": "2026-06-08T13:22:07.614Z"
+    },
+    {
+      "value": "ACOMPAÑANTE TERAPEUTICO",
+      "text": "ACOMPAÑANTE TERAPEUTICO",
+      "source": "xhr",
+      "term": "TER",
+      "capturedAt": "2026-06-08T13:22:03.104Z"
+    },
+    {
+      "value": "ALOJAMIENTO",
+      "text": "ALOJAMIENTO",
+      "source": "xhr",
+      "term": "ALO",
+      "capturedAt": "2026-06-08T13:17:47.448Z"
+    },
+    {
+      "value": "ALOJAMIENTO- FUNDACION MATEO ESQUIVO",
+      "text": "ALOJAMIENTO- FUNDACION MATEO ESQUIVO",
+      "source": "xhr",
+      "term": "ALO",
+      "capturedAt": "2026-06-08T13:17:47.448Z"
+    },
+    {
+      "value": "ANATOMIA PATOLOGICA",
+      "text": "ANATOMIA PATOLOGICA",
+      "source": "xhr",
+      "term": "ANA",
+      "capturedAt": "2026-06-08T13:17:54.456Z"
+    },
+    {
+      "value": "ANESTESIA, ANALGESIA Y REANIMACION",
+      "text": "ANESTESIA, ANALGESIA Y REANIMACION",
+      "source": "xhr",
+      "term": "ANA",
+      "capturedAt": "2026-06-08T13:17:54.457Z"
+    },
+    {
+      "value": "ANESTESIOLOGIA",
+      "text": "ANESTESIOLOGIA",
+      "source": "xhr",
+      "term": "ANES",
+      "capturedAt": "2026-06-08T13:17:56.585Z"
+    },
+    {
+      "value": "AUDIFONOS",
+      "text": "AUDIFONOS",
+      "source": "xhr",
+      "term": "FON",
+      "capturedAt": "2026-06-08T13:18:58.208Z"
+    },
+    {
+      "value": "AUDITORIA MEDICA",
+      "text": "AUDITORIA MEDICA",
+      "source": "xhr",
+      "term": "MED",
+      "capturedAt": "2026-06-08T13:19:55.641Z"
+    },
+    {
+      "value": "BACTERIOLOGIA",
+      "text": "BACTERIOLOGIA",
+      "source": "xhr",
+      "term": "TER",
+      "capturedAt": "2026-06-08T13:22:03.105Z"
+    },
+    {
+      "value": "CARDIOLOGIA",
+      "text": "CARDIOLOGIA",
+      "source": "xhr",
+      "term": "CAR",
+      "capturedAt": "2026-06-08T13:18:01.261Z"
+    },
+    {
+      "value": "CARDIOLOGIA PEDIATRICA",
+      "text": "CARDIOLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "CAR",
+      "capturedAt": "2026-06-08T13:18:01.262Z"
+    },
+    {
+      "value": "CIRUGIA",
+      "text": "CIRUGIA",
+      "source": "xhr",
+      "term": "CIR",
+      "capturedAt": "2026-06-08T13:18:10.604Z"
+    },
+    {
+      "value": "CIRUGIA BARIATRICA",
+      "text": "CIRUGIA BARIATRICA",
+      "source": "xhr",
+      "term": "CIR",
+      "capturedAt": "2026-06-08T13:18:10.604Z"
+    },
+    {
+      "value": "CIRUGIA BUCO MAXILO FACIAL",
+      "text": "CIRUGIA BUCO MAXILO FACIAL",
+      "source": "xhr",
+      "term": "CIR",
+      "capturedAt": "2026-06-08T13:18:10.604Z"
+    },
+    {
+      "value": "CIRUGIA CARDIOVASCULAR",
+      "text": "CIRUGIA CARDIOVASCULAR",
+      "source": "xhr",
+      "term": "CAR",
+      "capturedAt": "2026-06-08T13:18:01.262Z"
+    },
+    {
+      "value": "CIRUGIA DE APARATO DIGESTIVO",
+      "text": "CIRUGIA DE APARATO DIGESTIVO",
+      "source": "xhr",
+      "term": "CIR",
+      "capturedAt": "2026-06-08T13:18:10.604Z"
+    },
+    {
+      "value": "CIRUGIA GENERAL",
+      "text": "CIRUGIA GENERAL",
+      "source": "xhr",
+      "term": "GEN",
+      "capturedAt": "2026-06-08T13:19:13.212Z"
+    },
+    {
+      "value": "CIRUGIA INFANTIL",
+      "text": "CIRUGIA INFANTIL",
+      "source": "xhr",
+      "term": "INF",
+      "capturedAt": "2026-06-08T13:19:34.576Z"
+    },
+    {
+      "value": "CITODIAGNOSTICO",
+      "text": "CITODIAGNOSTICO",
+      "source": "xhr",
+      "term": "DIA",
+      "capturedAt": "2026-06-08T13:18:26.147Z"
+    },
+    {
+      "value": "CLINICA GENERAL",
+      "text": "CLINICA GENERAL",
+      "source": "xhr",
+      "term": "CLI",
+      "capturedAt": "2026-06-08T13:18:15.063Z"
+    },
+    {
+      "value": "CLINICA MEDICA",
+      "text": "CLINICA MEDICA",
+      "source": "xhr",
+      "term": "CLI",
+      "capturedAt": "2026-06-08T13:18:15.063Z"
+    },
+    {
+      "value": "CONSULTAS MEDICAS",
+      "text": "CONSULTAS MEDICAS",
+      "source": "xhr",
+      "term": "MED",
+      "capturedAt": "2026-06-08T13:19:55.641Z"
+    },
+    {
+      "value": "DERMATOLOGIA",
+      "text": "DERMATOLOGIA",
+      "source": "xhr",
+      "term": "DER",
+      "capturedAt": "2026-06-08T13:18:19.527Z"
+    },
+    {
+      "value": "DERMATOLOGIA PEDIATRICA",
+      "text": "DERMATOLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "DER",
+      "capturedAt": "2026-06-08T13:18:19.527Z"
+    },
+    {
+      "value": "DIABETES",
+      "text": "DIABETES",
+      "source": "xhr",
+      "term": "DIA",
+      "capturedAt": "2026-06-08T13:18:26.147Z"
+    },
+    {
+      "value": "DIAGNOSTICO POR IMAGENES",
+      "text": "DIAGNOSTICO POR IMAGENES",
+      "source": "xhr",
+      "term": "DIA",
+      "capturedAt": "2026-06-08T13:18:26.147Z"
+    },
+    {
+      "value": "DIAGNOSTICO POR IMAGENES -  ROS.",
+      "text": "DIAGNOSTICO POR IMAGENES -  ROS.",
+      "source": "xhr",
+      "term": "GEN",
+      "capturedAt": "2026-06-08T13:19:13.212Z"
+    },
+    {
+      "value": "ECOCARDIOGRAFIA",
+      "text": "ECOCARDIOGRAFIA",
+      "source": "xhr",
+      "term": "CAR",
+      "capturedAt": "2026-06-08T13:18:01.262Z"
+    },
+    {
+      "value": "ECODOPPLER VASCULAR PERIFERICO",
+      "text": "ECODOPPLER VASCULAR PERIFERICO",
+      "source": "xhr",
+      "term": "ECO",
+      "capturedAt": "2026-06-08T13:18:37.145Z"
+    },
+    {
+      "value": "ECOGRAFIA GENERAL",
+      "text": "ECOGRAFIA GENERAL",
+      "source": "xhr",
+      "term": "ECO",
+      "capturedAt": "2026-06-08T13:18:37.145Z"
+    },
+    {
+      "value": "ELEMENTOS LICITACION",
+      "text": "ELEMENTOS LICITACION",
+      "source": "xhr",
+      "term": "TAC",
+      "capturedAt": "2026-06-08T13:22:01.057Z"
+    },
+    {
+      "value": "ELEMENTOS MEDICOS",
+      "text": "ELEMENTOS MEDICOS",
+      "source": "xhr",
+      "term": "MED",
+      "capturedAt": "2026-06-08T13:19:55.641Z"
+    },
+    {
+      "value": "ELEMENTOS TRAUMATOLOGIA",
+      "text": "ELEMENTOS TRAUMATOLOGIA",
+      "source": "xhr",
+      "term": "TRA",
+      "capturedAt": "2026-06-08T13:22:07.614Z"
+    },
+    {
+      "value": "EMERGENCIA Y TRASLADO",
+      "text": "EMERGENCIA Y TRASLADO",
+      "source": "xhr",
+      "term": "TRA",
+      "capturedAt": "2026-06-08T13:22:07.614Z"
+    },
+    {
+      "value": "ENDOCRINOLOGIA",
+      "text": "ENDOCRINOLOGIA",
+      "source": "xhr",
+      "term": "END",
+      "capturedAt": "2026-06-08T13:18:41.807Z"
+    },
+    {
+      "value": "ENDOCRINOLOGIA PEDIATRICA",
+      "text": "ENDOCRINOLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "END",
+      "capturedAt": "2026-06-08T13:18:41.807Z"
+    },
+    {
+      "value": "ENDOCRINOLOGIA Y NUTRICION",
+      "text": "ENDOCRINOLOGIA Y NUTRICION",
+      "source": "xhr",
+      "term": "END",
+      "capturedAt": "2026-06-08T13:18:41.808Z"
+    },
+    {
+      "value": "ENFERMEDADES DE LA NUTRICION",
+      "text": "ENFERMEDADES DE LA NUTRICION",
+      "source": "xhr",
+      "term": "MED",
+      "capturedAt": "2026-06-08T13:19:55.641Z"
+    },
+    {
+      "value": "FISIATRIA",
+      "text": "FISIATRIA",
+      "source": "xhr",
+      "term": "FIS",
+      "capturedAt": "2026-06-08T13:18:51.333Z"
+    },
+    {
+      "value": "FLEBOLOGIA Y LINFOLOGIA",
+      "text": "FLEBOLOGIA Y LINFOLOGIA",
+      "source": "xhr",
+      "term": "INF",
+      "capturedAt": "2026-06-08T13:19:34.576Z"
+    },
+    {
+      "value": "FONOAUDIOLOGIA",
+      "text": "FONOAUDIOLOGIA",
+      "source": "xhr",
+      "term": "FON",
+      "capturedAt": "2026-06-08T13:18:58.208Z"
+    },
+    {
+      "value": "GASTROENTEROLOGIA",
+      "text": "GASTROENTEROLOGIA",
+      "source": "xhr",
+      "term": "GAS",
+      "capturedAt": "2026-06-08T13:19:05.476Z"
+    },
+    {
+      "value": "GASTROENTEROLOGIA PEDIATRICA",
+      "text": "GASTROENTEROLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "GAS",
+      "capturedAt": "2026-06-08T13:19:05.476Z"
+    },
+    {
+      "value": "GENETICA MEDICA",
+      "text": "GENETICA MEDICA",
+      "source": "xhr",
+      "term": "GENETICA",
+      "capturedAt": "2026-06-08T13:19:15.743Z"
+    },
+    {
+      "value": "GINECOLOGIA",
+      "text": "GINECOLOGIA",
+      "source": "xhr",
+      "term": "ECO",
+      "capturedAt": "2026-06-08T13:18:37.145Z"
+    },
+    {
+      "value": "GINECOLOGIA CLINICA",
+      "text": "GINECOLOGIA CLINICA",
+      "source": "xhr",
+      "term": "CLI",
+      "capturedAt": "2026-06-08T13:18:15.063Z"
+    },
+    {
+      "value": "GINECOLOGIA Y OBSTETRICIA",
+      "text": "GINECOLOGIA Y OBSTETRICIA",
+      "source": "xhr",
+      "term": "GIN",
+      "capturedAt": "2026-06-08T13:19:17.773Z"
+    },
+    {
+      "value": "HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD",
+      "text": "HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD",
+      "source": "xhr",
+      "term": "CAR",
+      "capturedAt": "2026-06-08T13:18:01.262Z"
+    },
+    {
+      "value": "HABILITACION ECOCARDIOGRAFIA NIVEL A",
+      "text": "HABILITACION ECOCARDIOGRAFIA NIVEL A",
+      "source": "xhr",
+      "term": "TAC",
+      "capturedAt": "2026-06-08T13:22:01.057Z"
+    },
+    {
+      "value": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1",
+      "text": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1",
+      "source": "xhr",
+      "term": "TAC",
+      "capturedAt": "2026-06-08T13:22:01.058Z"
+    },
+    {
+      "value": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1-B2",
+      "text": "HABILITACION ECOCARDIOGRAFIA NIVEL A-B1-B2",
+      "source": "xhr",
+      "term": "TAC",
+      "capturedAt": "2026-06-08T13:22:01.058Z"
+    },
+    {
+      "value": "HABILITACION ECODOPPLER VASCULAR PERIFERICO",
+      "text": "HABILITACION ECODOPPLER VASCULAR PERIFERICO",
+      "source": "xhr",
+      "term": "ODO",
+      "capturedAt": "2026-06-08T13:20:36.182Z"
+    },
+    {
+      "value": "HABILITACION ECOGRAFIA EN SU ESPECIALIDAD",
+      "text": "HABILITACION ECOGRAFIA EN SU ESPECIALIDAD",
+      "source": "xhr",
+      "term": "ECOGRAFIA",
+      "capturedAt": "2026-06-08T13:18:39.745Z"
+    },
+    {
+      "value": "HABILITACION ECOGRAFIA GENERAL",
+      "text": "HABILITACION ECOGRAFIA GENERAL",
+      "source": "xhr",
+      "term": "ECOGRAFIA",
+      "capturedAt": "2026-06-08T13:18:39.745Z"
+    },
+    {
+      "value": "HABILITACION EN ECOGRAFIA OCULAR",
+      "text": "HABILITACION EN ECOGRAFIA OCULAR",
+      "source": "xhr",
+      "term": "ECOGRAFIA",
+      "capturedAt": "2026-06-08T13:18:39.745Z"
+    },
+    {
+      "value": "HEMATOLOGIA",
+      "text": "HEMATOLOGIA",
+      "source": "xhr",
+      "term": "HEM",
+      "capturedAt": "2026-06-08T13:19:24.775Z"
+    },
+    {
+      "value": "HEMATOLOGIA PEDIATRICA",
+      "text": "HEMATOLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "HEM",
+      "capturedAt": "2026-06-08T13:19:24.775Z"
+    },
+    {
+      "value": "INFECTOLOGIA",
+      "text": "INFECTOLOGIA",
+      "source": "xhr",
+      "term": "INF",
+      "capturedAt": "2026-06-08T13:19:34.576Z"
+    },
+    {
+      "value": "INFECTOLOGIA PEDIATRICA",
+      "text": "INFECTOLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "INF",
+      "capturedAt": "2026-06-08T13:19:34.576Z"
+    },
+    {
+      "value": "KINESIOLOGIA",
+      "text": "KINESIOLOGIA",
+      "source": "xhr",
+      "term": "KIN",
+      "capturedAt": "2026-06-08T13:19:39.509Z"
+    },
+    {
+      "value": "KINESIOLOGIA - CG",
+      "text": "KINESIOLOGIA - CG",
+      "source": "xhr",
+      "term": "KIN",
+      "capturedAt": "2026-06-08T13:19:39.509Z"
+    },
+    {
+      "value": "MEDICA",
+      "text": "MEDICA",
+      "source": "xhr",
+      "term": "MEDICA",
+      "capturedAt": "2026-06-08T13:19:57.969Z"
+    },
+    {
+      "value": "MEDICA CIRUJANA",
+      "text": "MEDICA CIRUJANA",
+      "source": "xhr",
+      "term": "ANA",
+      "capturedAt": "2026-06-08T13:17:54.457Z"
+    },
+    {
+      "value": "MEDICINA DE EMERGENCIAS Y DESASTRES",
+      "text": "MEDICINA DE EMERGENCIAS Y DESASTRES",
+      "source": "xhr",
+      "term": "MEDICINA",
+      "capturedAt": "2026-06-08T13:20:00.489Z"
+    },
+    {
+      "value": "MEDICINA DEL DEPORTE",
+      "text": "MEDICINA DEL DEPORTE",
+      "source": "xhr",
+      "term": "MEDICINA",
+      "capturedAt": "2026-06-08T13:20:00.489Z"
+    },
+    {
+      "value": "MEDICINA DEL TRABAJO",
+      "text": "MEDICINA DEL TRABAJO",
+      "source": "xhr",
+      "term": "MEDICINA",
+      "capturedAt": "2026-06-08T13:20:00.489Z"
+    },
+    {
+      "value": "MEDICINA GENERAL",
+      "text": "MEDICINA GENERAL",
+      "source": "xhr",
+      "term": "MEDICINA",
+      "capturedAt": "2026-06-08T13:20:00.489Z"
+    },
+    {
+      "value": "MEDICINA GENERALISTA Y  DE FAMILIA",
+      "text": "MEDICINA GENERALISTA Y  DE FAMILIA",
+      "source": "xhr",
+      "term": "MEDICINA",
+      "capturedAt": "2026-06-08T13:20:00.489Z"
+    },
+    {
+      "value": "MEDICINA INTERNA",
+      "text": "MEDICINA INTERNA",
+      "source": "xhr",
+      "term": "TER",
+      "capturedAt": "2026-06-08T13:22:03.105Z"
+    },
+    {
+      "value": "MEDICINA TRANSFUSIONAL",
+      "text": "MEDICINA TRANSFUSIONAL",
+      "source": "xhr",
+      "term": "TRA",
+      "capturedAt": "2026-06-08T13:22:07.614Z"
+    },
+    {
+      "value": "MEDICO RADIOTERAPEUTA",
+      "text": "MEDICO RADIOTERAPEUTA",
+      "source": "xhr",
+      "term": "RAD",
+      "capturedAt": "2026-06-08T13:21:29.223Z"
+    },
+    {
+      "value": "NEFROLOGIA",
+      "text": "NEFROLOGIA",
+      "source": "xhr",
+      "term": "NEF",
+      "capturedAt": "2026-06-08T13:20:02.563Z"
+    },
+    {
+      "value": "NEFROLOGIA PEDIATRICA",
+      "text": "NEFROLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "NEF",
+      "capturedAt": "2026-06-08T13:20:02.563Z"
+    },
+    {
+      "value": "NEUMONOLOGIA",
+      "text": "NEUMONOLOGIA",
+      "source": "xhr",
+      "term": "NEU",
+      "capturedAt": "2026-06-08T13:20:09.540Z"
+    },
+    {
+      "value": "NEUMONOLOGIA PEDIATRICA",
+      "text": "NEUMONOLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "NEU",
+      "capturedAt": "2026-06-08T13:20:09.540Z"
+    },
+    {
+      "value": "NEUMONOLOGIA Y TISIOLOGIA",
+      "text": "NEUMONOLOGIA Y TISIOLOGIA",
+      "source": "xhr",
+      "term": "NEU",
+      "capturedAt": "2026-06-08T13:20:09.540Z"
+    },
+    {
+      "value": "NEUROCIRUGIA",
+      "text": "NEUROCIRUGIA",
+      "source": "xhr",
+      "term": "NEU",
+      "capturedAt": "2026-06-08T13:20:09.540Z"
+    },
+    {
+      "value": "NEUROCIRUGIA PEDIATRICA",
+      "text": "NEUROCIRUGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "NEU",
+      "capturedAt": "2026-06-08T13:20:09.540Z"
+    },
+    {
+      "value": "NEUROLOGIA",
+      "text": "NEUROLOGIA",
+      "source": "xhr",
+      "term": "NEURO",
+      "capturedAt": "2026-06-08T13:20:16.893Z"
+    },
+    {
+      "value": "NEUROLOGIA PEDIATRICA",
+      "text": "NEUROLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "NEURO",
+      "capturedAt": "2026-06-08T13:20:16.893Z"
+    },
+    {
+      "value": "NEUROSIQUIATRIA",
+      "text": "NEUROSIQUIATRIA",
+      "source": "xhr",
+      "term": "NEURO",
+      "capturedAt": "2026-06-08T13:20:16.893Z"
+    },
+    {
+      "value": "NUTRICION",
+      "text": "NUTRICION",
+      "source": "xhr",
+      "term": "NUT",
+      "capturedAt": "2026-06-08T13:20:24.545Z"
+    },
+    {
+      "value": "NUTRICION PEDIATRICA",
+      "text": "NUTRICION PEDIATRICA",
+      "source": "xhr",
+      "term": "NUT",
+      "capturedAt": "2026-06-08T13:20:24.545Z"
+    },
+    {
+      "value": "NUTRICIONISTA",
+      "text": "NUTRICIONISTA",
+      "source": "xhr",
+      "term": "NUT",
+      "capturedAt": "2026-06-08T13:20:24.545Z"
+    },
+    {
+      "value": "OBSTETRICIA",
+      "text": "OBSTETRICIA",
+      "source": "xhr",
+      "term": "OBS",
+      "capturedAt": "2026-06-08T13:20:29.175Z"
+    },
+    {
+      "value": "ODONTOLOGIA",
+      "text": "ODONTOLOGIA",
+      "source": "xhr",
+      "term": "ODO",
+      "capturedAt": "2026-06-08T13:20:36.182Z"
+    },
+    {
+      "value": "ODONTOLOGIA PME",
+      "text": "ODONTOLOGIA PME",
+      "source": "xhr",
+      "term": "ODO",
+      "capturedAt": "2026-06-08T13:20:36.182Z"
+    },
+    {
+      "value": "OFTALMOLOGIA",
+      "text": "OFTALMOLOGIA",
+      "source": "xhr",
+      "term": "OFT",
+      "capturedAt": "2026-06-08T13:20:43.181Z"
+    },
+    {
+      "value": "ONCOLOGIA",
+      "text": "ONCOLOGIA",
+      "source": "xhr",
+      "term": "ONC",
+      "capturedAt": "2026-06-08T13:20:50.257Z"
+    },
+    {
+      "value": "ONCOLOGIA MEDICA",
+      "text": "ONCOLOGIA MEDICA",
+      "source": "xhr",
+      "term": "ONC",
+      "capturedAt": "2026-06-08T13:20:50.257Z"
+    },
+    {
+      "value": "ONCOLOGIA PEDIATRICA",
+      "text": "ONCOLOGIA PEDIATRICA",
+      "source": "xhr",
+      "term": "ONC",
+      "capturedAt": "2026-06-08T13:20:50.257Z"
+    },
+    {
+      "value": "ONCOLOGIA QUIRURGICA",
+      "text": "ONCOLOGIA QUIRURGICA",
+      "source": "xhr",
+      "term": "ONC",
+      "capturedAt": "2026-06-08T13:20:50.257Z"
+    },
+    {
+      "value": "ORTOPEDIA BLANDA",
+      "text": "ORTOPEDIA BLANDA",
+      "source": "xhr",
+      "term": "ORT",
+      "capturedAt": "2026-06-08T13:20:59.108Z"
+    },
+    {
+      "value": "ORTOPEDIA Y TRAUMATOLOGIA",
+      "text": "ORTOPEDIA Y TRAUMATOLOGIA",
+      "source": "xhr",
+      "term": "ORT",
+      "capturedAt": "2026-06-08T13:20:59.108Z"
+    },
+    {
+      "value": "ORTOPEDIA Y TRAUMATOLOGIA INFANTIL",
+      "text": "ORTOPEDIA Y TRAUMATOLOGIA INFANTIL",
+      "source": "xhr",
+      "term": "INF",
+      "capturedAt": "2026-06-08T13:19:34.576Z"
+    },
+    {
+      "value": "OTORRINOLARINGOLOGIA",
+      "text": "OTORRINOLARINGOLOGIA",
+      "source": "xhr",
+      "term": "OTO",
+      "capturedAt": "2026-06-08T13:21:03.789Z"
+    },
+    {
+      "value": "OXIGENOTERAPIA",
+      "text": "OXIGENOTERAPIA",
+      "source": "xhr",
+      "term": "TERAPIA",
+      "capturedAt": "2026-06-08T13:22:05.531Z"
+    },
+    {
+      "value": "PEDIATRIA",
+      "text": "PEDIATRIA",
+      "source": "xhr",
+      "term": "PEDIATRIA",
+      "capturedAt": "2026-06-08T13:21:10.941Z"
+    },
+    {
+      "value": "PODOLOGÍA",
+      "text": "PODOLOGÍA",
+      "source": "xhr",
+      "term": "DOL",
+      "capturedAt": "2026-06-08T13:18:32.871Z"
+    },
+    {
+      "value": "PSICOLOGO",
+      "text": "PSICOLOGO",
+      "source": "xhr",
+      "term": "PSI",
+      "capturedAt": "2026-06-08T13:21:12.993Z"
+    },
+    {
+      "value": "PSICOONCOLOGIA",
+      "text": "PSICOONCOLOGIA",
+      "source": "xhr",
+      "term": "ONC",
+      "capturedAt": "2026-06-08T13:20:50.257Z"
+    },
+    {
+      "value": "PSICOPEDAGOGIA",
+      "text": "PSICOPEDAGOGIA",
+      "source": "xhr",
+      "term": "PSI",
+      "capturedAt": "2026-06-08T13:21:12.993Z"
+    },
+    {
+      "value": "PSICOPEDAGOGO - CG",
+      "text": "PSICOPEDAGOGO - CG",
+      "source": "xhr",
+      "term": "PSI",
+      "capturedAt": "2026-06-08T13:21:12.993Z"
+    },
+    {
+      "value": "PSIQUIATRIA",
+      "text": "PSIQUIATRIA",
+      "source": "xhr",
+      "term": "PSI",
+      "capturedAt": "2026-06-08T13:21:12.993Z"
+    },
+    {
+      "value": "PSIQUIATRIA INFANTO JUVENIL",
+      "text": "PSIQUIATRIA INFANTO JUVENIL",
+      "source": "xhr",
+      "term": "PSIQ",
+      "capturedAt": "2026-06-08T13:21:19.983Z"
+    },
+    {
+      "value": "RADIODIAGNOSTICO",
+      "text": "RADIODIAGNOSTICO",
+      "source": "xhr",
+      "term": "RAD",
+      "capturedAt": "2026-06-08T13:21:29.223Z"
+    },
+    {
+      "value": "RADIOLOGIA",
+      "text": "RADIOLOGIA",
+      "source": "xhr",
+      "term": "RAD",
+      "capturedAt": "2026-06-08T13:21:29.223Z"
+    },
+    {
+      "value": "RADIOLOGIA - GREMIAL MEDICA",
+      "text": "RADIOLOGIA - GREMIAL MEDICA",
+      "source": "xhr",
+      "term": "RAD",
+      "capturedAt": "2026-06-08T13:21:29.223Z"
+    },
+    {
+      "value": "RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR",
+      "text": "RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR",
+      "source": "xhr",
+      "term": "RAD",
+      "capturedAt": "2026-06-08T13:21:29.223Z"
+    },
+    {
+      "value": "RADIOTERAPIA",
+      "text": "RADIOTERAPIA",
+      "source": "xhr",
+      "term": "RADIOTERAPIA",
+      "capturedAt": "2026-06-08T13:21:37.035Z"
+    },
+    {
+      "value": "REHABILITACION - DISCAPACIDAD",
+      "text": "REHABILITACION - DISCAPACIDAD",
+      "source": "xhr",
+      "term": "REH",
+      "capturedAt": "2026-06-08T13:21:39.090Z"
+    },
+    {
+      "value": "REHABILITACION NEUROLOGICA",
+      "text": "REHABILITACION NEUROLOGICA",
+      "source": "xhr",
+      "term": "REH",
+      "capturedAt": "2026-06-08T13:21:39.090Z"
+    },
+    {
+      "value": "REUMATOLOGIA",
+      "text": "REUMATOLOGIA",
+      "source": "xhr",
+      "term": "REU",
+      "capturedAt": "2026-06-08T13:21:48.967Z"
+    },
+    {
+      "value": "SANATORIOS",
+      "text": "SANATORIOS",
+      "source": "xhr",
+      "term": "ANA",
+      "capturedAt": "2026-06-08T13:17:54.457Z"
+    },
+    {
+      "value": "SOPORTE NUTRICIONAL",
+      "text": "SOPORTE NUTRICIONAL",
+      "source": "xhr",
+      "term": "ORT",
+      "capturedAt": "2026-06-08T13:20:59.108Z"
+    },
+    {
+      "value": "TERAPIA INTENSIVA",
+      "text": "TERAPIA INTENSIVA",
+      "source": "xhr",
+      "term": "TERAPIA",
+      "capturedAt": "2026-06-08T13:22:05.531Z"
+    },
+    {
+      "value": "TERAPIA INTENSIVA PEDIATRICA",
+      "text": "TERAPIA INTENSIVA PEDIATRICA",
+      "source": "xhr",
+      "term": "TERAPIA",
+      "capturedAt": "2026-06-08T13:22:05.531Z"
+    },
+    {
+      "value": "TOCOGINECOLOGIA",
+      "text": "TOCOGINECOLOGIA",
+      "source": "xhr",
+      "term": "GIN",
+      "capturedAt": "2026-06-08T13:19:17.774Z"
+    },
+    {
+      "value": "TRAUMATOLOGIA Y ORTOPEDIA",
+      "text": "TRAUMATOLOGIA Y ORTOPEDIA",
+      "source": "xhr",
+      "term": "ORTOPEDIA",
+      "capturedAt": "2026-06-08T13:21:01.716Z"
+    },
+    {
+      "value": "TRAUMATOLOGO",
+      "text": "TRAUMATOLOGO",
+      "source": "xhr",
+      "term": "TRAU",
+      "capturedAt": "2026-06-08T13:22:09.738Z"
+    },
+    {
+      "value": "UROLOGIA",
+      "text": "UROLOGIA",
+      "source": "xhr",
+      "term": "UROLOGIA",
+      "capturedAt": "2026-06-08T13:22:19.631Z"
+    }
+  ],
+  "validationsTotal": 12,
+  "validations": [
+    {
+      "code": "0",
+      "text": "",
+      "raw": "[\"0\",\"\",\"[]\"]",
+      "term": "ALO",
+      "capturedAt": "2026-06-08T13:17:46.489Z"
+    },
+    {
+      "code": "152",
+      "text": "ANESTESIA, ANALGESIA Y REANIMACION",
+      "raw": "[\"152\",\"ANESTESIA, ANALGESIA Y REANIMACION\",\"[]\"]",
+      "term": "ANESTESIA",
+      "capturedAt": "2026-06-08T13:17:59.233Z"
+    },
+    {
+      "code": "106",
+      "text": "DIABETES",
+      "raw": "[\"106\",\"DIABETES\",\"[]\"]",
+      "term": "DIAB",
+      "capturedAt": "2026-06-08T13:18:28.312Z"
+    },
+    {
+      "code": "38",
+      "text": "FISIATRIA",
+      "raw": "[\"38\",\"FISIATRIA\",\"[]\"]",
+      "term": "FIS",
+      "capturedAt": "2026-06-08T13:18:51.333Z"
+    },
+    {
+      "code": "12",
+      "text": "FONOAUDIOLOGIA",
+      "raw": "[\"12\",\"FONOAUDIOLOGIA\",\"[]\"]",
+      "term": "FONOAUDIOLOGIA",
+      "capturedAt": "2026-06-08T13:19:03.427Z"
+    },
+    {
+      "code": "173",
+      "text": "GENETICA MEDICA",
+      "raw": "[\"173\",\"GENETICA MEDICA\",\"[]\"]",
+      "term": "GENETICA",
+      "capturedAt": "2026-06-08T13:19:15.744Z"
+    },
+    {
+      "code": "192",
+      "text": "MEDICINA DE EMERGENCIAS Y DESASTRES",
+      "raw": "[\"192\",\"MEDICINA DE EMERGENCIAS Y DESASTRES\",\"[]\"]",
+      "term": "RES",
+      "capturedAt": "2026-06-08T13:21:44.220Z"
+    },
+    {
+      "code": "3",
+      "text": "OFTALMOLOGIA",
+      "raw": "[\"3\",\"OFTALMOLOGIA\",\"[]\"]",
+      "term": "OFT",
+      "capturedAt": "2026-06-08T13:20:43.182Z"
+    },
+    {
+      "code": "22",
+      "text": "OTORRINOLARINGOLOGIA",
+      "raw": "[\"22\",\"OTORRINOLARINGOLOGIA\",\"[]\"]",
+      "term": "OTO",
+      "capturedAt": "2026-06-08T13:21:03.789Z"
+    },
+    {
+      "code": "29",
+      "text": "PEDIATRIA",
+      "raw": "[\"29\",\"PEDIATRIA\",\"[]\"]",
+      "term": "PEDIATRIA",
+      "capturedAt": "2026-06-08T13:21:10.941Z"
+    },
+    {
+      "code": "24",
+      "text": "PODOLOGÍA",
+      "raw": "[\"24\",\"PODOLOGÍA\",\"[]\"]",
+      "term": "DOL",
+      "capturedAt": "2026-06-08T13:18:32.871Z"
+    },
+    {
+      "code": "23",
+      "text": "REUMATOLOGIA",
+      "raw": "[\"23\",\"REUMATOLOGIA\",\"[]\"]",
+      "term": "REU",
+      "capturedAt": "2026-06-08T13:21:48.967Z"
+    }
+  ],
+  "logs": [
+    {
+      "at": "2026-06-08T13:17:46.489Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?1f32e0473c7b8cca7f8fad42a22d189b5e6ae240b2f379d27fcb4942e8972b1e,gx-no-cache=1780924666471",
+      "status": 200,
+      "term": "ALO",
+      "optionsCount": 0,
+      "validation": {
+        "code": "0",
+        "text": "",
+        "raw": "[\"0\",\"\",\"[]\"]"
+      },
+      "responsePreview": "[\"0\",\"\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:17:47.448Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e709ee99926f7d0a4baf8426016c89fe1e,gx-no-cache=1780924667421",
+      "status": 200,
+      "term": "ALO",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ALOJAMIENTO\",d:\"ALOJAMIENTO\"},{c:\"ALOJAMIENTO- FUNDACION MATEO ESQUIVO\",d:\"ALOJAMIENTO- FUNDACION MATEO ESQUIVO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:17:49.618Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e779475b4d4a10c9eed48442b1eeafef2c,gx-no-cache=1780924669580",
+      "status": 200,
+      "term": "ALOJ",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ALOJAMIENTO\",d:\"ALOJAMIENTO\"},{c:\"ALOJAMIENTO- FUNDACION MATEO ESQUIVO\",d:\"ALOJAMIENTO- FUNDACION MATEO ESQUIVO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:17:52.390Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b0d6ff9a760c95ac92ade1ba3c05b5334230af49523f637020b4d70997e8276b,gx-no-cache=1780924672378",
+      "status": 200,
+      "term": "ALOJAMIENTO",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ALOJAMIENTO\",d:\"ALOJAMIENTO\"},{c:\"ALOJAMIENTO- FUNDACION MATEO ESQUIVO\",d:\"ALOJAMIENTO- FUNDACION MATEO ESQUIVO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:17:54.457Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7674a731cbb935fb7b20f4b9a5d2252b9,gx-no-cache=1780924674434",
+      "status": 200,
+      "term": "ANA",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ANATOMIA PATOLOGICA\",d:\"ANATOMIA PATOLOGICA\"},{c:\"ANESTESIA, ANALGESIA Y REANIMACION\",d:\"ANESTESIA, ANALGESIA Y REANIMACION\"},{c:\"MEDICA CIRUJANA\",d:\"MEDICA CIRUJANA\"},{c:\"SANATORIOS\",d:\"SANATORIOS\"})))"
+    },
+    {
+      "at": "2026-06-08T13:17:56.585Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e79ca845400e571b0e4ddec139d524ee3f,gx-no-cache=1780924676573",
+      "status": 200,
+      "term": "ANES",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ANESTESIA, ANALGESIA Y REANIMACION\",d:\"ANESTESIA, ANALGESIA Y REANIMACION\"},{c:\"ANESTESIOLOGIA\",d:\"ANESTESIOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:17:59.233Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7680fc5c5fb7d1e618f4425f621716a5e2a5c0650efa27dd737883f81b517318b,gx-no-cache=1780924679190",
+      "status": 200,
+      "term": "ANESTESIA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ANESTESIA, ANALGESIA Y REANIMACION\",d:\"ANESTESIA, ANALGESIA Y REANIMACION\"})))"
+    },
+    {
+      "at": "2026-06-08T13:17:59.233Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7bec9d40f80b9cb0e87a6afa5421cd111a4a628d5a2901e6ee606c79333e635a7ed139ec0e67b0722d2880382b49f16bce4486add1ef118b2e8a447a906253dfd,gx-no-cache=1780924679207",
+      "status": 200,
+      "term": "ANESTESIA",
+      "optionsCount": 0,
+      "validation": {
+        "code": "152",
+        "text": "ANESTESIA, ANALGESIA Y REANIMACION",
+        "raw": "[\"152\",\"ANESTESIA, ANALGESIA Y REANIMACION\",\"[]\"]"
+      },
+      "responsePreview": "[\"152\",\"ANESTESIA, ANALGESIA Y REANIMACION\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:18:01.262Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e78b119620207a6d87b419e2065903176c,gx-no-cache=1780924681250",
+      "status": 200,
+      "term": "CAR",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CARDIOLOGIA\",d:\"CARDIOLOGIA\"},{c:\"CARDIOLOGIA PEDIATRICA\",d:\"CARDIOLOGIA PEDIATRICA\"},{c:\"CIRUGIA CARDIOVASCULAR\",d:\"CIRUGIA CARDIOVASCULAR\"},{c:\"ECOCARDIOGRAFIA\",d:\"ECOCARDIOGRAFIA\"},{c:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\",d:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:03.405Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b9c99fa56f68852afb8b192aa4997b65,gx-no-cache=1780924683392",
+      "status": 200,
+      "term": "CARD",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CARDIOLOGIA\",d:\"CARDIOLOGIA\"},{c:\"CARDIOLOGIA PEDIATRICA\",d:\"CARDIOLOGIA PEDIATRICA\"},{c:\"CIRUGIA CARDIOVASCULAR\",d:\"CIRUGIA CARDIOVASCULAR\"},{c:\"ECOCARDIOGRAFIA\",d:\"ECOCARDIOGRAFIA\"},{c:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\",d:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:05.742Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e78359677e047a5a4f96167729bd68d25a,gx-no-cache=1780924685729",
+      "status": 200,
+      "term": "CARDIO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CARDIOLOGIA\",d:\"CARDIOLOGIA\"},{c:\"CARDIOLOGIA PEDIATRICA\",d:\"CARDIOLOGIA PEDIATRICA\"},{c:\"CIRUGIA CARDIOVASCULAR\",d:\"CIRUGIA CARDIOVASCULAR\"},{c:\"ECOCARDIOGRAFIA\",d:\"ECOCARDIOGRAFIA\"},{c:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\",d:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:08.538Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e78359677e047a5a4f96167729bd68d25ae442e343df04e2c7a07652fcdf411e2b,gx-no-cache=1780924688526",
+      "status": 200,
+      "term": "CARDIOLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CARDIOLOGIA\",d:\"CARDIOLOGIA\"},{c:\"CARDIOLOGIA PEDIATRICA\",d:\"CARDIOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:10.604Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7a84475343151f6355116ab5e7dc0e55b,gx-no-cache=1780924690582",
+      "status": 200,
+      "term": "CIR",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CIRUGIA\",d:\"CIRUGIA\"},{c:\"CIRUGIA BARIATRICA\",d:\"CIRUGIA BARIATRICA\"},{c:\"CIRUGIA BUCO MAXILO FACIAL\",d:\"CIRUGIA BUCO MAXILO FACIAL\"},{c:\"CIRUGIA CARDIOVASCULAR\",d:\"CIRUGIA CARDIOVASCULAR\"},{c:\"CIRUGIA DE APARATO DIGESTIVO\",d:\"CIRUGIA DE APARATO DIGESTIVO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:13.016Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e75e55f7abe02c96831f1868e0d2a05017f6649c501c719db41196bc0730f0ae56,gx-no-cache=1780924693002",
+      "status": 200,
+      "term": "CIRUGIA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CIRUGIA\",d:\"CIRUGIA\"},{c:\"CIRUGIA BARIATRICA\",d:\"CIRUGIA BARIATRICA\"},{c:\"CIRUGIA BUCO MAXILO FACIAL\",d:\"CIRUGIA BUCO MAXILO FACIAL\"},{c:\"CIRUGIA CARDIOVASCULAR\",d:\"CIRUGIA CARDIOVASCULAR\"},{c:\"CIRUGIA DE APARATO DIGESTIVO\",d:\"CIRUGIA DE APARATO DIGESTIVO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:15.063Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7c3a2b162cc763913a7e8cdacec3735e5,gx-no-cache=1780924695048",
+      "status": 200,
+      "term": "CLI",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CLINICA GENERAL\",d:\"CLINICA GENERAL\"},{c:\"CLINICA MEDICA\",d:\"CLINICA MEDICA\"},{c:\"GINECOLOGIA CLINICA\",d:\"GINECOLOGIA CLINICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:17.481Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7c3230a92f536b671c6d810ee7bffdc5ef6649c501c719db41196bc0730f0ae56,gx-no-cache=1780924697468",
+      "status": 200,
+      "term": "CLINICA",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CLINICA GENERAL\",d:\"CLINICA GENERAL\"},{c:\"CLINICA MEDICA\",d:\"CLINICA MEDICA\"},{c:\"GINECOLOGIA CLINICA\",d:\"GINECOLOGIA CLINICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:19.527Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7e11d77e36f8c980ee68104319e2f193b,gx-no-cache=1780924699515",
+      "status": 200,
+      "term": "DER",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DERMATOLOGIA\",d:\"DERMATOLOGIA\"},{c:\"DERMATOLOGIA PEDIATRICA\",d:\"DERMATOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:21.678Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7ece849dcb1bf9c5d2bdc2b722146db32,gx-no-cache=1780924701659",
+      "status": 200,
+      "term": "DERM",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DERMATOLOGIA\",d:\"DERMATOLOGIA\"},{c:\"DERMATOLOGIA PEDIATRICA\",d:\"DERMATOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:24.097Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e782a81495950f9ba7ee210a8ca29b3af445ecf77b1657015c7c24ff11bc9e1d17,gx-no-cache=1780924704086",
+      "status": 200,
+      "term": "DERMATO",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DERMATOLOGIA\",d:\"DERMATOLOGIA\"},{c:\"DERMATOLOGIA PEDIATRICA\",d:\"DERMATOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:26.147Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e738d112831f65ebb7cdf3e9099546aa77,gx-no-cache=1780924706133",
+      "status": 200,
+      "term": "DIA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CARDIOLOGIA PEDIATRICA\",d:\"CARDIOLOGIA PEDIATRICA\"},{c:\"CITODIAGNOSTICO\",d:\"CITODIAGNOSTICO\"},{c:\"DERMATOLOGIA PEDIATRICA\",d:\"DERMATOLOGIA PEDIATRICA\"},{c:\"DIABETES\",d:\"DIABETES\"},{c:\"DIAGNOSTICO POR IMAGENES\",d:\"DIAGNOSTICO POR IMAGENES\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:28.311Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7d9455ff9eb08c5dd5fc66925e7c9c761,gx-no-cache=1780924708272",
+      "status": 200,
+      "term": "DIAB",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DIABETES\",d:\"DIABETES\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:28.312Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7a6490d4df3b88933326ba36f9b9c810b4c9db846503287604d47ef163f131543,gx-no-cache=1780924708295",
+      "status": 200,
+      "term": "DIAB",
+      "optionsCount": 0,
+      "validation": {
+        "code": "106",
+        "text": "DIABETES",
+        "raw": "[\"106\",\"DIABETES\",\"[]\"]"
+      },
+      "responsePreview": "[\"106\",\"DIABETES\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:18:30.807Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7edd16f298543f368c4fec2eae8db08eb349fb4f3a97bb519019b275bdc752d50,gx-no-cache=1780924710795",
+      "status": 200,
+      "term": "DIABETES",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"DIABETES\",d:\"DIABETES\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:32.871Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e714d32e45376cc9c430e3fab7307f0ce8,gx-no-cache=1780924712847",
+      "status": 200,
+      "term": "DOL",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"PODOLOGÍA\",d:\"PODOLOGÍA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:32.871Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae758a7aa7bc82e92f0fe1751b9a2380e26dbcee47613aa14018f4f08ba54703aac,gx-no-cache=1780924712860",
+      "status": 200,
+      "term": "DOL",
+      "optionsCount": 0,
+      "validation": {
+        "code": "24",
+        "text": "PODOLOGÍA",
+        "raw": "[\"24\",\"PODOLOGÍA\",\"[]\"]"
+      },
+      "responsePreview": "[\"24\",\"PODOLOGÍA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:18:37.145Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e76e95d07017c83f67520c4aff63e17ea6,gx-no-cache=1780924717130",
+      "status": 200,
+      "term": "ECO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ECOCARDIOGRAFIA\",d:\"ECOCARDIOGRAFIA\"},{c:\"ECODOPPLER VASCULAR PERIFERICO\",d:\"ECODOPPLER VASCULAR PERIFERICO\"},{c:\"ECOGRAFIA GENERAL\",d:\"ECOGRAFIA GENERAL\"},{c:\"GINECOLOGIA\",d:\"GINECOLOGIA\"},{c:\"GINECOLOGIA CLINICA\",d:\"GINECOLOGIA CLINICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:39.745Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7046074a212f6393cba298946fc450916267249e4e1eee314e15d5ad0d00094c6,gx-no-cache=1780924719733",
+      "status": 200,
+      "term": "ECOGRAFIA",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ECOGRAFIA GENERAL\",d:\"ECOGRAFIA GENERAL\"},{c:\"HABILITACION ECOGRAFIA EN SU ESPECIALIDAD\",d:\"HABILITACION ECOGRAFIA EN SU ESPECIALIDAD\"},{c:\"HABILITACION ECOGRAFIA GENERAL\",d:\"HABILITACION ECOGRAFIA GENERAL\"},{c:\"HABILITACION EN ECOGRAFIA OCULAR\",d:\"HABILITACION EN ECOGRAFIA OCULAR\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:41.808Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e76d9bd2c3109878cedad8268c3672c67e,gx-no-cache=1780924721796",
+      "status": 200,
+      "term": "END",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ENDOCRINOLOGIA\",d:\"ENDOCRINOLOGIA\"},{c:\"ENDOCRINOLOGIA PEDIATRICA\",d:\"ENDOCRINOLOGIA PEDIATRICA\"},{c:\"ENDOCRINOLOGIA Y NUTRICION\",d:\"ENDOCRINOLOGIA Y NUTRICION\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:43.957Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7d62ec1156d44a1616baffff2694c5da4,gx-no-cache=1780924723946",
+      "status": 200,
+      "term": "ENDO",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ENDOCRINOLOGIA\",d:\"ENDOCRINOLOGIA\"},{c:\"ENDOCRINOLOGIA PEDIATRICA\",d:\"ENDOCRINOLOGIA PEDIATRICA\"},{c:\"ENDOCRINOLOGIA Y NUTRICION\",d:\"ENDOCRINOLOGIA Y NUTRICION\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:49.266Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7ff44f153c70f287e7356d49bd04d5582584116b44ac5251a6d2983069a64c7ee,gx-no-cache=1780924729253",
+      "status": 200,
+      "term": "ENDOCRINO",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ENDOCRINOLOGIA\",d:\"ENDOCRINOLOGIA\"},{c:\"ENDOCRINOLOGIA PEDIATRICA\",d:\"ENDOCRINOLOGIA PEDIATRICA\"},{c:\"ENDOCRINOLOGIA Y NUTRICION\",d:\"ENDOCRINOLOGIA Y NUTRICION\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:51.333Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7afdd8d5a050f09d1d846c6092c9ae14a,gx-no-cache=1780924731313",
+      "status": 200,
+      "term": "FIS",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"FISIATRIA\",d:\"FISIATRIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:51.333Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7790e31d6b15d42b86f5eb8dc9eab783bb6f92b04072dc1d3bf5eaa10f4a7e04b,gx-no-cache=1780924731324",
+      "status": 200,
+      "term": "FIS",
+      "optionsCount": 0,
+      "validation": {
+        "code": "38",
+        "text": "FISIATRIA",
+        "raw": "[\"38\",\"FISIATRIA\",\"[]\"]"
+      },
+      "responsePreview": "[\"38\",\"FISIATRIA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:18:56.163Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7297c398addddf43e9e3f8e4e82cd81d3242572d8bba8616f449f4708e3c84326,gx-no-cache=1780924736152",
+      "status": 200,
+      "term": "FISIATRIA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"FISIATRIA\",d:\"FISIATRIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:18:58.208Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e74642f2cd8a93787d60f86f68184bf141,gx-no-cache=1780924738198",
+      "status": 200,
+      "term": "FON",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"AUDIFONOS\",d:\"AUDIFONOS\"},{c:\"FONOAUDIOLOGIA\",d:\"FONOAUDIOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:00.350Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e75e5fb657924765aae9e06bb7481ad73e,gx-no-cache=1780924740338",
+      "status": 200,
+      "term": "FONO",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"AUDIFONOS\",d:\"AUDIFONOS\"},{c:\"FONOAUDIOLOGIA\",d:\"FONOAUDIOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:03.427Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7570d139afeb87438f0ff04b874d053f6a5959b6ba7fe6466511ea08443c5b54e,gx-no-cache=1780924743409",
+      "status": 200,
+      "term": "FONOAUDIOLOGIA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"FONOAUDIOLOGIA\",d:\"FONOAUDIOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:03.427Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7681b1e808fe7ad9ca16c2d59179e4e7ebef12633d53cf642312256336453b8cd,gx-no-cache=1780924743417",
+      "status": 200,
+      "term": "FONOAUDIOLOGIA",
+      "optionsCount": 0,
+      "validation": {
+        "code": "12",
+        "text": "FONOAUDIOLOGIA",
+        "raw": "[\"12\",\"FONOAUDIOLOGIA\",\"[]\"]"
+      },
+      "responsePreview": "[\"12\",\"FONOAUDIOLOGIA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:19:05.476Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e76fea41ae5c3f701171e236e1f7b8645a,gx-no-cache=1780924745463",
+      "status": 200,
+      "term": "GAS",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GASTROENTEROLOGIA\",d:\"GASTROENTEROLOGIA\"},{c:\"GASTROENTEROLOGIA PEDIATRICA\",d:\"GASTROENTEROLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:07.803Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e765ba5da19a0c7a18b7094c73f393f9ab,gx-no-cache=1780924747791",
+      "status": 200,
+      "term": "GASTRO",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GASTROENTEROLOGIA\",d:\"GASTROENTEROLOGIA\"},{c:\"GASTROENTEROLOGIA PEDIATRICA\",d:\"GASTROENTEROLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:11.146Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e765ba5da19a0c7a18b7094c73f393f9abcfbe0d99958ae75c66cdc725c5c3f787,gx-no-cache=1780924751135",
+      "status": 200,
+      "term": "GASTROENTEROLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GASTROENTEROLOGIA\",d:\"GASTROENTEROLOGIA\"},{c:\"GASTROENTEROLOGIA PEDIATRICA\",d:\"GASTROENTEROLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:13.212Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7de5ab7661809b3bb2813c2d6f141b07c,gx-no-cache=1780924753199",
+      "status": 200,
+      "term": "GEN",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CIRUGIA GENERAL\",d:\"CIRUGIA GENERAL\"},{c:\"CLINICA GENERAL\",d:\"CLINICA GENERAL\"},{c:\"DIAGNOSTICO POR IMAGENES\",d:\"DIAGNOSTICO POR IMAGENES\"},{c:\"DIAGNOSTICO POR IMAGENES -  ROS.\",d:\"DIAGNOSTICO POR IMAGENES -  ROS.\"},{c:\"ECOGRAFIA GENERAL\",d:\"ECOGRAFIA GENERAL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:15.743Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b2445224b042fdbb976f5afe84c0fc5af95e32ae6ff3734beb9c47b886482f8c,gx-no-cache=1780924755710",
+      "status": 200,
+      "term": "GENETICA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GENETICA MEDICA\",d:\"GENETICA MEDICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:15.744Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7e6f1091c993c9e9533ed021db43b27ed8b295b27956efe4d04a9ffbf9ea70b8d,gx-no-cache=1780924755732",
+      "status": 200,
+      "term": "GENETICA",
+      "optionsCount": 0,
+      "validation": {
+        "code": "173",
+        "text": "GENETICA MEDICA",
+        "raw": "[\"173\",\"GENETICA MEDICA\",\"[]\"]"
+      },
+      "responsePreview": "[\"173\",\"GENETICA MEDICA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:19:17.774Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7080842e287de401e2c36e3568b6bbdb2,gx-no-cache=1780924757763",
+      "status": 200,
+      "term": "GIN",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GINECOLOGIA\",d:\"GINECOLOGIA\"},{c:\"GINECOLOGIA CLINICA\",d:\"GINECOLOGIA CLINICA\"},{c:\"GINECOLOGIA Y OBSTETRICIA\",d:\"GINECOLOGIA Y OBSTETRICIA\"},{c:\"TOCOGINECOLOGIA\",d:\"TOCOGINECOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:19.934Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e74eb2d3e4d697a9dc0dbc5eb0d7758f3a,gx-no-cache=1780924759906",
+      "status": 200,
+      "term": "GINE",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GINECOLOGIA\",d:\"GINECOLOGIA\"},{c:\"GINECOLOGIA CLINICA\",d:\"GINECOLOGIA CLINICA\"},{c:\"GINECOLOGIA Y OBSTETRICIA\",d:\"GINECOLOGIA Y OBSTETRICIA\"},{c:\"TOCOGINECOLOGIA\",d:\"TOCOGINECOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:22.718Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7f63bf82e9495c1e4b429de83dbc8f29ee442e343df04e2c7a07652fcdf411e2b,gx-no-cache=1780924762705",
+      "status": 200,
+      "term": "GINECOLOGIA",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GINECOLOGIA\",d:\"GINECOLOGIA\"},{c:\"GINECOLOGIA CLINICA\",d:\"GINECOLOGIA CLINICA\"},{c:\"GINECOLOGIA Y OBSTETRICIA\",d:\"GINECOLOGIA Y OBSTETRICIA\"},{c:\"TOCOGINECOLOGIA\",d:\"TOCOGINECOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:24.775Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e732423ba49083b05315b770f3bc7ab3d5,gx-no-cache=1780924764764",
+      "status": 200,
+      "term": "HEM",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"HEMATOLOGIA\",d:\"HEMATOLOGIA\"},{c:\"HEMATOLOGIA PEDIATRICA\",d:\"HEMATOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:26.942Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7461854dd99c5190a97ac3fb112bf6377,gx-no-cache=1780924766906",
+      "status": 200,
+      "term": "HEMA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"HEMATOLOGIA\",d:\"HEMATOLOGIA\"},{c:\"HEMATOLOGIA PEDIATRICA\",d:\"HEMATOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:29.716Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7629c09962a79883cddd37a9df8126d4be442e343df04e2c7a07652fcdf411e2b,gx-no-cache=1780924769703",
+      "status": 200,
+      "term": "HEMATOLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"HEMATOLOGIA\",d:\"HEMATOLOGIA\"},{c:\"HEMATOLOGIA PEDIATRICA\",d:\"HEMATOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:34.576Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e73c45c562da0cd5d73c5f3550c29dc77e,gx-no-cache=1780924774565",
+      "status": 200,
+      "term": "INF",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CIRUGIA INFANTIL\",d:\"CIRUGIA INFANTIL\"},{c:\"FLEBOLOGIA Y LINFOLOGIA\",d:\"FLEBOLOGIA Y LINFOLOGIA\"},{c:\"INFECTOLOGIA\",d:\"INFECTOLOGIA\"},{c:\"INFECTOLOGIA PEDIATRICA\",d:\"INFECTOLOGIA PEDIATRICA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\",d:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:37.457Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7332da571a2263f6523bda87a8b024923e9bafee78240c595a1f093591155ed07,gx-no-cache=1780924777447",
+      "status": 200,
+      "term": "INFECTOLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"INFECTOLOGIA\",d:\"INFECTOLOGIA\"},{c:\"INFECTOLOGIA PEDIATRICA\",d:\"INFECTOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:39.509Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7641340f998df8a0c739e5b5074f33d8f,gx-no-cache=1780924779496",
+      "status": 200,
+      "term": "KIN",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"KINESIOLOGIA\",d:\"KINESIOLOGIA\"},{c:\"KINESIOLOGIA - CG\",d:\"KINESIOLOGIA - CG\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:41.654Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e76ff03e49be26ced3a713865c59590ed5,gx-no-cache=1780924781640",
+      "status": 200,
+      "term": "KINE",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"KINESIOLOGIA\",d:\"KINESIOLOGIA\"},{c:\"KINESIOLOGIA - CG\",d:\"KINESIOLOGIA - CG\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:44.550Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e745235e3c4c4739341dec6962b800eae5e9bafee78240c595a1f093591155ed07,gx-no-cache=1780924784529",
+      "status": 200,
+      "term": "KINESIOLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"KINESIOLOGIA\",d:\"KINESIOLOGIA\"},{c:\"KINESIOLOGIA - CG\",d:\"KINESIOLOGIA - CG\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:55.641Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7e7fd4ddb482df0a07be3ec9ce8174802,gx-no-cache=1780924795630",
+      "status": 200,
+      "term": "MED",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"AUDITORIA MEDICA\",d:\"AUDITORIA MEDICA\"},{c:\"CLINICA MEDICA\",d:\"CLINICA MEDICA\"},{c:\"CONSULTAS MEDICAS\",d:\"CONSULTAS MEDICAS\"},{c:\"ELEMENTOS MEDICOS\",d:\"ELEMENTOS MEDICOS\"},{c:\"ENFERMEDADES DE LA NUTRICION\",d:\"ENFERMEDADES DE LA NUTRICION\"})))"
+    },
+    {
+      "at": "2026-06-08T13:19:57.969Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7f0b4858906a1fe8ffc17c9560775df19,gx-no-cache=1780924797956",
+      "status": 200,
+      "term": "MEDICA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"AUDITORIA MEDICA\",d:\"AUDITORIA MEDICA\"},{c:\"CLINICA MEDICA\",d:\"CLINICA MEDICA\"},{c:\"CONSULTAS MEDICAS\",d:\"CONSULTAS MEDICAS\"},{c:\"GENETICA MEDICA\",d:\"GENETICA MEDICA\"},{c:\"MEDICA\",d:\"MEDICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:00.489Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7315c6569f56a5edce91f055904a8084ec0f43ee74a66462dd98b6dcb2f9500f0,gx-no-cache=1780924800477",
+      "status": 200,
+      "term": "MEDICINA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"MEDICINA DE EMERGENCIAS Y DESASTRES\",d:\"MEDICINA DE EMERGENCIAS Y DESASTRES\"},{c:\"MEDICINA DEL DEPORTE\",d:\"MEDICINA DEL DEPORTE\"},{c:\"MEDICINA DEL TRABAJO\",d:\"MEDICINA DEL TRABAJO\"},{c:\"MEDICINA GENERAL\",d:\"MEDICINA GENERAL\"},{c:\"MEDICINA GENERALISTA Y  DE FAMILIA\",d:\"MEDICINA GENERALISTA Y  DE FAMILIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:02.563Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7aa9eb485fa329637f93bccbabc5b8532,gx-no-cache=1780924802531",
+      "status": 200,
+      "term": "NEF",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEFROLOGIA\",d:\"NEFROLOGIA\"},{c:\"NEFROLOGIA PEDIATRICA\",d:\"NEFROLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:04.776Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7651e18b62936acca7aed59f2bf8a50de,gx-no-cache=1780924804765",
+      "status": 200,
+      "term": "NEFRO",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEFROLOGIA\",d:\"NEFROLOGIA\"},{c:\"NEFROLOGIA PEDIATRICA\",d:\"NEFROLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:07.470Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e79c3d6ab3184c0a6d5fd6251033cc43a3ccdd78f1e97257652f52f7df66bdbb21,gx-no-cache=1780924807459",
+      "status": 200,
+      "term": "NEFROLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEFROLOGIA\",d:\"NEFROLOGIA\"},{c:\"NEFROLOGIA PEDIATRICA\",d:\"NEFROLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:09.540Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e72d9a8c08e53ee081f4c556dc8764af8b,gx-no-cache=1780924809514",
+      "status": 200,
+      "term": "NEU",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUMONOLOGIA\",d:\"NEUMONOLOGIA\"},{c:\"NEUMONOLOGIA PEDIATRICA\",d:\"NEUMONOLOGIA PEDIATRICA\"},{c:\"NEUMONOLOGIA Y TISIOLOGIA\",d:\"NEUMONOLOGIA Y TISIOLOGIA\"},{c:\"NEUROCIRUGIA\",d:\"NEUROCIRUGIA\"},{c:\"NEUROCIRUGIA PEDIATRICA\",d:\"NEUROCIRUGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:11.777Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7089d690921f58a26616ebdf3f2d7d9a9,gx-no-cache=1780924811765",
+      "status": 200,
+      "term": "NEUMO",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUMONOLOGIA\",d:\"NEUMONOLOGIA\"},{c:\"NEUMONOLOGIA PEDIATRICA\",d:\"NEUMONOLOGIA PEDIATRICA\"},{c:\"NEUMONOLOGIA Y TISIOLOGIA\",d:\"NEUMONOLOGIA Y TISIOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:14.660Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e70eca37c5dacd87fc3b7fdee46844a414e9bafee78240c595a1f093591155ed07,gx-no-cache=1780924814645",
+      "status": 200,
+      "term": "NEUMONOLOGIA",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUMONOLOGIA\",d:\"NEUMONOLOGIA\"},{c:\"NEUMONOLOGIA PEDIATRICA\",d:\"NEUMONOLOGIA PEDIATRICA\"},{c:\"NEUMONOLOGIA Y TISIOLOGIA\",d:\"NEUMONOLOGIA Y TISIOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:16.893Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e755a82acfdfe2cffb9bb480c6bc738d57,gx-no-cache=1780924816880",
+      "status": 200,
+      "term": "NEURO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUROCIRUGIA\",d:\"NEUROCIRUGIA\"},{c:\"NEUROCIRUGIA PEDIATRICA\",d:\"NEUROCIRUGIA PEDIATRICA\"},{c:\"NEUROLOGIA\",d:\"NEUROLOGIA\"},{c:\"NEUROLOGIA PEDIATRICA\",d:\"NEUROLOGIA PEDIATRICA\"},{c:\"NEUROSIQUIATRIA\",d:\"NEUROSIQUIATRIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:19.589Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e74f7282c10e93513cf02cd4704c8fd38fccdd78f1e97257652f52f7df66bdbb21,gx-no-cache=1780924819577",
+      "status": 200,
+      "term": "NEUROLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUROLOGIA\",d:\"NEUROLOGIA\"},{c:\"NEUROLOGIA PEDIATRICA\",d:\"NEUROLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:22.472Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e706ebf9bc0d45097c14827ce95033dd80ed0c9e2ea920a8a9dcbccf1f2b5349a4,gx-no-cache=1780924822460",
+      "status": 200,
+      "term": "NEUROCIRUGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUROCIRUGIA\",d:\"NEUROCIRUGIA\"},{c:\"NEUROCIRUGIA PEDIATRICA\",d:\"NEUROCIRUGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:24.545Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7594e5fadae630b835ffc6c7150f2fe40,gx-no-cache=1780924824514",
+      "status": 200,
+      "term": "NUT",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ENDOCRINOLOGIA Y NUTRICION\",d:\"ENDOCRINOLOGIA Y NUTRICION\"},{c:\"ENFERMEDADES DE LA NUTRICION\",d:\"ENFERMEDADES DE LA NUTRICION\"},{c:\"NUTRICION\",d:\"NUTRICION\"},{c:\"NUTRICION PEDIATRICA\",d:\"NUTRICION PEDIATRICA\"},{c:\"NUTRICIONISTA\",d:\"NUTRICIONISTA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:27.129Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b24b0cd6f03a685e2080aba2136127787bdb4a2d45884cba93942f39d97ac436,gx-no-cache=1780924827117",
+      "status": 200,
+      "term": "NUTRICION",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ENDOCRINOLOGIA Y NUTRICION\",d:\"ENDOCRINOLOGIA Y NUTRICION\"},{c:\"ENFERMEDADES DE LA NUTRICION\",d:\"ENFERMEDADES DE LA NUTRICION\"},{c:\"NUTRICION\",d:\"NUTRICION\"},{c:\"NUTRICION PEDIATRICA\",d:\"NUTRICION PEDIATRICA\"},{c:\"NUTRICIONISTA\",d:\"NUTRICIONISTA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:29.175Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7c409597cca001e0a7d616c2b61f84651,gx-no-cache=1780924829162",
+      "status": 200,
+      "term": "OBS",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GINECOLOGIA Y OBSTETRICIA\",d:\"GINECOLOGIA Y OBSTETRICIA\"},{c:\"OBSTETRICIA\",d:\"OBSTETRICIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:31.336Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7db967c58bea3976c066b969225bb306c,gx-no-cache=1780924831304",
+      "status": 200,
+      "term": "OBST",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GINECOLOGIA Y OBSTETRICIA\",d:\"GINECOLOGIA Y OBSTETRICIA\"},{c:\"OBSTETRICIA\",d:\"OBSTETRICIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:34.126Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e757ddcf144244818179c826acf9b95629e52708b16aa5b3718d4691a65c1bebff,gx-no-cache=1780924834103",
+      "status": 200,
+      "term": "OBSTETRICIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"GINECOLOGIA Y OBSTETRICIA\",d:\"GINECOLOGIA Y OBSTETRICIA\"},{c:\"OBSTETRICIA\",d:\"OBSTETRICIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:36.183Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7aa718c230012e8e7ecd668a35528cb62,gx-no-cache=1780924836163",
+      "status": 200,
+      "term": "ODO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ECODOPPLER VASCULAR PERIFERICO\",d:\"ECODOPPLER VASCULAR PERIFERICO\"},{c:\"HABILITACION ECODOPPLER VASCULAR PERIFERICO\",d:\"HABILITACION ECODOPPLER VASCULAR PERIFERICO\"},{c:\"ODONTOLOGIA\",d:\"ODONTOLOGIA\"},{c:\"ODONTOLOGIA PME\",d:\"ODONTOLOGIA PME\"},{c:\"PODOLOGÍA\",d:\"PODOLOGÍA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:38.315Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e725db98af5ae65e734e9874c2fa8b319b,gx-no-cache=1780924838304",
+      "status": 200,
+      "term": "ODON",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ODONTOLOGIA\",d:\"ODONTOLOGIA\"},{c:\"ODONTOLOGIA PME\",d:\"ODONTOLOGIA PME\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:41.117Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e727cc923aeab63979b82b74f5a565ca5fe442e343df04e2c7a07652fcdf411e2b,gx-no-cache=1780924841103",
+      "status": 200,
+      "term": "ODONTOLOGIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ODONTOLOGIA\",d:\"ODONTOLOGIA\"},{c:\"ODONTOLOGIA PME\",d:\"ODONTOLOGIA PME\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:43.182Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b171e37f1ab62893d6a600f8c5d969ac,gx-no-cache=1780924843163",
+      "status": 200,
+      "term": "OFT",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"OFTALMOLOGIA\",d:\"OFTALMOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:43.182Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7d7adefbeddcf260bc352b365ca18cf182802110f27c1b44b990ee114468950ce,gx-no-cache=1780924843172",
+      "status": 200,
+      "term": "OFT",
+      "optionsCount": 0,
+      "validation": {
+        "code": "3",
+        "text": "OFTALMOLOGIA",
+        "raw": "[\"3\",\"OFTALMOLOGIA\",\"[]\"]"
+      },
+      "responsePreview": "[\"3\",\"OFTALMOLOGIA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:20:45.318Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e772f8bb0a2aa4030632a4cfb9a8c7e041,gx-no-cache=1780924845305",
+      "status": 200,
+      "term": "OFTA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"OFTALMOLOGIA\",d:\"OFTALMOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:48.208Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7a8cfa4747f11b974ba5e73221c703480e9bafee78240c595a1f093591155ed07,gx-no-cache=1780924848197",
+      "status": 200,
+      "term": "OFTALMOLOGIA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"OFTALMOLOGIA\",d:\"OFTALMOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:50.257Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e756eb06d585958678c79df5a3c3cc2045,gx-no-cache=1780924850246",
+      "status": 200,
+      "term": "ONC",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ONCOLOGIA\",d:\"ONCOLOGIA\"},{c:\"ONCOLOGIA MEDICA\",d:\"ONCOLOGIA MEDICA\"},{c:\"ONCOLOGIA PEDIATRICA\",d:\"ONCOLOGIA PEDIATRICA\"},{c:\"ONCOLOGIA QUIRURGICA\",d:\"ONCOLOGIA QUIRURGICA\"},{c:\"PSICOONCOLOGIA\",d:\"PSICOONCOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:52.408Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e766dd31ebce09614be264f05782b9fa4d,gx-no-cache=1780924852387",
+      "status": 200,
+      "term": "ONCO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ONCOLOGIA\",d:\"ONCOLOGIA\"},{c:\"ONCOLOGIA MEDICA\",d:\"ONCOLOGIA MEDICA\"},{c:\"ONCOLOGIA PEDIATRICA\",d:\"ONCOLOGIA PEDIATRICA\"},{c:\"ONCOLOGIA QUIRURGICA\",d:\"ONCOLOGIA QUIRURGICA\"},{c:\"PSICOONCOLOGIA\",d:\"PSICOONCOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:55.010Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e793a3affefb6c1a300c60be57ea74ad49ff7ce39e9b0bcc984b07741333d6d142,gx-no-cache=1780924854998",
+      "status": 200,
+      "term": "ONCOLOGIA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ONCOLOGIA\",d:\"ONCOLOGIA\"},{c:\"ONCOLOGIA MEDICA\",d:\"ONCOLOGIA MEDICA\"},{c:\"ONCOLOGIA PEDIATRICA\",d:\"ONCOLOGIA PEDIATRICA\"},{c:\"ONCOLOGIA QUIRURGICA\",d:\"ONCOLOGIA QUIRURGICA\"},{c:\"PSICOONCOLOGIA\",d:\"PSICOONCOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:20:59.108Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b7870a784860faeebd647502616952cf,gx-no-cache=1780924859095",
+      "status": 200,
+      "term": "ORT",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"MEDICINA DEL DEPORTE\",d:\"MEDICINA DEL DEPORTE\"},{c:\"ORTOPEDIA BLANDA\",d:\"ORTOPEDIA BLANDA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA\",d:\"ORTOPEDIA Y TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\",d:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\"},{c:\"SOPORTE NUTRICIONAL\",d:\"SOPORTE NUTRICIONAL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:01.716Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e78dc606c97de855597e7537dbb9b1a7c8666d5e8e6157a5ac5618aad122d6b5ff,gx-no-cache=1780924861701",
+      "status": 200,
+      "term": "ORTOPEDIA",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ORTOPEDIA BLANDA\",d:\"ORTOPEDIA BLANDA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA\",d:\"ORTOPEDIA Y TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\",d:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\"},{c:\"TRAUMATOLOGIA Y ORTOPEDIA\",d:\"TRAUMATOLOGIA Y ORTOPEDIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:03.789Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e71f5c5130a82512360fe2f0fefe7c084e,gx-no-cache=1780924863745",
+      "status": 200,
+      "term": "OTO",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"OTORRINOLARINGOLOGIA\",d:\"OTORRINOLARINGOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:03.789Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7c3c5363f7206bef2b6beccbe54cf24cb8ab3125d9f3637fbe0580922f71b9ea4e9c95c19b4aa0629c8d85c8287157763,gx-no-cache=1780924863762",
+      "status": 200,
+      "term": "OTO",
+      "optionsCount": 0,
+      "validation": {
+        "code": "22",
+        "text": "OTORRINOLARINGOLOGIA",
+        "raw": "[\"22\",\"OTORRINOLARINGOLOGIA\",\"[]\"]"
+      },
+      "responsePreview": "[\"22\",\"OTORRINOLARINGOLOGIA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:21:06.271Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7cc5e1a25355121393e7adaf434fbab81d899e0144787bfa5759cb40743eafc3b,gx-no-cache=1780924866259",
+      "status": 200,
+      "term": "OTORRINO",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"OTORRINOLARINGOLOGIA\",d:\"OTORRINOLARINGOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:08.331Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e71d7a06a175ff6922c831304538043b03,gx-no-cache=1780924868313",
+      "status": 200,
+      "term": "PED",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"CARDIOLOGIA PEDIATRICA\",d:\"CARDIOLOGIA PEDIATRICA\"},{c:\"DERMATOLOGIA PEDIATRICA\",d:\"DERMATOLOGIA PEDIATRICA\"},{c:\"ENDOCRINOLOGIA PEDIATRICA\",d:\"ENDOCRINOLOGIA PEDIATRICA\"},{c:\"GASTROENTEROLOGIA PEDIATRICA\",d:\"GASTROENTEROLOGIA PEDIATRICA\"},{c:\"HEMATOLOGIA PEDIATRICA\",d:\"HEMATOLOGIA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:10.941Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7067aeb020b08ba74349191540d4bdbb6242572d8bba8616f449f4708e3c84326,gx-no-cache=1780924870920",
+      "status": 200,
+      "term": "PEDIATRIA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"PEDIATRIA\",d:\"PEDIATRIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:10.941Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae740318e3d28510cd1f7fd0dcd424c38e229ff12785a56f781dd00c0bd5d37dc5f,gx-no-cache=1780924870930",
+      "status": 200,
+      "term": "PEDIATRIA",
+      "optionsCount": 0,
+      "validation": {
+        "code": "29",
+        "text": "PEDIATRIA",
+        "raw": "[\"29\",\"PEDIATRIA\",\"[]\"]"
+      },
+      "responsePreview": "[\"29\",\"PEDIATRIA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:21:12.993Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7e02a48b87969eb069b5d8953092974d5,gx-no-cache=1780924872980",
+      "status": 200,
+      "term": "PSI",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"PSICOLOGO\",d:\"PSICOLOGO\"},{c:\"PSICOONCOLOGIA\",d:\"PSICOONCOLOGIA\"},{c:\"PSICOPEDAGOGIA\",d:\"PSICOPEDAGOGIA\"},{c:\"PSICOPEDAGOGO - CG\",d:\"PSICOPEDAGOGO - CG\"},{c:\"PSIQUIATRIA\",d:\"PSIQUIATRIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:15.152Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e72cb31fb1037719f42b18cb7878393e59,gx-no-cache=1780924875123",
+      "status": 200,
+      "term": "PSIC",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"PSICOLOGO\",d:\"PSICOLOGO\"},{c:\"PSICOONCOLOGIA\",d:\"PSICOONCOLOGIA\"},{c:\"PSICOPEDAGOGIA\",d:\"PSICOPEDAGOGIA\"},{c:\"PSICOPEDAGOGO - CG\",d:\"PSICOPEDAGOGO - CG\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:19.984Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e787fb920cba31ef543ec3e98f82084423,gx-no-cache=1780924879972",
+      "status": 200,
+      "term": "PSIQ",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"PSIQUIATRIA\",d:\"PSIQUIATRIA\"},{c:\"PSIQUIATRIA INFANTO JUVENIL\",d:\"PSIQUIATRIA INFANTO JUVENIL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:22.781Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e730002e065816989c34a46ee05bddd184991617074a5c1066558d7da133c46025,gx-no-cache=1780924882769",
+      "status": 200,
+      "term": "PSIQUIATRIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"PSIQUIATRIA\",d:\"PSIQUIATRIA\"},{c:\"PSIQUIATRIA INFANTO JUVENIL\",d:\"PSIQUIATRIA INFANTO JUVENIL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:29.223Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7ade027e65e35dfa7bf1989552da817ed,gx-no-cache=1780924889210",
+      "status": 200,
+      "term": "RAD",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"MEDICO RADIOTERAPEUTA\",d:\"MEDICO RADIOTERAPEUTA\"},{c:\"RADIODIAGNOSTICO\",d:\"RADIODIAGNOSTICO\"},{c:\"RADIOLOGIA\",d:\"RADIOLOGIA\"},{c:\"RADIOLOGIA - GREMIAL MEDICA\",d:\"RADIOLOGIA - GREMIAL MEDICA\"},{c:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\",d:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:31.459Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b9e2a8ac341632589939e944c356a878,gx-no-cache=1780924891447",
+      "status": 200,
+      "term": "RADIO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"MEDICO RADIOTERAPEUTA\",d:\"MEDICO RADIOTERAPEUTA\"},{c:\"RADIODIAGNOSTICO\",d:\"RADIODIAGNOSTICO\"},{c:\"RADIOLOGIA\",d:\"RADIOLOGIA\"},{c:\"RADIOLOGIA - GREMIAL MEDICA\",d:\"RADIOLOGIA - GREMIAL MEDICA\"},{c:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\",d:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:34.159Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e79d438b2d1352108af30798d2877f60b3ccdd78f1e97257652f52f7df66bdbb21,gx-no-cache=1780924894142",
+      "status": 200,
+      "term": "RADIOLOGIA",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"RADIOLOGIA\",d:\"RADIOLOGIA\"},{c:\"RADIOLOGIA - GREMIAL MEDICA\",d:\"RADIOLOGIA - GREMIAL MEDICA\"},{c:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\",d:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:37.036Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e71a8df94d8f47882610d7948afe3b173d611be03ff5881acc6921b5d7d7201b79,gx-no-cache=1780924897022",
+      "status": 200,
+      "term": "RADIOTERAPIA",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\",d:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\"},{c:\"RADIOTERAPIA\",d:\"RADIOTERAPIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:39.090Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7344994aa8204032e896923b0f0ff9287,gx-no-cache=1780924899074",
+      "status": 200,
+      "term": "REH",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"REHABILITACION - DISCAPACIDAD\",d:\"REHABILITACION - DISCAPACIDAD\"},{c:\"REHABILITACION NEUROLOGICA\",d:\"REHABILITACION NEUROLOGICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:42.151Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7682ef1230498d7ed43e60bf17b3b943dff16629bc041f30052bb2c90810b8ab6,gx-no-cache=1780924902140",
+      "status": 200,
+      "term": "REHABILITACION",
+      "optionsCount": 2,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"REHABILITACION - DISCAPACIDAD\",d:\"REHABILITACION - DISCAPACIDAD\"},{c:\"REHABILITACION NEUROLOGICA\",d:\"REHABILITACION NEUROLOGICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:44.220Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7030f8b41df66d384532e172360051f23,gx-no-cache=1780924904195",
+      "status": 200,
+      "term": "RES",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"MEDICINA DE EMERGENCIAS Y DESASTRES\",d:\"MEDICINA DE EMERGENCIAS Y DESASTRES\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:44.220Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae7f56684471dedc3b466f1ee2c780d85fe629d9dbb6445aab06ce8b23c8d049134a10038546ee97e8127f8fa3ad49287549aab48f9b6ed92b3384d4a73bb696d97,gx-no-cache=1780924904206",
+      "status": 200,
+      "term": "RES",
+      "optionsCount": 0,
+      "validation": {
+        "code": "192",
+        "text": "MEDICINA DE EMERGENCIAS Y DESASTRES",
+        "raw": "[\"192\",\"MEDICINA DE EMERGENCIAS Y DESASTRES\",\"[]\"]"
+      },
+      "responsePreview": "[\"192\",\"MEDICINA DE EMERGENCIAS Y DESASTRES\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:21:48.967Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e710c77be179b63fd15fbf27d20db1358c,gx-no-cache=1780924908945",
+      "status": 200,
+      "term": "REU",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"REUMATOLOGIA\",d:\"REUMATOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:48.967Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?bbd31f733173dbc5c6cbec9f8ae92ae72e41f24868c9a74353f31fb77a02fd4ab40b819c85bedd71ef7c7ca2bc1e5b26,gx-no-cache=1780924908953",
+      "status": 200,
+      "term": "REU",
+      "optionsCount": 0,
+      "validation": {
+        "code": "23",
+        "text": "REUMATOLOGIA",
+        "raw": "[\"23\",\"REUMATOLOGIA\",\"[]\"]"
+      },
+      "responsePreview": "[\"23\",\"REUMATOLOGIA\",\"[]\"]"
+    },
+    {
+      "at": "2026-06-08T13:21:51.191Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e776aa0101e0f5f544f5ac98e83ae515f4,gx-no-cache=1780924911180",
+      "status": 200,
+      "term": "REUMA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"REUMATOLOGIA\",d:\"REUMATOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:21:54.072Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e74bdc6a47811ba995deaea3515b71763be9bafee78240c595a1f093591155ed07,gx-no-cache=1780924914062",
+      "status": 200,
+      "term": "REUMATOLOGIA",
+      "optionsCount": 1,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"REUMATOLOGIA\",d:\"REUMATOLOGIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:01.058Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7fdd1029e6f5fadd34907cb16932815c6,gx-no-cache=1780924921045",
+      "status": 200,
+      "term": "TAC",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ELEMENTOS LICITACION\",d:\"ELEMENTOS LICITACION\"},{c:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\",d:\"HABILITACION ECOCARDIOGRAFIA EN SU ESPECIALIDAD\"},{c:\"HABILITACION ECOCARDIOGRAFIA NIVEL A\",d:\"HABILITACION ECOCARDIOGRAFIA NIVEL A\"},{c:\"HABILITACION ECOCARDIOGRAFIA NIVEL A-B1\",d:\"HABILITACION ECOCARDIOGRAFIA NIVEL A-B1\"},{c:\"HABILITACION ECOCARDIOGRAFIA NIVEL A-B1-B2\",d:\"HABILITACION ECOCARDIOGRAFIA NIVEL A-B1-B2\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:03.105Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7685cda57f18f71777805dfdfd0d86c73,gx-no-cache=1780924923094",
+      "status": 200,
+      "term": "TER",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ACOMPAÑANTE TERAPEUTICO\",d:\"ACOMPAÑANTE TERAPEUTICO\"},{c:\"BACTERIOLOGIA\",d:\"BACTERIOLOGIA\"},{c:\"GASTROENTEROLOGIA\",d:\"GASTROENTEROLOGIA\"},{c:\"GASTROENTEROLOGIA PEDIATRICA\",d:\"GASTROENTEROLOGIA PEDIATRICA\"},{c:\"MEDICINA INTERNA\",d:\"MEDICINA INTERNA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:05.531Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7f64236c17dbc4caf64bc73144ddce3ebf6649c501c719db41196bc0730f0ae56,gx-no-cache=1780924925517",
+      "status": 200,
+      "term": "TERAPIA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"OXIGENOTERAPIA\",d:\"OXIGENOTERAPIA\"},{c:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\",d:\"RADIOLOGIA RADIOTERAPIA Y MEDICINA NUCLEAR\"},{c:\"RADIOTERAPIA\",d:\"RADIOTERAPIA\"},{c:\"TERAPIA INTENSIVA\",d:\"TERAPIA INTENSIVA\"},{c:\"TERAPIA INTENSIVA PEDIATRICA\",d:\"TERAPIA INTENSIVA PEDIATRICA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:07.614Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7b3ff7baf6437caf265b93715c1ddf3d8,gx-no-cache=1780924927581",
+      "status": 200,
+      "term": "TRA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ACCIDENTE DE TRABAJO\",d:\"ACCIDENTE DE TRABAJO\"},{c:\"ELEMENTOS TRAUMATOLOGIA\",d:\"ELEMENTOS TRAUMATOLOGIA\"},{c:\"EMERGENCIA Y TRASLADO\",d:\"EMERGENCIA Y TRASLADO\"},{c:\"MEDICINA DEL TRABAJO\",d:\"MEDICINA DEL TRABAJO\"},{c:\"MEDICINA TRANSFUSIONAL\",d:\"MEDICINA TRANSFUSIONAL\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:09.738Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e76f78f6da8765df4a3f59b7594134a287,gx-no-cache=1780924929721",
+      "status": 200,
+      "term": "TRAU",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ELEMENTOS TRAUMATOLOGIA\",d:\"ELEMENTOS TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA\",d:\"ORTOPEDIA Y TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\",d:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\"},{c:\"TRAUMATOLOGIA Y ORTOPEDIA\",d:\"TRAUMATOLOGIA Y ORTOPEDIA\"},{c:\"TRAUMATOLOGO\",d:\"TRAUMATOLOGO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:12.067Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7856591b2cdc2b244b579713c605eae75,gx-no-cache=1780924932056",
+      "status": 200,
+      "term": "TRAUMA",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ELEMENTOS TRAUMATOLOGIA\",d:\"ELEMENTOS TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA\",d:\"ORTOPEDIA Y TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\",d:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\"},{c:\"TRAUMATOLOGIA Y ORTOPEDIA\",d:\"TRAUMATOLOGIA Y ORTOPEDIA\"},{c:\"TRAUMATOLOGO\",d:\"TRAUMATOLOGO\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:15.063Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7856591b2cdc2b244b579713c605eae75704a14252b9e88fe6c5007c19df72636,gx-no-cache=1780924935051",
+      "status": 200,
+      "term": "TRAUMATOLOGIA",
+      "optionsCount": 4,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"ELEMENTOS TRAUMATOLOGIA\",d:\"ELEMENTOS TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA\",d:\"ORTOPEDIA Y TRAUMATOLOGIA\"},{c:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\",d:\"ORTOPEDIA Y TRAUMATOLOGIA INFANTIL\"},{c:\"TRAUMATOLOGIA Y ORTOPEDIA\",d:\"TRAUMATOLOGIA Y ORTOPEDIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:17.303Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e77550f74817c96c9256798e72bcefc5f8,gx-no-cache=1780924937114",
+      "status": 200,
+      "term": "URO",
+      "optionsCount": 5,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUROCIRUGIA\",d:\"NEUROCIRUGIA\"},{c:\"NEUROCIRUGIA PEDIATRICA\",d:\"NEUROCIRUGIA PEDIATRICA\"},{c:\"NEUROLOGIA\",d:\"NEUROLOGIA\"},{c:\"NEUROLOGIA PEDIATRICA\",d:\"NEUROLOGIA PEDIATRICA\"},{c:\"NEUROSIQUIATRIA\",d:\"NEUROSIQUIATRIA\"})))"
+    },
+    {
+      "at": "2026-06-08T13:22:19.631Z",
+      "url": "https://app.santafe.gov.ar/iapos-app-srvt/servlet/auauditcabe_ww?01ceeaada8f77e5244cf16ed019722e7487e65e2c6dd4bc6f3a785c6016cb07b86fe4cd120ce2daf72af2c56b89d4256,gx-no-cache=1780924939619",
+      "status": 200,
+      "term": "UROLOGIA",
+      "optionsCount": 3,
+      "validation": null,
+      "responsePreview": "(new Array( new Array({c:\"NEUROLOGIA\",d:\"NEUROLOGIA\"},{c:\"NEUROLOGIA PEDIATRICA\",d:\"NEUROLOGIA PEDIATRICA\"},{c:\"UROLOGIA\",d:\"UROLOGIA\"})))"
+    }
+  ]
+}

@@ -19,7 +19,7 @@ globalThis.HTMLSelectElement = win.HTMLSelectElement;
 globalThis.Event = win.Event;
 globalThis.CustomEvent = win.CustomEvent;
 
-const StepEditor = require("../../src/modules/editor/step-editor.js");
+const StepEditor = require("../../../../src/modules/editor/step-editor.js");
 
 function resetBody(html) {
   win.document.body.innerHTML = html;
