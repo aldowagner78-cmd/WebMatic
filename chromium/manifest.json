@@ -1,15 +1,15 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "WebMatic",
   "version": "0.1.0",
-  "description": "Automatizacion web modular — Chrome, Edge y Firefox, en Windows, macOS y Linux.",
+  "description": "Automatizacion web modular — Chrome y Edge.",
   "icons": {
     "16": "logo16.png",
     "32": "logo32.png",
     "48": "logo48.png",
     "128": "logo128.png"
   },
-  "browser_action": {
+  "action": {
     "default_title": "WebMatic",
     "default_icon": {
       "16": "logo16.png",
@@ -18,16 +18,16 @@
     }
   },
   "background": {
-    "scripts": [
-      "src/modules/storage/fs-handle.js",
-      "src/background/background.js"
-    ]
+    "service_worker": "chromium/background.chromium.js"
   },
   "permissions": [
     "storage",
     "downloads",
     "activeTab",
     "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
     "<all_urls>"
   ],
   "content_scripts": [
@@ -57,27 +57,20 @@
     }
   ],
   "web_accessible_resources": [
-    "logo48.png",
-    "src/modules/ui/ui-shell.css",
-    "src/help/help.html",
-    "src/help/help.js"
+    {
+      "resources": [
+        "logo48.png",
+        "src/modules/ui/ui-shell.css",
+        "src/help/help.html",
+        "src/help/help.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ],
   "options_ui": {
     "page": "src/options/options.html",
     "open_in_tab": false
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "webmatic@local.dev",
-      "data_collection_permissions": {
-        "required": [
-          "none"
-        ]
-      },
-      "strict_min_version": "140.0"
-    },
-    "gecko_android": {
-      "strict_min_version": "142.0"
-    }
   }
 }

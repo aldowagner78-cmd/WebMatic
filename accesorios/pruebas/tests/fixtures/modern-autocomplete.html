@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Modern Fixture - Autocomplete</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; }
+    .card { border: 1px solid #d1d5db; border-radius: 10px; padding: 12px; }
+    .suggest-box { border: 1px solid #cbd5e1; border-radius: 8px; margin-top: 6px; max-height: 140px; overflow: auto; }
+    .suggest-item { padding: 6px 10px; cursor: pointer; }
+    .suggest-item:hover { background: #e0f2fe; }
+    label { display: block; margin-top: 10px; font-weight: 600; }
+    input, select, button { width: 100%; padding: 8px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Modern Fixture - Autocomplete + SPA Navigation</h1>
+  <p>Incluye fetch simulado, datalist, shadow DOM y navegacion a subpagina.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Autocomplete por fetch</h2>
+      <label for="modern-affiliate">Affiliate</label>
+      <input id="modern-affiliate" name="modern_affiliate" autocomplete="off" placeholder="Type 2+ chars" />
+      <div id="modern-affiliate-list" class="suggest-box" role="listbox" aria-label="affiliate list"></div>
+
+      <label for="modern-specialty">Specialty datalist</label>
+      <input id="modern-specialty" list="modern-specialty-list" autocomplete="off" />
+      <datalist id="modern-specialty-list">
+        <option value="Cardiology"></option>
+        <option value="Dermatology"></option>
+        <option value="Neurology"></option>
+        <option value="Pediatrics"></option>
+      </datalist>
+
+      <label for="modern-mode">Mode</label>
+      <select id="modern-mode">
+        <option value="normal">Normal</option>
+        <option value="safe">Safe</option>
+      </select>
+    </section>
+
+    <section class="card">
+      <h2>Shadow DOM control</h2>
+      <wm-shadow-autocomplete></wm-shadow-autocomplete>
+
+      <label for="modern-notes">Notes</label>
+      <input id="modern-notes" type="text" />
+
+      <button id="btn-modern-subpage" type="button">Go to subpage</button>
+    </section>
+  </div>
+
+  <script>
+    class WmShadowAutocomplete extends HTMLElement {
+      connectedCallback() {
+        const root = this.attachShadow({ mode: "open" });
+        root.innerHTML = "";
+
+        const style = document.createElement("style");
+        style.textContent = "label{display:block;font-weight:600} input{width:100%;padding:8px;margin-top:4px} ul{margin:6px 0 0;padding:0;list-style:none;border:1px solid #cbd5e1;border-radius:8px;max-height:120px;overflow:auto} li{padding:6px 10px;cursor:pointer} li:hover{background:#fef3c7}";
+
+        const label = document.createElement("label");
+        label.textContent = "Shadow city";
+
+        const input = document.createElement("input");
+        input.id = "shadow-city";
+        input.setAttribute("autocomplete", "off");
+
+        const list = document.createElement("ul");
+        list.setAttribute("role", "listbox");
+
+        const cities = ["Santa Fe", "Rosario", "Cordoba", "Mendoza", "Neuquen"];
+        input.addEventListener("input", () => {
+          const q = input.value.trim().toLowerCase();
+          list.replaceChildren();
+          if (!q) return;
+          cities.filter((c) => c.toLowerCase().includes(q)).forEach((city) => {
+            const li = document.createElement("li");
+            li.setAttribute("role", "option");
+            li.textContent = city;
+            li.addEventListener("click", () => {
+              input.value = city;
+              input.dispatchEvent(new Event("change", { bubbles: true }));
+              list.replaceChildren();
+            });
+            list.appendChild(li);
+          });
+        });
+
+        root.append(style, label, input, list);
+      }
+    }
+    customElements.define("wm-shadow-autocomplete", WmShadowAutocomplete);
+
+    const fakeCatalog = [
+      { value: "1001", text: "Wagner, Aldo" },
+      { value: "1002", text: "Rios, Paula" },
+      { value: "1003", text: "Perez, Marta" },
+      { value: "1004", text: "Garcia, Juan" }
+    ];
+
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (url, init) => {
+      const u = String(url || "");
+      if (u.includes("/api/affiliate")) {
+        const q = new URL(u, location.origin).searchParams.get("q") || "";
+        const items = fakeCatalog.filter((i) => i.text.toLowerCase().includes(q.toLowerCase()) || i.value.includes(q));
+        return Promise.resolve(new Response(JSON.stringify({ items }), {
+          status: 200,
+          headers: { "content-type": "application/json" }
+        }));
+      }
+      return nativeFetch(url, init);
+    };
+
+    const input = document.getElementById("modern-affiliate");
+    const list = document.getElementById("modern-affiliate-list");
+
+    function renderSuggestions(items) {
+      list.replaceChildren();
+      items.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "suggest-item";
+        row.setAttribute("role", "option");
+        row.dataset.value = item.value;
+        row.textContent = item.text + " (" + item.value + ")";
+        row.addEventListener("click", () => {
+          input.value = item.text;
+          input.dataset.selectedValue = item.value;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+          list.replaceChildren();
+        });
+        list.appendChild(row);
+      });
+    }
+
+    input.addEventListener("input", async () => {
+      const q = input.value.trim();
+      if (q.length < 2) {
+        list.replaceChildren();
+        return;
+      }
+      const resp = await fetch("/api/affiliate?q=" + encodeURIComponent(q));
+      const data = await resp.json();
+      renderSuggestions(Array.isArray(data.items) ? data.items : []);
+    });
+
+    document.getElementById("btn-modern-subpage").addEventListener("click", () => {
+      location.href = "./modern-autocomplete-subpage.html?from=modern";
+    });
+  </script>
+</body>
+</html>

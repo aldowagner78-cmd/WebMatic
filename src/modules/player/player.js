@@ -1,6 +1,10 @@
 (function initPlayer(globalScope) {
   const utils = globalScope.WebMaticUtils;
 
+  // Acumulador de fallbacks aplicados durante una ejecución de play().
+  // Se reinicia al inicio de play() y se entrega como summary.fallbacks en onDone().
+  let _fallbackBucket = null;
+
   /**
    * Recursively searches for a CSS selector within a root node and any
    * attached Shadow Roots. Returns the first match or null.
@@ -57,6 +61,161 @@
     return null;
   }
 
+  function _findKnownGalleryControlFallback(selector) {
+    const sel = String(selector || "");
+    if (!sel) return null;
+
+    const isNext = /\[title\s*=\s*["']Next \(arrow right\)["']\]/i.test(sel)
+      || /\[title\s*=\s*["']Siguiente \(flecha derecha\)["']\]/i.test(sel)
+      || /gallery-next/i.test(sel);
+    const isClose = /\[title\s*=\s*["']Close \(Esc\)["']\]/i.test(sel)
+      || /\[title\s*=\s*["']Cerrar \(Esc\)["']\]/i.test(sel)
+      || /gallery-close/i.test(sel);
+
+    if (!isNext && !isClose) return null;
+
+    const probes = isNext
+      ? [
+          "[data-testid='gallery-next']",
+          "[title='Next (arrow right)']",
+          "[title='Siguiente (flecha derecha)']",
+          "[aria-label='Next (arrow right)']",
+          "[aria-label='Siguiente (flecha derecha)']",
+          "button[aria-label*='Next']",
+          "button[aria-label*='Siguiente']"
+        ]
+      : [
+          "[data-testid='gallery-close']",
+          "[title='Close (Esc)']",
+          "[title='Cerrar (Esc)']",
+          "[aria-label='Close']",
+          "[aria-label='Cerrar']",
+          "button[aria-label*='Close']",
+          "button[aria-label*='Cerrar']"
+        ];
+
+    for (const p of probes) {
+      try {
+        const list = document.querySelectorAll(p);
+        const visible = Array.from(list).find((el) => _isInteractable(el));
+        if (visible) return visible;
+        if (list.length > 0) return list[0];
+      } catch (_e) { /* ignore */ }
+    }
+
+    return null;
+  }
+
+  function _isLikelyGalleryNextSelector(selector) {
+    const sel = String(selector || "");
+    return /\[title\s*=\s*["']Next \(arrow right\)["']\]/i.test(sel)
+      || /\[title\s*=\s*["']Siguiente \(flecha derecha\)["']\]/i.test(sel)
+      || /gallery-next/i.test(sel);
+  }
+
+  function _isLikelyGalleryCloseSelector(selector) {
+    const sel = String(selector || "");
+    return /\[title\s*=\s*["']Close \(Esc\)["']\]/i.test(sel)
+      || /\[title\s*=\s*["']Cerrar \(Esc\)["']\]/i.test(sel)
+      || /gallery-close/i.test(sel);
+  }
+
+  function _findOpenLightboxNode() {
+    const candidates = [
+      "[role='dialog'][aria-modal='true']",
+      "[role='dialog']",
+      "[class*='lightbox' i]",
+      "[class*='ui-pdp-gallery-modal' i]",
+      "[id*='lightbox' i]",
+      "[id*='ligthbox' i]"
+    ];
+    for (const sel of candidates) {
+      try {
+        const list = document.querySelectorAll(sel);
+        for (const el of list) {
+          if (_isInteractable(el)) return el;
+        }
+        if (list.length) return list[0];
+      } catch (_e) { /* ignore */ }
+    }
+    return null;
+  }
+
+  function _findMainGalleryImageToOpen() {
+    const probes = [
+      "figure.ui-pdp-gallery__figure img",
+      ".ui-pdp-gallery__figure img",
+      "img[data-testid^='image-']",
+      "[data-testid^='gallery-figure'] img",
+      "[data-zoom]"
+    ];
+    for (const p of probes) {
+      try {
+        const list = document.querySelectorAll(p);
+        const visible = Array.from(list).find((el) => _isInteractable(el));
+        if (visible) return visible;
+        if (list.length) return list[0];
+      } catch (_e) { /* ignore */ }
+    }
+    return null;
+  }
+
+  function _dispatchKey(key, keyCode) {
+    const init = { key, code: key, keyCode, which: keyCode, bubbles: true, cancelable: true };
+    const targets = [];
+    try {
+      const lb = _findOpenLightboxNode();
+      if (lb) targets.push(lb);
+    } catch (_e) { /* ignore */ }
+    try { if (document.activeElement) targets.push(document.activeElement); } catch (_e) { /* ignore */ }
+    try { if (document.body) targets.push(document.body); } catch (_e) { /* ignore */ }
+    targets.push(document, window);
+    for (const t of targets) {
+      try {
+        t.dispatchEvent(new KeyboardEvent("keydown", init));
+        t.dispatchEvent(new KeyboardEvent("keyup", init));
+      } catch (_e) { /* ignore */ }
+    }
+  }
+
+  function _trySyntheticGalleryClick(selector) {
+    const isNext = _isLikelyGalleryNextSelector(selector);
+    const isClose = _isLikelyGalleryCloseSelector(selector);
+    if (!isNext && !isClose) return false;
+
+    try {
+      if (isNext) {
+        if (!_findOpenLightboxNode()) {
+          const opener = _findMainGalleryImageToOpen();
+          if (opener) {
+            simulateClick(opener);
+          }
+        }
+        _dispatchKey("ArrowRight", 39);
+      } else {
+        _dispatchKey("Escape", 27);
+      }
+      try {
+        console.warn("[WebMatic][playback] synthetic gallery key fallback applied", {
+          selector,
+          action: isNext ? "ArrowRight" : "Escape"
+        });
+      } catch (_e) { /* ignore */ }
+      try {
+        if (Array.isArray(_fallbackBucket)) {
+          _fallbackBucket.push({
+            kind: "synthetic_key",
+            action: isNext ? "ArrowRight" : "Escape",
+            selector
+          });
+        }
+      } catch (_e) { /* ignore */ }
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function findElement(selector) {
     if (!selector) return null;
 
@@ -104,14 +263,227 @@
     }
 
     // Standard CSS selector — with Shadow DOM + iframe piercing
-    return findInDocument(document, selector);
+    const direct = findInDocument(document, selector);
+    if (direct) return direct;
+
+    // Known volatile gallery controls (Next/Close) vary by locale/attribute.
+    // Apply a semantic fallback to improve cross-site robustness.
+    return _findKnownGalleryControlFallback(selector);
+  }
+
+  function _isVisibleForDiagnostic(el) {
+    if (!el || !(el instanceof Element)) return false;
+    const htmlEl = /** @type {HTMLElement} */ (el);
+    try {
+      const view = (htmlEl.ownerDocument && htmlEl.ownerDocument.defaultView) || window;
+      const cs = view && typeof view.getComputedStyle === "function"
+        ? view.getComputedStyle(htmlEl)
+        : { display: "", visibility: "", opacity: "", pointerEvents: "" };
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0" || cs.pointerEvents === "none") return false;
+      return !!(htmlEl.getClientRects && htmlEl.getClientRects().length > 0);
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _summarizeElementForDiagnostic(el) {
+    if (!el || !(el instanceof Element)) return null;
+    const tag = String(el.tagName || "").toLowerCase();
+    const attrs = {
+      id: el.id || "",
+      className: typeof el.className === "string" ? el.className : "",
+      role: el.getAttribute && el.getAttribute("role") || "",
+      title: el.getAttribute && el.getAttribute("title") || "",
+      ariaLabel: el.getAttribute && el.getAttribute("aria-label") || "",
+      dataTestid: el.getAttribute && el.getAttribute("data-testid") || "",
+      name: el.getAttribute && el.getAttribute("name") || "",
+      type: el.getAttribute && el.getAttribute("type") || ""
+    };
+    const text = String(el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    return {
+      tag,
+      visible: _isVisibleForDiagnostic(el),
+      attrs,
+      text
+    };
+  }
+
+  function _collectSelectorDiagnostics(selector) {
+    const out = {
+      selector,
+      mode: "css",
+      matchedCount: 0,
+      topMatches: [],
+      nearbyGalleryControls: []
+    };
+
+    if (!selector) return out;
+
+    try {
+      if (selector.startsWith("/") || selector.startsWith("(")) {
+        out.mode = "xpath";
+        const xpathResult = document.evaluate(
+          selector,
+          document,
+          null,
+          XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
+          null
+        );
+        out.matchedCount = xpathResult.snapshotLength;
+        const top = [];
+        for (let i = 0; i < Math.min(5, xpathResult.snapshotLength); i++) {
+          const node = xpathResult.snapshotItem(i);
+          const summary = _summarizeElementForDiagnostic(node);
+          if (summary) top.push(summary);
+        }
+        out.topMatches = top;
+      } else {
+        const nodeList = document.querySelectorAll(selector);
+        out.matchedCount = nodeList.length;
+        out.topMatches = Array.from(nodeList)
+          .slice(0, 5)
+          .map((n) => _summarizeElementForDiagnostic(n))
+          .filter(Boolean);
+      }
+    } catch (e) {
+      out.error = String((e && e.message) || e || "error");
+    }
+
+    try {
+      if (/(next|siguiente|close|cerrar|arrow|flecha|gallery)/i.test(String(selector))) {
+        const probeSelectors = [
+          "[data-testid*='gallery']",
+          "[title*='Next']",
+          "[title*='Siguiente']",
+          "[aria-label*='Next']",
+          "[aria-label*='Siguiente']",
+          "[title*='Close']",
+          "[title*='Cerrar']",
+          "[aria-label*='Close']",
+          "[aria-label*='Cerrar']"
+        ];
+        const probes = [];
+        for (const ps of probeSelectors) {
+          try {
+            const list = document.querySelectorAll(ps);
+            if (list.length === 0) continue;
+            probes.push({
+              probe: ps,
+              count: list.length,
+              top: Array.from(list).slice(0, 3).map((n) => _summarizeElementForDiagnostic(n)).filter(Boolean)
+            });
+          } catch (_e) { /* ignore */ }
+        }
+        out.nearbyGalleryControls = probes;
+      }
+    } catch (_e) { /* ignore */ }
+
+    return out;
+  }
+
+  function _logSelectorFailure(stepType, selector) {
+    const diag = _collectSelectorDiagnostics(selector);
+    try {
+      console.groupCollapsed(`[WebMatic][selector-diagnostic] ${stepType} -> ${selector}`);
+      console.log(diag);
+      console.groupEnd();
+      globalScope.__WEBMATIC_LAST_SELECTOR_DIAGNOSTIC__ = {
+        at: new Date().toISOString(),
+        stepType,
+        diagnostic: diag
+      };
+    } catch (_e) { /* ignore */ }
+  }
+
+  function evaluateArithmeticExpression(expression) {
+    const input = String(expression || "").trim();
+    if (!input) throw new Error("Expresion vacia");
+
+    const tokens = [];
+    const pattern = /\s*([()+\-*/]|\d*\.?\d+)/gy;
+    let match;
+    let lastIndex = 0;
+    while ((match = pattern.exec(input)) !== null) {
+      if (match.index !== lastIndex) throw new Error("Expresion invalida");
+      tokens.push(match[1]);
+      lastIndex = pattern.lastIndex;
+    }
+    if (lastIndex !== input.length) throw new Error("Expresion invalida");
+
+    const output = [];
+    const operators = [];
+    const precedence = { "+": 1, "-": 1, "*": 2, "/": 2 };
+    const applyOperator = () => {
+      const operator = operators.pop();
+      const right = output.pop();
+      const left = output.pop();
+      if (left == null || right == null) throw new Error("Expresion invalida");
+      if (operator === "+") output.push(left + right);
+      else if (operator === "-") output.push(left - right);
+      else if (operator === "*") output.push(left * right);
+      else if (operator === "/") output.push(left / right);
+    };
+
+    let expectValue = true;
+    for (const token of tokens) {
+      if (/^\d*\.?\d+$/.test(token)) {
+        output.push(Number(token));
+        expectValue = false;
+        continue;
+      }
+      if (token === "(") {
+        operators.push(token);
+        expectValue = true;
+        continue;
+      }
+      if (token === ")") {
+        while (operators.length > 0 && operators[operators.length - 1] !== "(") {
+          applyOperator();
+        }
+        if (operators.pop() !== "(") throw new Error("Expresion invalida");
+        expectValue = false;
+        continue;
+      }
+      if ("+-*/".includes(token)) {
+        if (expectValue && token === "-") {
+          output.push(0);
+        } else if (expectValue) {
+          throw new Error("Expresion invalida");
+        }
+        while (operators.length > 0 && precedence[operators[operators.length - 1]] >= precedence[token]) {
+          applyOperator();
+        }
+        operators.push(token);
+        expectValue = true;
+        continue;
+      }
+      throw new Error("Expresion invalida");
+    }
+
+    while (operators.length > 0) {
+      const operator = operators.pop();
+      if (operator === "(") throw new Error("Expresion invalida");
+      const right = output.pop();
+      const left = output.pop();
+      if (left == null || right == null) throw new Error("Expresion invalida");
+      if (operator === "+") output.push(left + right);
+      else if (operator === "-") output.push(left - right);
+      else if (operator === "*") output.push(left * right);
+      else if (operator === "/") output.push(left / right);
+    }
+
+    if (output.length !== 1 || !Number.isFinite(output[0])) throw new Error("Expresion invalida");
+    return output[0];
   }
 
   function _isInteractable(el) {
     if (!el || !(el instanceof Element)) return false;
     const htmlEl = /** @type {HTMLElement} */ (el);
     if ("disabled" in htmlEl && htmlEl.disabled) return false;
-    const cs = getComputedStyle(htmlEl);
+    const view = (htmlEl.ownerDocument && htmlEl.ownerDocument.defaultView) || window;
+    const cs = view && typeof view.getComputedStyle === "function"
+      ? view.getComputedStyle(htmlEl)
+      : { display: "", visibility: "", pointerEvents: "" };
     if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return false;
     return htmlEl.getClientRects && htmlEl.getClientRects().length > 0;
   }
@@ -153,9 +525,92 @@
         }
       } catch (e) { /* invalid selector */ }
     }
-    if (matches.length === 0) return findElement(selector);
+    if (matches.length === 0) {
+      const direct = findElement(selector);
+      const associated = _findAssociatedCheckInput(direct);
+      return associated || direct;
+    }
     const interactable = matches.find((el) => _isInteractable(el));
     return interactable || matches[0];
+  }
+
+  function _findAssociatedCheckInput(el) {
+    if (!el || !(el instanceof Element)) return null;
+    if (el instanceof HTMLInputElement) {
+      const t = (el.type || "").toLowerCase();
+      if (t === "checkbox" || t === "radio") return el;
+    }
+
+    // label wrapping input
+    try {
+      const nested = el.querySelector && el.querySelector('input[type="checkbox"], input[type="radio"]');
+      if (nested instanceof HTMLInputElement) return nested;
+    } catch (e) { /* ignore */ }
+
+    // label[for=id] target
+    try {
+      const lbl = el instanceof HTMLLabelElement ? el : (el.closest && el.closest("label[for]"));
+      if (lbl && lbl.htmlFor) {
+        const doc = el.ownerDocument || document;
+        const linked = doc.getElementById(lbl.htmlFor);
+        if (linked instanceof HTMLInputElement) {
+          const t = (linked.type || "").toLowerCase();
+          if (t === "checkbox" || t === "radio") return linked;
+        }
+      }
+    } catch (e) { /* ignore */ }
+
+    return null;
+  }
+
+  function _findCheckActivator(inputEl) {
+    if (!(inputEl instanceof HTMLInputElement)) return null;
+
+    // 1) Associated labels are the most reliable trigger for hidden radios/checkboxes.
+    try {
+      if (inputEl.labels && inputEl.labels.length) {
+        const visibleLabel = Array.from(inputEl.labels).find((l) => _isInteractable(l));
+        if (visibleLabel) return visibleLabel;
+        if (inputEl.labels[0]) return inputEl.labels[0];
+      }
+    } catch (e) { /* ignore */ }
+
+    // 2) Any explicit label[for=id] in the same document.
+    if (inputEl.id) {
+      try {
+        const doc = inputEl.ownerDocument || document;
+        const escapedId = String(inputEl.id).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        const labels = doc.querySelectorAll(`label[for="${escapedId}"]`);
+        for (const lbl of labels) {
+          if (_isInteractable(lbl)) return lbl;
+        }
+        if (labels.length > 0) return labels[0];
+      } catch (e) { /* ignore */ }
+    }
+
+    // 3) Nearby role wrappers often receive the click in custom components.
+    try {
+      const roleWrap = inputEl.closest('[role="radio"], [role="checkbox"], label');
+      if (roleWrap && roleWrap !== inputEl) return roleWrap;
+    } catch (e) { /* ignore */ }
+
+    return null;
+  }
+
+  function _setCheckedNative(inputEl, desired) {
+    try {
+      const proto = Object.getPrototypeOf(inputEl) || HTMLInputElement.prototype;
+      const desc = Object.getOwnPropertyDescriptor(proto, "checked");
+      if (desc && typeof desc.set === "function") {
+        desc.set.call(inputEl, Boolean(desired));
+      } else {
+        inputEl.checked = Boolean(desired);
+      }
+    } catch (e) {
+      inputEl.checked = Boolean(desired);
+    }
+    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    inputEl.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
   /**
@@ -304,13 +759,33 @@
 
         if (step.type === "navigate") {
           const url = expandVariables(step.url || "", vars);
-          if (url && window.location.href !== url) {
-            window.location.href = url;
-            // Navigation will unload the page; the promise intentionally never resolves
-            // — the player saves state to background before calling this step.
-          } else {
+          if (!url || window.location.href === url) {
             resolve();
+            return;
           }
+
+          // Same-document navigations (typically hash-only changes) do not unload
+          // the page, so this step must resolve to avoid freezing playback.
+          try {
+            const currentUrl = new URL(window.location.href);
+            const targetUrl = new URL(url, window.location.href);
+            const sameDocument =
+              currentUrl.origin === targetUrl.origin &&
+              currentUrl.pathname === targetUrl.pathname &&
+              currentUrl.search === targetUrl.search;
+
+            if (sameDocument) {
+              if (currentUrl.hash !== targetUrl.hash) {
+                window.location.hash = targetUrl.hash || "";
+              }
+              resolve();
+              return;
+            }
+          } catch (_e) { /* ignore parse issues */ }
+
+          window.location.href = url;
+          // Navigation will unload the page; the promise intentionally never resolves
+          // — the player saves state to background before calling this step.
           return;
         }
 
@@ -341,7 +816,10 @@
             const found = findElement(wfSelector);
             if (found) { resolve(); }
             else if (Date.now() - start < wfTimeout) { setTimeout(wfPoll, retryMs); }
-            else { reject(new Error(`wait_for: tiempo agotado esperando "${wfSelector}"`)); }
+            else {
+              _logSelectorFailure("wait_for", wfSelector);
+              reject(new Error(`wait_for: tiempo agotado esperando "${wfSelector}". Ver consola: [WebMatic][selector-diagnostic]`));
+            }
           };
           wfPoll();
           return;
@@ -354,7 +832,7 @@
             try {
               if (/^[-\d\s+*/.()]+$/.test(raw.trim())) {
                 // eslint-disable-next-line no-new-func
-                vars[step.variable] = String(new Function(`"use strict"; return (${raw.trim()})`)());
+                vars[step.variable] = String(evaluateArithmeticExpression(raw));
               } else {
                 vars[step.variable] = raw;
               }
@@ -458,34 +936,44 @@
           if (Date.now() - start < timeoutMs) {
             setTimeout(attempt, retryMs);
           } else {
-            reject(new Error(`Elemento no encontrado: ${selector}`));
+            if (step.type === "click" && _trySyntheticGalleryClick(selector)) {
+              resolve();
+              return;
+            }
+            _logSelectorFailure(step.type || "unknown", selector);
+            reject(new Error(`Elemento no encontrado: ${selector}. Ver consola: [WebMatic][selector-diagnostic]`));
           }
           return;
         }
 
         const value = expandVariables(step.value || "", vars);
+        const _silentStep = !!step._fast;
 
         if (step.type === "click") {
-          _highlightElement(el);
+          if (!_silentStep) _highlightElement(el);
           simulateClick(el);
         } else if (step.type === "dblclick") {
-          _highlightElement(el);
+          if (!_silentStep) _highlightElement(el);
           // Fire the full sequence: mousedown+up+click ×2, then dblclick
           [1, 1, 1, 2, 2, 2, 2].forEach((detail, i) => {
             const types = ["mousedown", "mouseup", "click", "mousedown", "mouseup", "click", "dblclick"];
             el.dispatchEvent(new MouseEvent(types[i], { bubbles: true, cancelable: true, detail }));
           });
         } else if (step.type === "choose_option") {
-          _highlightElement(el);
+          if (!_silentStep) _highlightElement(el);
           const _resolvedValue = expandVariables(step.value || "", vars);
           const _resolvedText = expandVariables(step.text || "", vars);
           const _inputMode = String(step.inputMode || "").toLowerCase();
+          const _controlKind = String(step && step.controlRef && step.controlRef.controlKind || "").toLowerCase();
           const _isSelect = el instanceof HTMLSelectElement;
 
           // choose_option también soporta inputs con autocomplete cuando
           // el grabador promovió input/text a choose_option (inputMode=autocomplete).
           if (!_isSelect) {
-            if (_inputMode !== "autocomplete") {
+            const _autoDetected = _inputMode === "autocomplete"
+              || _controlKind.indexOf("autocomplete") >= 0
+              || _isLikelyAutocompleteInput(el, step);
+            if (!_autoDetected) {
               reject(new Error(`choose_option requiere un <select> o inputMode=autocomplete: ${selector}`));
               return;
             }
@@ -615,7 +1103,7 @@
           setTimeout(() => { try { _sel.focus(); } catch (e) { /* ignore */ } }, 50);
           return;
         } else if (step.type === "input" || step.type === "text") {
-          _highlightElement(el);
+          if (!_silentStep) _highlightElement(el);
           el.focus();
           setInputValue(el, value);
           // Intentar seleccionar la opción del autocomplete (GeneXus, etc.)
@@ -634,27 +1122,51 @@
           });
           return; // resolve() se llama dentro del .then()
         } else if (step.type === "check") {
-          _highlightElement(el);
+          if (!_silentStep) _highlightElement(el);
+
+          if (!(el instanceof HTMLInputElement)) {
+            // Some imported macros may reference a visual toggle node instead of
+            // the underlying input. Click it and continue.
+            simulateClick(el);
+            resolve();
+            return;
+          }
+
           const desired = step.checked === true || step.checked === "true";
           const elType = (el.type || "").toLowerCase();
           let _checkAttempts = 0;
           const _applyCheck = () => {
+            if (el.checked === desired) {
+              resolve();
+              return;
+            }
+
+            const activator = _findCheckActivator(el);
+
             if (elType === "radio") {
-              // Radio buttons: simulate a click to activate the radio group logic correctly
-              if (!el.checked && desired) simulateClick(el);
+              // Radio buttons: prefer real click paths to trigger group logic.
+              if (desired) {
+                if (_isInteractable(el)) {
+                  simulateClick(el);
+                } else if (activator) {
+                  simulateClick(activator);
+                } else {
+                  _setCheckedNative(el, true);
+                }
+              }
             } else {
-              // Checkbox: prefer real click (framework logic), fallback to property + change
+              // Checkbox: prefer real click paths, fallback to native property setter.
               if (el.checked !== desired) {
                 if (_isInteractable(el)) {
                   simulateClick(el);
+                } else if (activator) {
+                  simulateClick(activator);
                 } else {
-                  el.checked = desired;
-                  el.dispatchEvent(new Event("change", { bubbles: true }));
+                  _setCheckedNative(el, desired);
                 }
                 // If a custom handler prevented state toggle, force desired state.
                 if (el.checked !== desired) {
-                  el.checked = desired;
-                  el.dispatchEvent(new Event("change", { bubbles: true }));
+                  _setCheckedNative(el, desired);
                 }
               }
             }
@@ -667,9 +1179,26 @@
               }
               _checkAttempts += 1;
               if (_checkAttempts < 3) {
+                // Retry once with activator-first path for custom widgets.
+                if (activator && _isInteractable(activator)) {
+                  simulateClick(activator);
+                }
                 _applyCheck();
                 return;
               }
+
+              // Best-effort fallback for custom visual toggles:
+              // some component libraries trigger UI updates but never reflect the
+              // final state in the hidden native input's .checked.
+              if (
+                desired === true &&
+                (elType === "radio" || elType === "checkbox") &&
+                (activator || !_isInteractable(el))
+              ) {
+                resolve();
+                return;
+              }
+
               reject(new Error(`No se pudo establecer el estado CHECK esperado en: ${selector}`));
             }, 80);
           };
@@ -731,6 +1260,156 @@
 
   function _resetPageForms(excludeSelector) {
     _clearInputsInDoc(document, excludeSelector || null);
+  }
+
+  function _collectCurrentFormControls(doc, out) {
+    if (!doc) return;
+    try {
+      const nodes = doc.querySelectorAll("input, select, textarea");
+      nodes.forEach((el) => {
+        try {
+          if (el.closest && (el.closest("#webmatic-panel-root") || el.closest("#webmatic-floating-recorder-global") || el.closest("#webmatic-floating-player-global"))) {
+            return;
+          }
+          const tag = String(el.tagName || "").toLowerCase();
+          const type = String(el.type || "").toLowerCase();
+          if (type === "hidden" || type === "submit" || type === "button" || type === "image" || type === "file" || type === "reset") return;
+          out.push({
+            tag,
+            type,
+            id: String(el.id || ""),
+            name: String((el.getAttribute && el.getAttribute("name")) || "")
+          });
+        } catch (_e) { /* ignore */ }
+      });
+    } catch (_e) { /* ignore */ }
+
+    try {
+      const frames = doc.querySelectorAll("iframe, frame");
+      frames.forEach((fr) => {
+        try {
+          _collectCurrentFormControls(fr.contentDocument || (fr.contentWindow && fr.contentWindow.document), out);
+        } catch (_e) { /* cross-origin */ }
+      });
+    } catch (_e) { /* ignore */ }
+  }
+
+  function _setElementValueLikeUser(el, value) {
+    const str = String(value == null ? "" : value);
+    const proto = (el && el.constructor && el.constructor.prototype) || HTMLInputElement.prototype;
+    const desc = Object.getOwnPropertyDescriptor(proto, "value");
+    if (desc && typeof desc.set === "function") desc.set.call(el, str);
+    else el.value = str;
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  function _restoreFormFromBaseline(preRunReset) {
+    const controls = Array.isArray(preRunReset && preRunReset.controls) ? preRunReset.controls : [];
+    const summary = { restored: 0, skipped: 0, mismatch: 0 };
+
+    try {
+      console.info("[WebMatic][preRunReset:start]", {
+        controls: controls.length,
+        url: String((preRunReset && preRunReset.url) || "")
+      });
+    } catch (_e) { /* ignore */ }
+
+    try {
+      console.info("[WebMatic][preRunReset:baselineLoaded]", {
+        controls: controls.length,
+        capturedAt: Number((preRunReset && preRunReset.capturedAt) || 0) || null
+      });
+    } catch (_e) { /* ignore */ }
+
+    try {
+      const current = [];
+      _collectCurrentFormControls(document, current);
+      console.info("[WebMatic][preRunReset:currentScanned]", { controls: current.length });
+    } catch (_e) { /* ignore */ }
+
+    controls.forEach((ctrl, idx) => {
+      const selector = String((ctrl && ctrl.selector) || "").trim();
+      if (!selector) {
+        summary.skipped += 1;
+        try { console.info("[WebMatic][preRunReset:controlSkipped]", { index: idx, reason: "missing_selector" }); } catch (_e) { /* ignore */ }
+        return;
+      }
+
+      const el = findElement(selector);
+      if (!el) {
+        summary.mismatch += 1;
+        try { console.info("[WebMatic][preRunReset:controlMismatch]", { index: idx, selector, reason: "not_found" }); } catch (_e) { /* ignore */ }
+        return;
+      }
+
+      const tag = String(el.tagName || "").toLowerCase();
+      const type = String(el.type || "").toLowerCase();
+      const expectedTag = String((ctrl && ctrl.tag) || "").toLowerCase();
+      if (expectedTag && expectedTag !== tag) {
+        summary.mismatch += 1;
+        try { console.info("[WebMatic][preRunReset:controlMismatch]", { index: idx, selector, reason: "tag_mismatch", expectedTag, actualTag: tag }); } catch (_e) { /* ignore */ }
+        return;
+      }
+
+      try {
+        if (tag === "select") {
+          const rawValue = String((ctrl && ctrl.value) != null ? ctrl.value : "");
+          const hadValue = rawValue !== "";
+          let changed = false;
+          if (hadValue && String(el.value || "") !== rawValue) {
+            el.value = rawValue;
+            changed = true;
+          }
+          if (!hadValue && Number.isFinite(Number(ctrl && ctrl.selectedIndex)) && Number(el.selectedIndex) !== Number(ctrl.selectedIndex)) {
+            el.selectedIndex = Number(ctrl.selectedIndex);
+            changed = true;
+          }
+          if (changed) {
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+            summary.restored += 1;
+            try { console.info("[WebMatic][preRunReset:controlRestored]", { index: idx, selector, type: "select" }); } catch (_e) { /* ignore */ }
+          } else {
+            summary.skipped += 1;
+            try { console.info("[WebMatic][preRunReset:controlSkipped]", { index: idx, selector, reason: "already_equal" }); } catch (_e) { /* ignore */ }
+          }
+          return;
+        }
+
+        if (type === "checkbox" || type === "radio") {
+          const desired = Boolean(ctrl && ctrl.checked);
+          if (Boolean(el.checked) === desired) {
+            summary.skipped += 1;
+            try { console.info("[WebMatic][preRunReset:controlSkipped]", { index: idx, selector, reason: "already_equal" }); } catch (_e) { /* ignore */ }
+            return;
+          }
+          el.checked = desired;
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+          summary.restored += 1;
+          try { console.info("[WebMatic][preRunReset:controlRestored]", { index: idx, selector, type }); } catch (_e) { /* ignore */ }
+          return;
+        }
+
+        const desiredValue = String((ctrl && ctrl.value) != null ? ctrl.value : "");
+        if (String(el.value == null ? "" : el.value) === desiredValue) {
+          summary.skipped += 1;
+          try { console.info("[WebMatic][preRunReset:controlSkipped]", { index: idx, selector, reason: "already_equal" }); } catch (_e) { /* ignore */ }
+          return;
+        }
+        _setElementValueLikeUser(el, desiredValue);
+        summary.restored += 1;
+        try { console.info("[WebMatic][preRunReset:controlRestored]", { index: idx, selector, type: tag || type || "field" }); } catch (_e) { /* ignore */ }
+      } catch (_e) {
+        summary.mismatch += 1;
+        try { console.info("[WebMatic][preRunReset:controlMismatch]", { index: idx, selector, reason: "apply_failed" }); } catch (_x) { /* ignore */ }
+      }
+    });
+
+    try {
+      console.info("[WebMatic][preRunReset:done]", summary);
+    } catch (_e) { /* ignore */ }
+    return summary;
   }
 
   function _splitSelectorList(raw) {
@@ -895,6 +1574,30 @@
     });
   }
 
+  function _isLikelyAutocompleteInput(el, step) {
+    if (!el) return false;
+    const tag = String(el.tagName || "").toLowerCase();
+    const type = String(el.type || "").toLowerCase();
+    if (tag !== "input" && tag !== "textarea") return false;
+    if (tag === "input" && type && !["text", "search", ""].includes(type)) return false;
+
+    const role = String((el.getAttribute && el.getAttribute("role")) || "").toLowerCase();
+    const ariaAutocomplete = String((el.getAttribute && el.getAttribute("aria-autocomplete")) || "").toLowerCase();
+    const hasList = !!(el.getAttribute && el.getAttribute("list"));
+    const cls = String(el.className || "").toLowerCase();
+    const id = String(el.id || "").toLowerCase();
+    const name = String((el.getAttribute && el.getAttribute("name")) || "").toLowerCase();
+    const selector = String(step && step.selector || "").toLowerCase();
+    const hasTextToType = !!String((step && (step.text || step.value)) || "").trim();
+
+    if (role === "combobox" || ariaAutocomplete || hasList) return true;
+    if (/autocomplete|typeahead|select2|chosen|lookup|smart/.test(cls)) return true;
+    if (/vdelegacion|vaucaespefc/.test(id) || /vdelegacion|vaucaespefc/.test(name) || /vdelegacion|vaucaespefc/.test(selector)) return true;
+    // Fallback tolerante: si choose_option llega sobre input textual con texto/valor,
+    // tratamos como autocomplete para no bloquear por metadata incompleta.
+    return hasTextToType;
+  }
+
   function _highlightElement(el) {
     try {
       el.setAttribute("data-wm-hl", "1");
@@ -924,6 +1627,106 @@
     } catch (e) { /* ignore */ }
   }
 
+  function _normalizeStepsForPlayback(steps) {
+    if (!Array.isArray(steps)) return [];
+    const cloned = steps.map((s) => (s && typeof s === "object" ? { ...s } : s));
+
+    return cloned.filter((step, i, arr) => {
+      if (!step || !step.selector) return true;
+      const selector = String(step.selector || "");
+      const transientHint = /(next|siguiente|prev|anterior|close|cerrar|arrow|flecha|gallery|thumbnail|overlay)/i.test(selector);
+
+      if (step.type === "click" && transientHint) {
+        for (let k = i + 1; k < arr.length; k++) {
+          const t = arr[k] && arr[k].type;
+          if (t === "wait" || t === "hover" || t === "scroll_to") continue;
+          if (t === "navigate") return false;
+          if (t === "input" || t === "text" || t === "check" || t === "choose_option" || t === "extract" || t === "click") break;
+        }
+      }
+
+      if (step.type === "hover") {
+        for (let k = i + 1; k < arr.length; k++) {
+          const t = arr[k] && arr[k].type;
+          if (t === "wait" || t === "hover" || t === "scroll_to") continue;
+          if (t === "navigate") return false;
+          if (t === "input" || t === "text" || t === "check" || t === "choose_option" || t === "extract" || t === "click" || t === "wait_for") break;
+        }
+      }
+
+      if (step.type !== "wait_for") return true;
+
+      let j = i + 1;
+      while (j < arr.length && arr[j] && arr[j].type === "wait") j++;
+      const next = arr[j];
+
+      // Pattern: wait_for(X) -> click(X) -> ... -> navigate
+      // For transient controls this wait tends to be brittle and redundant.
+      if (next && next.type === "click" && next.selector === step.selector) {
+        let k = j + 1;
+        while (k < arr.length) {
+          const t = arr[k] && arr[k].type;
+          if (t === "wait" || t === "hover" || t === "scroll_to") {
+            k++;
+            continue;
+          }
+          break;
+        }
+        if (arr[k] && arr[k].type === "navigate") return false;
+      }
+
+      if (transientHint) {
+        // If a navigate arrives before any stable form/data action, drop wait_for.
+        for (let k = i + 1; k < arr.length; k++) {
+          const t = arr[k] && arr[k].type;
+          if (t === "wait" || t === "hover" || t === "scroll_to") continue;
+          if (t === "navigate") return false;
+          if (t === "input" || t === "text" || t === "check" || t === "choose_option" || t === "extract") break;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  function _isTransientGallerySelector(selector) {
+    return /(next|siguiente|prev|anterior|close|cerrar|arrow|flecha|gallery|thumbnail|overlay)/i.test(String(selector || ""));
+  }
+
+  function _hasNavigateSoon(steps, fromIndex, maxLookahead) {
+    if (!Array.isArray(steps)) return false;
+    const start = Math.max(0, Number(fromIndex) || 0);
+    const max = Math.max(1, Number(maxLookahead) || 6);
+    let seen = 0;
+    for (let i = start; i < steps.length && seen < max; i++) {
+      const t = steps[i] && steps[i].type;
+      if (!t) continue;
+      if (t === "wait" || t === "hover" || t === "scroll_to") {
+        seen++;
+        continue;
+      }
+      if (t === "navigate") return true;
+      if (t === "input" || t === "text" || t === "check" || t === "choose_option" || t === "extract" || t === "click") return false;
+      seen++;
+    }
+    return false;
+  }
+
+  function _isRecoverableTransientFailure(err, step, steps, stepIndex) {
+    if (!step || (step.type !== "click" && step.type !== "wait_for" && step.type !== "hover")) return false;
+    const msg = String((err && err.message) || err || "");
+
+    // Hover should be best-effort during playback. Missing targets are common
+    // on volatile UIs and should not abort the whole macro.
+    if (step.type === "hover") {
+      return /Elemento no encontrado/i.test(msg);
+    }
+
+    if (!_isTransientGallerySelector(step.selector || "")) return false;
+    if (!_hasNavigateSoon(steps, (stepIndex || 0) + 1, 8)) return false;
+    return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
+  }
+
   class Player {
     constructor(options) {
       this.retryMs = options?.retryMs ?? 500;
@@ -939,24 +1742,52 @@
      */
     async play(steps, options = {}) {
       if (!Array.isArray(steps) || steps.length === 0) return false;
+      const runtimeSteps = _normalizeStepsForPlayback(steps);
+      if (!Array.isArray(runtimeSteps) || runtimeSteps.length === 0) return false;
       const speed = Math.max(0.5, Math.min(3, options.speed ?? 1));
       // Base delay between steps: 300ms at speed 1, scaled inversely
       const baseDelayMs = Math.round(300 / speed);
       const vars = options.vars || {};
       const startIndex = options.startIndex || 0;
       const macroId = options.macroId || null;
-      const hasExplicitCaptureDefaults = steps.some((s) => s && s.type === "capture_defaults");
+      const hasExplicitCaptureDefaults = runtimeSteps.some((s) => s && s.type === "capture_defaults");
       this.isPlaying = true;
       this._abort = false;
       this._speed = speed;
+      _fallbackBucket = [];
+
+      if (startIndex === 0 && options.preRunReset && typeof options.preRunReset === "object") {
+        _restoreFormFromBaseline(options.preRunReset);
+      }
 
       // Do not reset page forms implicitly: it can alter defaults not present in the recording.
       // If needed, callers can opt-in with options.autoReset=true or record an explicit reset_fields step.
-      if (options.autoReset === true && startIndex === 0 && (!steps[0] || steps[0].type !== "reset_fields")) {
-        const keepSels = steps
+      if (options.autoReset === true && startIndex === 0 && (!runtimeSteps[0] || runtimeSteps[0].type !== "reset_fields")) {
+        const keepSels = runtimeSteps
           .filter(s => (s.type === "input" || s.type === "text") && s.useCurrentValue && s.selector)
           .map(s => s.selector);
         _resetPageForms(keepSels.length > 0 ? keepSels.join(", ") : null);
+      }
+
+      // Universal playback bootstrap: if macro starts with local interactions
+      // (non-navigate) and we're on a different page, jump to first recorded
+      // navigate URL so playback can start from anywhere.
+      if (startIndex === 0 && options.bootstrapToFirstNavigate !== false) {
+        const firstStep = runtimeSteps[0] || null;
+        const firstNav = runtimeSteps.find((s) => s && s.type === "navigate" && s.url);
+        if (firstStep && firstStep.type !== "navigate" && firstNav && firstNav.url) {
+          const bootstrapUrl = expandVariables(firstNav.url, vars);
+          if (bootstrapUrl && window.location.href !== bootstrapUrl) {
+            await new Promise((res) => {
+              chrome.runtime.sendMessage({
+                type: "SAVE_PLAYBACK_STATE",
+                steps: runtimeSteps, index: 0, vars, speed, macroId
+              }, () => { void chrome.runtime.lastError; res(); });
+            });
+            window.location.href = bootstrapUrl;
+            return true;
+          }
+        }
       }
 
       try {
@@ -965,9 +1796,9 @@
         // Las macros con un paso capture_defaults explícito siguen funcionando igual.
         const autoCaptureEnabled = options.autoCaptureDefaults === true;
         let autoCaptureDone = !autoCaptureEnabled || hasExplicitCaptureDefaults || startIndex > 0;
-        for (let i = startIndex; i < steps.length; i++) {
+        for (let i = startIndex; i < runtimeSteps.length; i++) {
           if (this._abort) break;
-          const step = steps[i];
+          const step = runtimeSteps[i];
 
           // Automatic safety net: if the macro doesn't include capture_defaults,
           // normalize defaults right before the first field-mutating step.
@@ -975,14 +1806,14 @@
             const autoStep = {
               type: "capture_defaults",
               _fast: true,
-              _preserveSelectors: Array.from(_collectModifiedSelectors(steps, i))
+              _preserveSelectors: Array.from(_collectModifiedSelectors(runtimeSteps, i))
             };
             await executeStep(autoStep, vars, this.retryMs, this.timeoutMs, this._speed);
             autoCaptureDone = true;
           }
 
           const capturePreserve = step.type === "capture_defaults"
-            ? Array.from(_collectModifiedSelectors(steps, i + 1))
+            ? Array.from(_collectModifiedSelectors(runtimeSteps, i + 1))
             : null;
           const runnableStep = capturePreserve ? { ...step, _preserveSelectors: capturePreserve } : step;
           if (typeof options.onStep === "function" && !runnableStep._fast) options.onStep(step, i);
@@ -996,7 +1827,7 @@
             await new Promise((res) => {
               chrome.runtime.sendMessage({
                 type: "SAVE_PLAYBACK_STATE",
-                steps, index: i + 1, vars, speed, macroId
+                steps: runtimeSteps, index: i + 1, vars, speed, macroId
               }, () => { void chrome.runtime.lastError; res(); });
             });
           }
@@ -1085,26 +1916,69 @@
           if (step.type === "navigate") {
             const _navUrl = expandVariables(step.url || "", vars);
             if (_navUrl && window.location.href !== _navUrl) {
-              // URL differs — navigation will unload the page; save state first
-              await new Promise((res) => {
-                chrome.runtime.sendMessage({
-                  type: "SAVE_PLAYBACK_STATE",
-                  steps, index: i + 1, vars, speed, macroId
-                }, () => { void chrome.runtime.lastError; res(); });
-              });
-              window.location.href = _navUrl;
-              // Page is unloading — this promise never continues; exit play()
-              return true;
+              let _sameDocument = false;
+              try {
+                const _cur = new URL(window.location.href);
+                const _dst = new URL(_navUrl, window.location.href);
+                _sameDocument =
+                  _cur.origin === _dst.origin &&
+                  _cur.pathname === _dst.pathname &&
+                  _cur.search === _dst.search;
+                if (_sameDocument) {
+                  if (_cur.hash !== _dst.hash) window.location.hash = _dst.hash || "";
+                }
+              } catch (_) { /* ignore parse issues */ }
+
+              if (!_sameDocument) {
+                // Real page unload navigation: persist and hand off to next page.
+                await new Promise((res) => {
+                  chrome.runtime.sendMessage({
+                    type: "SAVE_PLAYBACK_STATE",
+                    steps: runtimeSteps, index: i + 1, vars, speed, macroId
+                  }, () => { void chrome.runtime.lastError; res(); });
+                });
+                window.location.href = _navUrl;
+                // Page is unloading — this promise never continues; exit play()
+                return true;
+              }
             }
             // URL is empty or matches current page — treat as no-op, continue loop
-            if (i < steps.length - 1) await new Promise((r) => setTimeout(r, baseDelayMs));
+            if (i < runtimeSteps.length - 1) await new Promise((r) => setTimeout(r, baseDelayMs));
             continue;
           }
 
           // Execute the step (state was already saved at the top of the loop)
-          await executeStep(runnableStep, vars, this.retryMs, this.timeoutMs, this._speed);
+          try {
+            await executeStep(runnableStep, vars, this.retryMs, this.timeoutMs, this._speed);
+          } catch (stepErr) {
+            // Defensive runtime guard for brittle gallery controls in legacy macros:
+            // if a transient click/wait_for fails but a navigate is coming right away,
+            // skip this step and continue to the stable navigation state.
+            if (_isRecoverableTransientFailure(stepErr, step, runtimeSteps, i)) {
+              try {
+                console.warn("[WebMatic][playback] step skipped as transient before navigate", {
+                  index: i,
+                  type: step.type,
+                  selector: step.selector,
+                  reason: String((stepErr && stepErr.message) || stepErr || "")
+                });
+              } catch (_e) { /* ignore */ }
+              try {
+                if (Array.isArray(_fallbackBucket)) {
+                  _fallbackBucket.push({
+                    kind: "transient_skip",
+                    index: i,
+                    type: step.type,
+                    selector: step.selector || ""
+                  });
+                }
+              } catch (_e) { /* ignore */ }
+            } else {
+              throw stepErr;
+            }
+          }
 
-          if (i < steps.length - 1) {
+          if (i < runtimeSteps.length - 1) {
             await new Promise((r) => setTimeout(r, baseDelayMs));
           }
         }
@@ -1131,7 +2005,8 @@
         try {
           chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
         } catch (_) {}
-        if (typeof options.onDone === "function") options.onDone();
+        const _summary = { fallbacks: Array.isArray(_fallbackBucket) ? _fallbackBucket.slice() : [] };
+        if (typeof options.onDone === "function") options.onDone(_summary);
       } catch (err) {
         try {
           chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
@@ -1139,6 +2014,7 @@
         if (typeof options.onError === "function") options.onError(err);
       } finally {
         this.isPlaying = false;
+        _fallbackBucket = null;
       }
       return true;
     }

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GeneXus Fixture - Subpage Flow</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 20px; }
+    .row { display: grid; grid-template-columns: 220px 1fr; gap: 10px; margin-bottom: 12px; }
+    .dropdown { border: 1px solid #cbd5e1; border-radius: 8px; max-height: 120px; overflow: auto; display: none; }
+    .dropdown button { width: 100%; text-align: left; border: 0; background: #fff; padding: 6px 8px; cursor: pointer; }
+    .dropdown button:hover { background: #dbeafe; }
+  </style>
+</head>
+<body>
+  <h1>GeneXus-like Main Page</h1>
+  <p>Simula ids y catálogos tipo GeneXus para validar captura de autocomplete y navegacion.</p>
+
+  <div class="row">
+    <label for="vDELEGACION">Delegacion</label>
+    <div>
+      <input id="vDELEGACION" name="vDELEGACION" autocomplete="off" />
+      <div id="vDELEGACION_menu" class="dropdown" role="listbox"></div>
+      <select id="GXHvDELEGACION" style="display:none"></select>
+    </div>
+  </div>
+
+  <div class="row">
+    <label for="vAUCAESPEFC">Especialidad</label>
+    <div>
+      <input id="vAUCAESPEFC" name="vAUCAESPEFC" autocomplete="off" />
+      <div id="vAUCAESPEFC_menu" class="dropdown" role="listbox"></div>
+      <select id="GXHvAUCAESPEFC" style="display:none"></select>
+    </div>
+  </div>
+
+  <div class="row">
+    <span></span>
+    <div>
+      <button id="gx-search" type="button">Buscar</button>
+      <button id="gx-subpage" type="button">Ir a subpagina</button>
+    </div>
+  </div>
+
+  <script>
+    var GX_DELEG = [{ c: "54", d: "ALVEAR" }, { c: "55", d: "BELGRANO" }, { c: "56", d: "CASTELLANOS" }];
+    var GX_ESP = [{ c: "101", d: "CARDIOLOGY" }, { c: "102", d: "CLINIC" }, { c: "103", d: "DERMATOLOGY" }];
+
+    function gxFillHiddenSelect(selectId, list) {
+      var sel = document.getElementById(selectId);
+      sel.replaceChildren();
+      for (var i = 0; i < list.length; i++) {
+        var opt = document.createElement("option");
+        opt.value = list[i].c;
+        opt.textContent = list[i].d;
+        sel.appendChild(opt);
+      }
+    }
+
+    function gxShowMenu(inputId, menuId, source, hiddenSelectId) {
+      var input = document.getElementById(inputId);
+      var menu = document.getElementById(menuId);
+      var q = String(input.value || "").trim().toUpperCase();
+      var filtered = source.filter(function (x) {
+        return !q || x.d.indexOf(q) >= 0 || x.c.indexOf(q) >= 0;
+      });
+
+      gxFillHiddenSelect(hiddenSelectId, filtered);
+      menu.replaceChildren();
+      if (!filtered.length) {
+        menu.style.display = "none";
+        return;
+      }
+
+      filtered.forEach(function (x) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("role", "option");
+        b.dataset.value = x.c;
+        b.textContent = x.d + " (" + x.c + ")";
+        b.addEventListener("click", function () {
+          input.value = x.d;
+          input.dataset.selectedValue = x.c;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+          menu.style.display = "none";
+        });
+        menu.appendChild(b);
+      });
+
+      menu.style.display = "block";
+    }
+
+    document.getElementById("vDELEGACION").addEventListener("input", function () {
+      gxShowMenu("vDELEGACION", "vDELEGACION_menu", GX_DELEG, "GXHvDELEGACION");
+    });
+
+    document.getElementById("vAUCAESPEFC").addEventListener("input", function () {
+      gxShowMenu("vAUCAESPEFC", "vAUCAESPEFC_menu", GX_ESP, "GXHvAUCAESPEFC");
+    });
+
+    document.getElementById("gx-subpage").addEventListener("click", function () {
+      location.href = "./genexus-subpage-detail.html";
+    });
+  </script>
+</body>
+</html>

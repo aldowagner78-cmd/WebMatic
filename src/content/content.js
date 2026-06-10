@@ -297,9 +297,366 @@
   }
 
   const PAGE_META_STORAGE_KEY = "webmaticPageMetadataProfiles";
+  const MACROS_STORAGE_KEY = "webmaticMacros";
+  const MACROS_SYNC_META_KEY = "webmaticMacrosSyncMeta";
+  const MACROS_SYNC_CHUNK_PREFIX = "webmaticMacrosSyncChunk_";
+  const MACROS_SYNC_CHUNK_SIZE = 7000;
+  const SETTINGS_STORAGE_KEY = "webmaticSettings";
+  const SETTINGS_SYNC_KEY = "webmaticSettingsSyncSnapshot";
+  const SITE_SURVIVAL_KEY = "webmaticSurvivalSnapshotV1";
+  const APP_CONTENT_STATS_KEY = "webmaticAppContentStats";
   const PAGE_META_MAX_DEFAULT = 60;
+  const DEFAULT_APP_CONTENT_STATS = Object.freeze({
+    fullBackupsCreated: 0,
+    fullBackupsImported: 0,
+    macroExports: 0,
+    macroImports: 0,
+    pageMetaExports: 0,
+    pageMetaImports: 0
+  });
   let pageMetadataProfiles = [];
   let pageMetaMaxProfiles = PAGE_META_MAX_DEFAULT;
+  let appContentStats = { ...DEFAULT_APP_CONTENT_STATS };
+  let lastMacrosPersistHash = "";
+  let lastSettingsPersistHash = "";
+  let macrosPersistenceReady = false;
+  let settingsPersistenceReady = false;
+  let macroSurvivalBackupTimer = null;
+
+  function _readSiteSurvivalSnapshot() {
+    try {
+      if (!globalScope || !globalScope.localStorage) return null;
+      const raw = globalScope.localStorage.getItem(SITE_SURVIVAL_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(String(raw));
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function _writeSiteSurvivalSnapshot(patch) {
+    try {
+      if (!globalScope || !globalScope.localStorage) return false;
+      const prev = _readSiteSurvivalSnapshot() || {};
+      const next = {
+        version: 1,
+        updatedAt: Date.now(),
+        origin: String((location && location.origin) || ""),
+        ...prev,
+        ...(patch && typeof patch === "object" ? patch : {})
+      };
+      globalScope.localStorage.setItem(SITE_SURVIVAL_KEY, JSON.stringify(next));
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _loadSiteSurvivalMacros() {
+    const snap = _readSiteSurvivalSnapshot();
+    const list = snap && Array.isArray(snap.macros) ? snap.macros : [];
+    return Array.isArray(list) ? list : [];
+  }
+
+  function _loadSiteSurvivalSettings() {
+    const snap = _readSiteSurvivalSnapshot();
+    const cfg = snap && snap.settings && typeof snap.settings === "object" ? snap.settings : null;
+    return cfg && !Array.isArray(cfg) ? cfg : null;
+  }
+  const ORIGIN_SURVIVAL_KEY = "webmaticSurvivalBackupV1";
+
+  function _canUseOriginStorage() {
+    try {
+      const u = new URL(String(location && location.href ? location.href : ""));
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _readOriginSurvivalSnapshot() {
+    try {
+      if (!_canUseOriginStorage()) return null;
+      const raw = localStorage.getItem(ORIGIN_SURVIVAL_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(String(raw));
+      return parsed && typeof parsed === "object" ? parsed : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function _writeOriginSurvivalSnapshot(snapshot) {
+    try {
+      if (!_canUseOriginStorage()) return false;
+      localStorage.setItem(ORIGIN_SURVIVAL_KEY, JSON.stringify(snapshot || {}));
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _queueOriginSurvivalSnapshot(macros, settings) {
+    const list = Array.isArray(macros) ? macros : [];
+    const cfg = settings && typeof settings === "object" ? settings : {};
+    try {
+      _writeOriginSurvivalSnapshot({
+        version: 1,
+        app: "WebMatic",
+        savedAt: Date.now(),
+        host: String(location && location.host ? location.host : ""),
+        macros: list,
+        settings: cfg
+      });
+    } catch (_e) { /* ignore */ }
+  }
+
+  function getSyncStorageValues(keys) {
+    return new Promise((resolve) => {
+      try {
+        if (!chrome.storage || !chrome.storage.sync) {
+          resolve({});
+          return;
+        }
+        chrome.storage.sync.get(keys, (result) => {
+          if (chrome.runtime.lastError) {
+            resolve({});
+            return;
+          }
+          resolve(result || {});
+        });
+      } catch (_e) {
+        resolve({});
+      }
+    });
+  }
+
+  function setSyncStorageValues(patch) {
+    return new Promise((resolve) => {
+      try {
+        if (!chrome.storage || !chrome.storage.sync) {
+          resolve(false);
+          return;
+        }
+        chrome.storage.sync.set(patch || {}, () => {
+          resolve(!chrome.runtime.lastError);
+        });
+      } catch (_e) {
+        resolve(false);
+      }
+    });
+  }
+
+  function removeSyncStorageKeys(keys) {
+    return new Promise((resolve) => {
+      try {
+        if (!chrome.storage || !chrome.storage.sync) {
+          resolve(false);
+          return;
+        }
+        const list = Array.isArray(keys) ? keys : [keys];
+        chrome.storage.sync.remove(list, () => {
+          resolve(!chrome.runtime.lastError);
+        });
+      } catch (_e) {
+        resolve(false);
+      }
+    });
+  }
+
+  async function _saveMacrosSyncSnapshot(macros) {
+    try {
+      const list = Array.isArray(macros) ? macros : [];
+      const json = JSON.stringify(list);
+      const chunks = [];
+      for (let i = 0; i < json.length; i += MACROS_SYNC_CHUNK_SIZE) {
+        chunks.push(json.slice(i, i + MACROS_SYNC_CHUNK_SIZE));
+      }
+      const currentMeta = await getSyncStorageValues([MACROS_SYNC_META_KEY]);
+      const oldCount = Number(currentMeta && currentMeta[MACROS_SYNC_META_KEY] && currentMeta[MACROS_SYNC_META_KEY].chunkCount) || 0;
+      const patch = {};
+      for (let i = 0; i < chunks.length; i += 1) {
+        patch[`${MACROS_SYNC_CHUNK_PREFIX}${i}`] = chunks[i];
+      }
+      patch[MACROS_SYNC_META_KEY] = {
+        version: 1,
+        chunkCount: chunks.length,
+        savedAt: Date.now(),
+        itemCount: list.length
+      };
+      const ok = await setSyncStorageValues(patch);
+      if (!ok) return false;
+      if (oldCount > chunks.length) {
+        const stale = [];
+        for (let i = chunks.length; i < oldCount; i += 1) stale.push(`${MACROS_SYNC_CHUNK_PREFIX}${i}`);
+        if (stale.length > 0) await removeSyncStorageKeys(stale);
+      }
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  async function _loadMacrosSyncSnapshot() {
+    try {
+      const metaData = await getSyncStorageValues([MACROS_SYNC_META_KEY]);
+      const meta = metaData && metaData[MACROS_SYNC_META_KEY];
+      const count = Math.max(0, Number(meta && meta.chunkCount) || 0);
+      if (!count) return [];
+      const keys = [];
+      for (let i = 0; i < count; i += 1) keys.push(`${MACROS_SYNC_CHUNK_PREFIX}${i}`);
+      const data = await getSyncStorageValues(keys);
+      let json = "";
+      for (let i = 0; i < count; i += 1) json += String(data[`${MACROS_SYNC_CHUNK_PREFIX}${i}`] || "");
+      const parsed = JSON.parse(json);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_e) {
+      return [];
+    }
+  }
+
+  async function _saveSettingsSyncSnapshot(settings) {
+    try {
+      const payload = settings && typeof settings === "object" ? settings : {};
+      return await setSyncStorageValues({ [SETTINGS_SYNC_KEY]: payload });
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  async function _loadSettingsSyncSnapshot() {
+    try {
+      const data = await getSyncStorageValues([SETTINGS_SYNC_KEY]);
+      const obj = data && data[SETTINGS_SYNC_KEY];
+      return obj && typeof obj === "object" && !Array.isArray(obj) ? obj : null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function _queueMacroSurvivalBackup(macros) {
+    if (macroSurvivalBackupTimer) {
+      clearTimeout(macroSurvivalBackupTimer);
+      macroSurvivalBackupTimer = null;
+    }
+    const list = Array.isArray(macros) ? macros : [];
+    if (list.length === 0) return;
+    macroSurvivalBackupTimer = setTimeout(() => {
+      macroSurvivalBackupTimer = null;
+      const payload = {
+        version: 1,
+        app: "WebMatic",
+        kind: "macros-survival",
+        exportedAt: new Date().toISOString(),
+        macros: list
+      };
+      chrome.runtime.sendMessage({
+        type: "EXPORT_FILE",
+        filename: "backup/webmatic-macros-survival-v1.json",
+        content: JSON.stringify(payload, null, 2),
+        saveAs: false
+      }, () => {
+        void chrome.runtime.lastError;
+      });
+    }, 2200);
+  }
+
+  async function _restoreMacrosFromInternalSnapshot(mode) {
+    let source = "sync";
+    let recovered = await _loadMacrosSyncSnapshot();
+    if (!Array.isArray(recovered) || recovered.length === 0) {
+      recovered = _loadSiteSurvivalMacros();
+      source = "site";
+    }
+    if (!Array.isArray(recovered) || recovered.length === 0) {
+      return { ok: false, restored: 0, total: 0, reason: "empty-sync", source: "none" };
+    }
+    const currentState = store.getState();
+    const current = Array.isArray(currentState && currentState.library && currentState.library.macros)
+      ? currentState.library.macros
+      : [];
+    const useMerge = String(mode || "").toLowerCase() === "merge";
+    let next = recovered;
+    if (useMerge) {
+      const byId = new Map();
+      current.forEach((m) => { if (m && m.id) byId.set(String(m.id), m); });
+      recovered.forEach((m) => {
+        const key = String(m && m.id ? m.id : `macro_${Date.now()}_${Math.floor(Math.random() * 10000)}`);
+        byId.set(key, m);
+      });
+      next = Array.from(byId.values());
+    }
+    store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: next });
+    await setLocalStorageValues({ [MACROS_STORAGE_KEY]: next });
+    void _saveMacrosSyncSnapshot(next);
+    _writeSiteSurvivalSnapshot({ macros: next, macrosSavedAt: Date.now() });
+    lastMacrosPersistHash = _simpleStableHash(JSON.stringify(next));
+    return { ok: true, restored: recovered.length, total: next.length, reason: useMerge ? "merged" : "replaced", source };
+  }
+
+  function _normalizeAppContentStats(raw) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    return {
+      fullBackupsCreated: Math.max(0, Number(source.fullBackupsCreated) || 0),
+      fullBackupsImported: Math.max(0, Number(source.fullBackupsImported) || 0),
+      macroExports: Math.max(0, Number(source.macroExports) || 0),
+      macroImports: Math.max(0, Number(source.macroImports) || 0),
+      pageMetaExports: Math.max(0, Number(source.pageMetaExports) || 0),
+      pageMetaImports: Math.max(0, Number(source.pageMetaImports) || 0)
+    };
+  }
+
+  async function _loadAppContentStats() {
+    const data = await getLocalStorageValues([APP_CONTENT_STATS_KEY]);
+    appContentStats = _normalizeAppContentStats(data[APP_CONTENT_STATS_KEY]);
+    return appContentStats;
+  }
+
+  async function _saveAppContentStats(patch) {
+    const next = _normalizeAppContentStats({ ...appContentStats, ...(patch && typeof patch === "object" ? patch : {}) });
+    appContentStats = next;
+    await setLocalStorageValues({ [APP_CONTENT_STATS_KEY]: next });
+    return next;
+  }
+
+  async function _incrementAppContentStats(patch) {
+    const delta = patch && typeof patch === "object" ? patch : {};
+    const next = { ...appContentStats };
+    Object.keys(DEFAULT_APP_CONTENT_STATS).forEach((key) => {
+      next[key] = Math.max(0, Number(next[key]) || 0) + Math.max(0, Number(delta[key]) || 0);
+    });
+    return _saveAppContentStats(next);
+  }
+
+  function _refreshPlaySummary() {
+    const panel = document.getElementById("webmatic-panel-root");
+    if (!panel) return;
+    const summary = panel.querySelector("[data-play-summary-text]");
+    if (!summary) return;
+    const state = typeof store.getState === "function" ? store.getState() : null;
+    const macroCount = Array.isArray(state && state.library && state.library.macros) ? state.library.macros.length : 0;
+    const metaCount = Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles.length : 0;
+    const fullBackups = Number(appContentStats.fullBackupsCreated) || 0;
+    const fullBackupsImported = Number(appContentStats.fullBackupsImported) || 0;
+    const macroImports = Number(appContentStats.macroImports) || 0;
+    const macroExports = Number(appContentStats.macroExports) || 0;
+    const pageMetaImports = Number(appContentStats.pageMetaImports) || 0;
+    const pageMetaExports = Number(appContentStats.pageMetaExports) || 0;
+    const status = String((state && state.runtime && state.runtime.statusMessage) || "Listo");
+    summary.style.whiteSpace = "pre-wrap";
+    summary.textContent = [
+      `Macros: ${macroCount}`,
+      `Metadatos: ${metaCount}`,
+      `Backups creados: ${fullBackups}`,
+      `Backups importados: ${fullBackupsImported}`,
+      `Macros exportadas: ${macroExports}`,
+      `Macros importadas: ${macroImports}`,
+      `Metadatos exportados: ${pageMetaExports}`,
+      `Metadatos importados: ${pageMetaImports}`,
+      `Estado: ${status}`
+    ].join("\n");
+  }
 
   function _safeUrlParts(rawUrl) {
     try {
@@ -369,7 +726,31 @@
     return out;
   }
 
-  function _catalogsFromInventories(inventories) {
+  function _selectorAllowSet(selectors) {
+    const list = Array.isArray(selectors) ? selectors : [];
+    if (list.length === 0) return null;
+    const set = new Set();
+    list.forEach((sel) => {
+      const v = String(sel || "").trim();
+      if (v) set.add(v);
+    });
+    return set.size > 0 ? set : null;
+  }
+
+  function _filterCatalogMapBySelectors(map, selectors) {
+    const allowed = _selectorAllowSet(selectors);
+    if (!allowed) return map || {};
+    const out = {};
+    Object.keys(map || {}).forEach((sel) => {
+      if (!allowed.has(sel)) return;
+      const options = _dedupeOptions(map[sel]);
+      if (options.length > 0) out[sel] = options;
+    });
+    return out;
+  }
+
+  function _catalogsFromInventories(inventories, selectors) {
+    const allowed = _selectorAllowSet(selectors);
     const out = {};
     (Array.isArray(inventories) ? inventories : []).forEach((inv) => {
       const ctrls = Array.isArray(inv && inv.controls) ? inv.controls : [];
@@ -377,6 +758,7 @@
         const sel = String((ctrl && ctrl.selector) || "").trim();
         const options = _dedupeOptions(ctrl && ctrl.options);
         if (!sel || options.length === 0) return;
+        if (allowed && !allowed.has(sel)) return;
         out[sel] = _dedupeOptions([...(out[sel] || []), ...options]);
       });
     });
@@ -389,10 +771,20 @@
     const inventories = Array.isArray(raw.inventories)
       ? raw.inventories
       : (raw.inventory ? [raw.inventory] : []);
-    const mergedCatalogs = _mergeCatalogMaps(raw.autocompleteCatalogs, _catalogsFromInventories(inventories));
+    const defaults = (raw.defaults && typeof raw.defaults === "object" && !Array.isArray(raw.defaults))
+      ? raw.defaults
+      : {};
+    const selectedSelectors = Array.isArray(raw.selectedSelectors) && raw.selectedSelectors.length > 0
+      ? raw.selectedSelectors
+      : (Object.keys(defaults).length > 0 ? Object.keys(defaults) : null);
+    const mergedCatalogs = _mergeCatalogMaps(
+      _filterCatalogMapBySelectors(raw.autocompleteCatalogs, selectedSelectors),
+      _catalogsFromInventories(inventories, selectedSelectors)
+    );
     const domElements = Array.isArray(raw.domElements) ? raw.domElements : [];
     const selectors = Object.keys(mergedCatalogs || {});
     const fingerprint = String(raw.fingerprint || _buildProfileFingerprint(page, selectors));
+    // defaults: mapa selector→valor capturado al momento de la captura
     return {
       id: String(raw.id || `pm_${Date.now()}_${Math.floor(Math.random() * 10000)}`),
       capturedAt: Number(raw.capturedAt) || Date.now(),
@@ -405,7 +797,9 @@
       },
       inventories: inventories,
       domElements,
+      selectedSelectors: selectedSelectors ? selectedSelectors.slice() : [],
       autocompleteCatalogs: mergedCatalogs,
+      defaults,
       fingerprint,
       stats: {
         controls: inventories.reduce((acc, inv) => acc + (Array.isArray(inv && inv.controls) ? inv.controls.length : 0), 0),
@@ -485,6 +879,7 @@
       .map(_normalizePageMetaProfile)
       .filter(Boolean)
       .sort((a, b) => (b.capturedAt || 0) - (a.capturedAt || 0));
+    _refreshPlaySummary();
   }
 
   async function _savePageMetadataProfiles(list) {
@@ -495,6 +890,7 @@
       .slice(0, _normalizePageMetaMaxProfiles(pageMetaMaxProfiles));
     pageMetadataProfiles = normalized;
     await setLocalStorageValues({ [PAGE_META_STORAGE_KEY]: normalized });
+    _refreshPlaySummary();
     return normalized;
   }
 
@@ -570,6 +966,53 @@
     return top;
   }
 
+  /**
+   * Restaura silenciosamente los campos de la página actual a sus valores por
+   * defecto usando el perfil más reciente que coincida con la URL actual.
+   * Opera 100% en background (_fast): no emite pasos visibles al usuario.
+   */
+  function _restoreProfileDefaultsForCurrentPage() {
+    try {
+      const target = _safeUrlParts(location && location.href ? location.href : "");
+      const profiles = Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles : [];
+      if (profiles.length === 0) return;
+      const best = profiles
+        .map((p) => ({ p, score: _scorePageProfileForTarget(p, target) }))
+        .filter((x) => x.score >= 90)
+        .sort((a, b) => (b.score - a.score) || ((b.p.capturedAt || 0) - (a.p.capturedAt || 0)))[0];
+      if (!best || !best.p) return;
+      const defaults = best.p.defaults;
+      if (!defaults || typeof defaults !== "object") return;
+      Object.keys(defaults).forEach((sel) => {
+        try {
+          const el = document.querySelector(sel);
+          if (!el) return;
+          const tag = String(el.tagName || "").toLowerCase();
+          const inputType = String((el.getAttribute && el.getAttribute("type")) || "").toLowerCase();
+          const val = defaults[sel];
+          if (tag === "input" && (inputType === "checkbox" || inputType === "radio")) {
+            const shouldCheck = val === "checked";
+            if (el.checked !== shouldCheck) {
+              el.checked = shouldCheck;
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+          } else if (tag === "select") {
+            if (el.value !== String(val)) {
+              el.value = String(val);
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+          } else {
+            if (el.value !== String(val)) {
+              el.value = String(val);
+              el.dispatchEvent(new Event("input", { bubbles: true }));
+              el.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+          }
+        } catch (_e) { /* campo no accesible, saltar */ }
+      });
+    } catch (_e) { /* nunca interrumpir la reproducción */ }
+  }
+
   function _listCurrentPageProfiles(limit) {
     const target = _safeUrlParts(location && location.href ? location.href : "");
     const max = Math.max(1, Math.min(30, Number(limit) || 12));
@@ -612,6 +1055,59 @@
 
   function _resolveReusableMetadataForCurrentPage() {
     return _resolveReusableMetadataForUrl(location && location.href ? location.href : "");
+  }
+
+  function _reuseHistoricalCatalogsForSelectors(targetUrl, selectedSelectors, currentCatalogs) {
+    const out = _mergeCatalogMaps(currentCatalogs || {});
+    const selectors = (Array.isArray(selectedSelectors) ? selectedSelectors : [])
+      .map((s) => String(s || "").trim())
+      .filter(Boolean);
+    if (selectors.length === 0) return out;
+
+    const target = _safeUrlParts(targetUrl || (location && location.href ? location.href : ""));
+    const ranked = (Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles : [])
+      .map((p) => ({ p, score: _scorePageProfileForTarget(p, target) }))
+      .filter((x) => x && x.p && x.score >= 90)
+      .sort((a, b) => (b.score - a.score) || ((b.p.capturedAt || 0) - (a.p.capturedAt || 0)))
+      .map((x) => x.p);
+
+    selectors.forEach((sel) => {
+      const already = _dedupeOptions(out[sel]);
+      if (already.length > 0) return;
+      for (let i = 0; i < ranked.length; i += 1) {
+        const p = ranked[i];
+        const bag = (p && p.autocompleteCatalogs && typeof p.autocompleteCatalogs === "object") ? p.autocompleteCatalogs : {};
+        const hist = _dedupeOptions(bag[sel]);
+        if (hist.length > 0) {
+          out[sel] = hist;
+          break;
+        }
+      }
+    });
+
+    return out;
+  }
+
+  function _bestHistoricalCatalogForSelector(targetUrl, selector, minScore) {
+    const sel = String(selector || "").trim();
+    if (!sel) return [];
+    const target = _safeUrlParts(targetUrl || (location && location.href ? location.href : ""));
+    const threshold = Math.max(0, Number(minScore) || 90);
+    const ranked = (Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles : [])
+      .map((p) => ({ p, score: _scorePageProfileForTarget(p, target) }))
+      .filter((x) => x && x.p && x.score >= threshold)
+      .sort((a, b) => (b.score - a.score) || ((b.p.capturedAt || 0) - (a.p.capturedAt || 0)))
+      .map((x) => x.p);
+
+    let best = [];
+    for (let i = 0; i < ranked.length; i += 1) {
+      const bag = (ranked[i] && ranked[i].autocompleteCatalogs && typeof ranked[i].autocompleteCatalogs === "object")
+        ? ranked[i].autocompleteCatalogs
+        : {};
+      const arr = _dedupeOptions(bag[sel]);
+      if (arr.length > best.length) best = arr;
+    }
+    return best;
   }
 
   function _extractNavigateTargets(steps) {
@@ -662,6 +1158,147 @@
       exportedAt: new Date().toISOString(),
       profiles: Array.isArray(profiles) ? profiles : []
     };
+  }
+
+  function _tableCell(raw) {
+    return String(raw == null ? "" : raw)
+      .replace(/\r?\n/g, " ")
+      .replace(/\|/g, "\\|")
+      .trim();
+  }
+
+  function _serializePageMetadataTablesText(profiles) {
+    const list = Array.isArray(profiles) ? profiles : [];
+    const lines = [];
+    lines.push("WebMatic page metadata tables");
+    lines.push(`ExportedAt: ${new Date().toISOString()}`);
+    lines.push(`Profiles: ${list.length}`);
+    lines.push("");
+
+    list.forEach((p, idx) => {
+      const page = _safeUrlParts(p && p.page ? p.page.url : "");
+      const title = String((p && p.page && p.page.title) || "");
+      const capturedAt = Number(p && p.capturedAt) ? new Date(Number(p.capturedAt)).toISOString() : "";
+      const catalogs = (p && p.autocompleteCatalogs && typeof p.autocompleteCatalogs === "object") ? p.autocompleteCatalogs : {};
+      const selectors = Object.keys(catalogs).sort((a, b) => a.localeCompare(b));
+
+      lines.push(`## Profile ${idx + 1}`);
+      lines.push(`- CapturedAt: ${capturedAt}`);
+      lines.push(`- Url: ${page.url}`);
+      lines.push(`- Path: ${page.path}`);
+      lines.push(`- Title: ${title}`);
+      lines.push(`- Fingerprint: ${String((p && p.fingerprint) || "")}`);
+      lines.push(`- Selectors: ${selectors.length}`);
+      lines.push("");
+
+      lines.push("### Summary by field");
+      lines.push("| Field | Options |") ;
+      lines.push("|---|---:|");
+      selectors.forEach((sel) => {
+        const options = _dedupeOptions(catalogs[sel]);
+        lines.push(`| ${_tableCell(sel)} | ${options.length} |`);
+      });
+      lines.push("");
+
+      selectors.forEach((sel) => {
+        const options = _dedupeOptions(catalogs[sel]);
+        lines.push(`### ${_tableCell(sel)}`);
+        lines.push("| # | Value | Text |") ;
+        lines.push("|---:|---|---|");
+        options.forEach((opt, i) => {
+          lines.push(`| ${i + 1} | ${_tableCell(opt && opt.value)} | ${_tableCell(opt && opt.text)} |`);
+        });
+        if (options.length === 0) lines.push("| 1 |  |  |");
+        lines.push("");
+      });
+      lines.push("---");
+      lines.push("");
+    });
+
+    return lines.join("\n");
+  }
+
+  function _slugifyFilenamePart(raw) {
+    const normalized = String(raw == null ? "" : raw)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    const clean = normalized
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80);
+    return clean || "field";
+  }
+
+  function _buildPageMetadataFieldExports(profiles) {
+    const list = Array.isArray(profiles) ? profiles : [];
+    const bySelector = new Map();
+    list.forEach((p) => {
+      const page = _safeUrlParts(p && p.page ? p.page.url : "");
+      const catalogs = (p && p.autocompleteCatalogs && typeof p.autocompleteCatalogs === "object") ? p.autocompleteCatalogs : {};
+      Object.keys(catalogs).forEach((sel) => {
+        const selector = String(sel || "").trim();
+        if (!selector) return;
+        if (!bySelector.has(selector)) {
+          bySelector.set(selector, {
+            selector,
+            optionsMap: new Map(),
+            profiles: new Set(),
+            pages: new Set()
+          });
+        }
+        const bucket = bySelector.get(selector);
+        bucket.profiles.add(String((p && p.id) || `${Number(p && p.capturedAt) || 0}`));
+        bucket.pages.add(page.path || page.url || "");
+        _dedupeOptions(catalogs[selector]).forEach((opt) => {
+          const value = String(opt && opt.value != null ? opt.value : "");
+          const text = String(opt && opt.text != null ? opt.text : "");
+          const key = `${value}||${text}`;
+          if (!bucket.optionsMap.has(key)) bucket.optionsMap.set(key, { value, text });
+        });
+      });
+    });
+
+    const selectors = Array.from(bySelector.keys()).sort((a, b) => a.localeCompare(b));
+    const summaryLines = [];
+    summaryLines.push("WebMatic page metadata field exports");
+    summaryLines.push(`ExportedAt: ${new Date().toISOString()}`);
+    summaryLines.push(`Profiles: ${list.length}`);
+    summaryLines.push(`Fields: ${selectors.length}`);
+    summaryLines.push("");
+    summaryLines.push("| Field | Unique options | Profiles | Pages | File |\n|---|---:|---:|---:|---|");
+
+    const files = [];
+    selectors.forEach((selector) => {
+      const bucket = bySelector.get(selector);
+      const options = Array.from(bucket.optionsMap.values())
+        .sort((a, b) => String(a.text || a.value).localeCompare(String(b.text || b.value)));
+      const slug = _slugifyFilenamePart(selector);
+      const fileName = `metadata/fields/${slug}.txt`;
+
+      const lines = [];
+      lines.push("WebMatic field table");
+      lines.push(`ExportedAt: ${new Date().toISOString()}`);
+      lines.push(`Field: ${selector}`);
+      lines.push(`UniqueOptions: ${options.length}`);
+      lines.push(`Profiles: ${bucket.profiles.size}`);
+      lines.push(`Pages: ${bucket.pages.size}`);
+      lines.push("");
+      lines.push("| # | Value | Text |\n|---:|---|---|");
+      options.forEach((opt, idx) => {
+        lines.push(`| ${idx + 1} | ${_tableCell(opt.value)} | ${_tableCell(opt.text)} |`);
+      });
+      if (options.length === 0) lines.push("| 1 |  |  |");
+
+      files.push({ filename: fileName, content: lines.join("\n") });
+      summaryLines.push(`| ${_tableCell(selector)} | ${options.length} | ${bucket.profiles.size} | ${bucket.pages.size} | ${fileName} |`);
+    });
+
+    files.unshift({
+      filename: "metadata/webmatic-page-metadata-fields-summary-v1.txt",
+      content: summaryLines.join("\n")
+    });
+    return files;
   }
 
   function _coerceCatalogOptionList(rawList) {
@@ -765,6 +1402,33 @@
   }
 
   const store = storeFactory.createStore();
+  store.subscribe(() => {
+    _refreshPlaySummary();
+  });
+  store.subscribe((state) => {
+    if (!macrosPersistenceReady) return;
+    const macros = Array.isArray(state && state.library && state.library.macros)
+      ? state.library.macros
+      : [];
+    const hash = _simpleStableHash(JSON.stringify(macros));
+    if (hash === lastMacrosPersistHash) return;
+    lastMacrosPersistHash = hash;
+    void setLocalStorageValues({ [MACROS_STORAGE_KEY]: macros });
+    void _saveMacrosSyncSnapshot(macros);
+    _writeSiteSurvivalSnapshot({ macros, macrosSavedAt: Date.now() });
+    _queueMacroSurvivalBackup(macros);
+  });
+  store.subscribe((state) => {
+    if (!settingsPersistenceReady) return;
+    const settings = state && state.settings && typeof state.settings === "object"
+      ? state.settings
+      : {};
+    const hash = _simpleStableHash(JSON.stringify(settings));
+    if (hash === lastSettingsPersistHash) return;
+    lastSettingsPersistHash = hash;
+    void _saveSettingsSyncSnapshot(settings);
+    _writeSiteSurvivalSnapshot({ settings, settingsSavedAt: Date.now() });
+  });
   const iimAdapter = globalScope.WebMaticIimAdapter;
   const themePalettes = {
     light: [
@@ -806,7 +1470,8 @@
     _autocompleteCollectorInstalled: false,
     _autocompleteExpansionState: {},
     _autocompleteLastTypedBySelector: {},
-    _autocompleteExpansionPromises: {}
+    _autocompleteExpansionPromises: {},
+    preRunReset: null
   };
   const RECORDER_DYNAMIC_METADATA_ENABLED = false;
 
@@ -833,6 +1498,7 @@
   const IAPOS_FIELD_PROFILES = {
     "#vAUCAESPEFC": {
       key: "especialidad",
+      minExpected: 120,
       terms: [
         "ALO","ALOJ","ALOJAMIENTO","ANA","ANES","ANESTESIA","CAR","CARD","CARDIO","CARDIOLOGIA",
         "CIR","CIRUGIA","CLI","CLINICA","DER","DERM","DERMATO","DIA","DIAB","DIABETES",
@@ -856,6 +1522,7 @@
     },
     "#vDELEGACION": {
       key: "delegacion",
+      minExpected: 150,
       terms: [
         "IAP","IAPOS","CENTRAL","CASA","ROS","ROSARIO","RAF","RAFAELA","REC","RECONQUISTA","VEN","VENADO",
         "CAS","CASILDA","CAN","CANADA","GAL","GALVEZ","ESP","ESPERANZA","AMSAFE","DIPART","CONVENIO","SOFSA",
@@ -1052,6 +1719,190 @@
     if (f.ariaLabel) bits.push(`label:${f.ariaLabel}`);
     if (bits.length === 0) bits.push(f.selector);
     return bits.slice(0, 2).join(" | ");
+  }
+
+  function _friendlyCaptureFieldName(fieldOrId) {
+    const raw = typeof fieldOrId === "string" ? fieldOrId : ((fieldOrId && (fieldOrId.id || fieldOrId.name || fieldOrId.selector)) || "");
+    const key = String(raw || "").replace(/^#/, "").toUpperCase();
+    const map = {
+      VNFLGVISTA: "VER",
+      VAUCATIPPRES: "TIPO AUTORIZACION",
+      VAUCAESTADO: "ESTADO",
+      VCOBERTURA: "COBERTURA",
+      VMDMEDCODIGOSNCHECK: "TIENE ARCHIVO ADJUNTO",
+      VMODALIDAD: "MODALIDAD",
+      VVERBAJAS: "VER BAJAS",
+      VREQCOMPRA: "REQUIERE COMPRA",
+      VDELEGACION: "DELEGACION",
+      VAUCAESPEFC: "ESPECIALIDAD"
+    };
+    if (map[key]) return map[key];
+    const visible = _compactVisibleText(fieldOrId && fieldOrId.displayName);
+    if (visible) return visible.toUpperCase();
+    return String(raw || "CAMPO").replace(/^#/, "").toUpperCase();
+  }
+
+  function _normalizeFieldId(value) {
+    return String(value || "").trim().toUpperCase();
+  }
+
+  function _canonicalSelectorForElement(el) {
+    if (!el) return "";
+    if (el.id) return `#${el.id}`;
+    return _safeBuildElementSelector(el) || _selectorForAutocompleteEl(el) || "";
+  }
+
+  function _profileForElement(el, selector) {
+    if (!el) return null;
+    const candidates = [];
+    const push = (v) => {
+      const s = String(v || "").trim();
+      if (s && !candidates.includes(s)) candidates.push(s);
+    };
+    push(selector);
+    push(_safeBuildElementSelector(el));
+    push(_selectorForAutocompleteEl(el));
+    if (el.id) push(`#${el.id}`);
+    const name = el.getAttribute && el.getAttribute("name");
+    if (name) {
+      push(`input[name="${name}"]`);
+      push(`[name="${name}"]`);
+    }
+    for (let i = 0; i < candidates.length; i += 1) {
+      if (IAPOS_FIELD_PROFILES[candidates[i]]) return IAPOS_FIELD_PROFILES[candidates[i]];
+    }
+    return null;
+  }
+
+  function _isVisibleCaptureElement(el) {
+    if (!el) return false;
+    try {
+      const style = globalScope.getComputedStyle ? globalScope.getComputedStyle(el) : null;
+      if (style && (style.display === "none" || style.visibility === "hidden")) return false;
+      if (typeof el.getClientRects === "function") {
+        const rects = el.getClientRects();
+        if (rects && rects.length > 0) return true;
+      }
+      if ("offsetParent" in el) return el.offsetParent !== null;
+    } catch (_e) {
+      return true;
+    }
+    return true;
+  }
+
+  function _fieldIdentityForCapture(el, displayName) {
+    if (!el) return "";
+    return [
+      displayName,
+      el.id || "",
+      (el.getAttribute && el.getAttribute("name")) || "",
+      (el.getAttribute && el.getAttribute("placeholder")) || "",
+      (el.getAttribute && el.getAttribute("aria-label")) || "",
+      (el.getAttribute && el.getAttribute("role")) || "",
+      (el.getAttribute && el.getAttribute("class")) || ""
+    ].join(" ").toLowerCase();
+  }
+
+  function _isIaposAuditContext(root) {
+    const doc = root || document;
+    const path = String(location && location.pathname || "");
+    const href = String(location && location.href || "");
+    const title = String(doc && doc.title || "");
+    const hasSignature = !!(
+      doc && typeof doc.getElementById === "function" &&
+      (doc.getElementById("vDELEGACION") || doc.querySelector && doc.querySelector('[name="vDELEGACION"]')) &&
+      (doc.getElementById("vAUCAESPEFC") || doc.querySelector && doc.querySelector('[name="vAUCAESPEFC"]'))
+    );
+    return /\/servlet\/auauditcabe_ww/i.test(path) || /auauditcabe_ww/i.test(href) || /autorizaciones/i.test(title) || hasSignature;
+  }
+
+  function _classifyCaptureElement(el, root, opts) {
+    if (!el || el.disabled) return { include: false, kind: "ignored", reason: "disabled" };
+    const tag = String(el.tagName || "").toLowerCase();
+    const inputType = String((el.getAttribute && el.getAttribute("type")) || "").toLowerCase();
+    const idOrName = _normalizeFieldId(el.id || (el.getAttribute && el.getAttribute("name")) || "");
+
+    if (opts && opts.iaposAudit) {
+      const allowSelectIds = new Set(["VNFLGVISTA", "VAUCATIPPRES", "VAUCAESTADO", "VCOBERTURA", "VMDMEDCODIGOSNCHECK", "VMODALIDAD"]);
+      const allowCheckIds = new Set(["VVERBAJAS", "VREQCOMPRA"]);
+      const allowAutocompleteIds = new Set(["VDELEGACION", "VAUCAESPEFC"]);
+
+      if (allowSelectIds.has(idOrName)) return { include: true, kind: "select", reason: "iapos-allowed-select-id" };
+      if (allowCheckIds.has(idOrName)) return { include: true, kind: "check", reason: "iapos-allowed-check-id" };
+      if (allowAutocompleteIds.has(idOrName)) return { include: true, kind: "autocomplete", reason: "iapos-allowed-autocomplete-id" };
+      return { include: false, kind: "ignored", reason: "iapos-not-in-allowlist" };
+    }
+
+    const blockedTypes = new Set(["hidden", "button", "submit", "reset", "image", "file", "password"]);
+    if (tag === "input" && blockedTypes.has(inputType)) return { include: false, kind: "ignored", reason: "blocked-input-type" };
+    if (!_isVisibleCaptureElement(el)) return { include: false, kind: "ignored", reason: "not-visible" };
+
+    const displayName = _inferVisibleFieldLabel(el, root || document);
+    const identity = _fieldIdentityForCapture(el, displayName);
+    const selector = _canonicalSelectorForElement(el);
+    const profile = _profileForElement(el, selector);
+    const role = String((el.getAttribute && el.getAttribute("role")) || "").toLowerCase();
+    const hasDomAutocompleteEvidence = !!(
+      (el.getAttribute && (el.getAttribute("list") || el.getAttribute("aria-autocomplete") || el.getAttribute("aria-haspopup"))) ||
+      role === "combobox" || role === "listbox" ||
+      /combobox|autocomplete|typeahead|select2|chosen|smart|lookup/i.test(identity)
+    );
+    const gxClass = _classifyGeneXusField(el);
+    const hasGeneXusCatalogEvidence = _isAutocompleteCandidate(el) && !!(gxClass && (gxClass.key || Number(gxClass.score) >= 60));
+    const isAutocomplete = !!profile || hasDomAutocompleteEvidence || hasGeneXusCatalogEvidence;
+
+    const denyTechnical = /(\bbuscar\b|\bsearch\b|ordenado\s*por|vcurrentpage|vk2bmaxpages|pagin|grid|toolbar)/i;
+    if (denyTechnical.test(identity)) return { include: false, kind: "ignored", reason: "technical-or-search" };
+
+    if (tag === "select") return { include: true, kind: "select", reason: "native-select" };
+    if (tag === "input" && (inputType === "checkbox" || inputType === "radio")) return { include: true, kind: "check", reason: "check-state" };
+    if (isAutocomplete) return { include: true, kind: "autocomplete", reason: profile ? "known-profile-autocomplete" : "autocomplete-evidence" };
+
+    return { include: false, kind: "text", reason: "plain-text-no-catalog-evidence" };
+  }
+
+  function _collectCensableFieldsForCapture(root) {
+    const doc = root || document;
+    if (!doc || typeof doc.querySelectorAll !== "function") return { included: [], excluded: [], isIaposAuditPage: false };
+    const panelEl = doc.getElementById ? doc.getElementById("webmatic-panel-root") : null;
+    const isIaposAuditPage = _isIaposAuditContext(doc);
+    const nodes = Array.from(doc.querySelectorAll("input, select, textarea"))
+      .filter((el) => !panelEl || !panelEl.contains(el));
+    const included = [];
+    const excluded = [];
+    const seen = new Set();
+    const addIncluded = (el, classification) => {
+      const selector = _canonicalSelectorForElement(el);
+      if (!selector || seen.has(selector)) return;
+      seen.add(selector);
+      included.push({
+        selector,
+        tag: String(el.tagName || "").toLowerCase(),
+        inputType: String((el.getAttribute && el.getAttribute("type")) || "").toLowerCase(),
+        id: el.id || "",
+        name: (el.getAttribute && el.getAttribute("name")) || "",
+        displayName: isIaposAuditPage ? _friendlyCaptureFieldName(el.id || (el.getAttribute && el.getAttribute("name")) || selector) : _inferVisibleFieldLabel(el, doc),
+        autoCandidate: classification.kind === "autocomplete",
+        captureKind: classification.kind,
+        reason: classification.reason
+      });
+    };
+
+    nodes.forEach((el) => {
+      const classification = _classifyCaptureElement(el, doc, { iaposAudit: isIaposAuditPage });
+      if (classification.include) addIncluded(el, classification);
+      else excluded.push({ id: el.id || "", name: (el.getAttribute && el.getAttribute("name")) || "", reason: classification.reason });
+    });
+
+    if (isIaposAuditPage) {
+      ["vDELEGACION", "vAUCAESPEFC"].forEach((id) => {
+        let el = null;
+        try { el = doc.getElementById(id) || doc.querySelector(`[name="${id}"]`); } catch (_e) { el = null; }
+        if (el) addIncluded(el, { kind: "autocomplete", reason: "iapos-forced-priority-autocomplete" });
+      });
+    }
+
+    return { included, excluded, isIaposAuditPage };
   }
 
   function _openFieldSelectionModal(fields) {
@@ -1505,6 +2356,49 @@
     return _extractHtmlLikeOptions(raw);
   }
 
+  function _collectDirectEmbeddedCatalogOptions(field, root, profile) {
+    const doc = root || document;
+    if (!field || !doc) return [];
+    const id = String(field.id || "").trim();
+    const name = String((field.getAttribute && field.getAttribute("name")) || "").trim();
+    const tokens = _dedupeTerms([
+      id,
+      name,
+      id ? `GXH_${id}` : "",
+      name ? `GXH_${name}` : "",
+      profile && profile.key
+    ]).filter((t) => String(t || "").length >= 3);
+    const options = [];
+    const pushMany = (items) => {
+      _filterCatalogOptions(items).forEach((o) => {
+        if (profile && _iaposShouldReject(profile, o && o.value, o && o.text)) return;
+        options.push(o);
+      });
+    };
+
+    pushMany(_collectDomSuggestionOptions(field, doc));
+
+    try {
+      const attrNames = ["data-options", "data-source", "data-values", "data-items", "data-autocomplete", "data-gx-options"];
+      attrNames.forEach((attr) => {
+        const raw = field.getAttribute && field.getAttribute(attr);
+        if (raw) pushMany(_parseAutocompleteOptions(raw));
+      });
+    } catch (e) { /* ignore */ }
+
+    try {
+      const scriptNodes = Array.from(doc.querySelectorAll ? doc.querySelectorAll("script, template") : []);
+      scriptNodes.forEach((node) => {
+        const raw = String(node.textContent || "");
+        if (!raw || raw.length > 2000000) return;
+        if (tokens.length > 0 && !tokens.some((t) => raw.indexOf(t) >= 0)) return;
+        pushMany(_parseAutocompleteOptions(raw));
+      });
+    } catch (e) { /* ignore */ }
+
+    return _dedupeOptions(options);
+  }
+
   function _extractHtmlLikeOptions(raw) {
     const text = String(raw || "");
     if (!text || text.indexOf("<") < 0) return [];
@@ -1707,6 +2601,20 @@
     return out;
   }
 
+  function _minimizeProbeTermsByPrefix(terms, minLen) {
+    const minLength = Math.max(1, Number(minLen) || 1);
+    const sorted = _dedupeTerms(terms)
+      .map((t) => String(t || "").trim().toUpperCase())
+      .filter((t) => t.length >= minLength)
+      .sort((a, b) => (a.length - b.length) || a.localeCompare(b));
+    const kept = [];
+    sorted.forEach((term) => {
+      const covered = kept.some((k) => term.startsWith(k));
+      if (!covered) kept.push(term);
+    });
+    return kept;
+  }
+
   function _looksLikeNoiseOption(value, text) {
     const v = String(value || "").trim().toLowerCase();
     const t = String(text || "").trim().toLowerCase();
@@ -1788,10 +2696,273 @@
     return { code: _normalizeCatalogText(m[1]), text: _normalizeCatalogText(m[2]) };
   }
 
+  async function _triggerGeneXusAutocompleteCycle(field, term, cfg) {
+    if (!field) return;
+    const config = cfg || {};
+    const settleMs = Math.max(120, Number(config.settleMs) || 220);
+    const value = String(term == null ? "" : term);
+    const previousActive = document.activeElement;
+    try {
+      if (typeof field.focus === "function") field.focus();
+      if (typeof field.onfocus === "function") {
+        try { field.onfocus(); } catch (_e) { /* ignore */ }
+      }
+      const proto = Object.getPrototypeOf(field);
+      const d = proto ? Object.getOwnPropertyDescriptor(proto, "value") : null;
+      if (d && typeof d.set === "function") d.set.call(field, value); else field.value = value;
+      try { field.dispatchEvent(new Event("input", { bubbles: true, cancelable: true })); } catch (_e) { /* ignore */ }
+      try { field.dispatchEvent(new Event("change", { bubbles: true, cancelable: true })); } catch (_e) { /* ignore */ }
+      if (typeof field.onchange === "function") {
+        try { field.onchange(); } catch (_e) { /* ignore */ }
+      }
+      await _sleep(settleMs);
+      if (typeof field.onblur === "function") {
+        try { field.onblur(); } catch (_e) { /* ignore */ }
+      }
+      await _sleep(settleMs);
+    } finally {
+      if (previousActive && typeof previousActive.focus === "function") {
+        try { previousActive.focus(); } catch (_e) { /* ignore */ }
+      }
+    }
+  }
+
+  async function _captureIaposViaGeneXusHandlers(field, selector, profile, cfg) {
+    const config = cfg || {};
+    const maxOptions = Math.max(200, Number(config.maxOptions) || 60000);
+    const maxTerms = Math.max(6, Number(config.maxTerms) || 18);
+    const settleMs = Math.max(120, Number(config.settleMs) || 220);
+    const terms = _minimizeProbeTermsByPrefix(
+      _fastTermsForField(field, _dedupeTerms(profile && profile.terms)),
+      4
+    ).slice(0, maxTerms);
+    const bag = new Map();
+    let requestCount = 0;
+    let captureCount = 0;
+    const startedAt = Date.now();
+
+    const add = (value, text) => {
+      const v = _normalizeCatalogText(value);
+      const t = _normalizeCatalogText(text || value);
+      if (!v && !t) return;
+      if (_iaposShouldReject(profile, v, t)) return;
+      const key = `${v || t}||${t || v}`;
+      if (!bag.has(key)) bag.set(key, { value: v || t, text: t || v });
+    };
+
+    const stopDomCollector = _installTemporaryDomSuggestionCollector(field, (domOptions) => {
+      _filterCatalogOptions(domOptions).forEach((o) => add(o.value, o.text));
+    });
+
+    const restoreCollector = _installTemporaryNetworkCollector((payload) => {
+      const raw = String(payload || "");
+      const opts = _filterCatalogOptions(_parseGeneXusOptionsFromResponse(raw));
+      if (opts.length > 0) {
+        captureCount += 1;
+        opts.forEach((o) => add(o.value, o.text));
+      }
+      const val = _parseGeneXusValidationFromResponse(raw);
+      if (val && !_iaposShouldReject(profile, val.code, val.text)) {
+        const code = String(val.code || "").trim();
+        const text = String(val.text || "").trim();
+        const useful = (code && code !== "0") || (text.length >= 3 && text.toUpperCase() !== code.toUpperCase());
+        if (useful) add(code, text);
+      }
+    }, () => {
+      requestCount += 1;
+    });
+
+    const previousValue = String(field.value == null ? "" : field.value);
+    try {
+      for (let i = 0; i < terms.length; i += 1) {
+        if (bag.size >= maxOptions) break;
+        await _triggerGeneXusAutocompleteCycle(field, terms[i], { settleMs });
+      }
+      _filterCatalogOptions(_collectDomSuggestionOptions(field, document)).forEach((o) => add(o.value, o.text));
+    } finally {
+      stopDomCollector();
+      restoreCollector();
+      try {
+        const proto = Object.getPrototypeOf(field);
+        const d = proto ? Object.getOwnPropertyDescriptor(proto, "value") : null;
+        if (d && typeof d.set === "function") d.set.call(field, previousValue); else field.value = previousValue;
+      } catch (_e) { /* ignore */ }
+    }
+
+    return {
+      selector,
+      options: _dedupeOptions(Array.from(bag.values())),
+      requests: requestCount,
+      captures: captureCount,
+      termsTried: terms.length,
+      elapsedMs: Date.now() - startedAt,
+      mode: "iapos-gx-event-pipeline"
+    };
+  }
+
   async function _captureIaposProfiledCatalogForField(field, selector, profile, cfg) {
     const config = cfg || {};
-    const typeWaitMs = Math.max(900, Number(config.typeWaitMs) || 1500);
-    const perCharMs = Math.max(35, Number(config.perCharMs) || 90);
+    const profileTerms = _dedupeTerms(profile && profile.terms);
+    const isCriticalIaposCatalog = !!(profile && (profile.key === "delegacion" || profile.key === "especialidad"));
+    const historicalOptions = _dedupeOptions(_bestHistoricalCatalogForSelector(location && location.href ? location.href : "", selector, 90)
+      .filter((o) => !_iaposShouldReject(profile, o && o.value, o && o.text)));
+    const useReplay = config.useReplay === true;
+    const runReplayCapture = async (seedTerms, replayCfg) => {
+      const sA = seedTerms[0] || "ABC";
+      const sB = seedTerms.find((t) => String(t).toUpperCase() !== String(sA).toUpperCase()) || "ABD";
+      return _captureAutocompleteCatalogForField(field, seedTerms, {
+        seedA: sA,
+        seedB: sB,
+        probeWaitMs: Math.max(260, Number(replayCfg && replayCfg.probeWaitMs) || 320),
+        finalSettleMs: Math.max(380, Number(replayCfg && replayCfg.finalSettleMs) || 500),
+        typeWaitMs: Math.max(140, Number(replayCfg && replayCfg.typeWaitMs) || 180),
+        perCharMs: Math.max(20, Number(replayCfg && replayCfg.perCharMs) || 30),
+        maxOptions: Number(config.maxOptions) || 60000,
+        maxParallelRequests: Math.max(8, Number(replayCfg && replayCfg.maxParallelRequests) || 10),
+        forceTerms: replayCfg && replayCfg.forceTerms === true,
+        maxTerms: Math.max(0, Number(replayCfg && replayCfg.maxTerms) || 0),
+        expandToCombos: false,
+        comboThreshold: 999999
+      });
+    };
+    const directOptions = _dedupeOptions(_collectDirectEmbeddedCatalogOptions(field, document, profile)
+      .filter((o) => !_iaposShouldReject(profile, o && o.value, o && o.text)));
+
+    let fast = { options: [], requests: 0, captures: 0, termsTried: 0, elapsedMs: 0 };
+    if (useReplay) {
+      fast = await runReplayCapture(profileTerms, { maxParallelRequests: 8 });
+    }
+    const fastOptions = _dedupeOptions([...directOptions, ...(Array.isArray(fast.options) ? fast.options : [])]
+      .filter((o) => !_iaposShouldReject(profile, o && o.value, o && o.text)));
+    const aggregateMap = new Map();
+    const pushAggregate = (list) => {
+      _dedupeOptions(Array.isArray(list) ? list : []).forEach((o) => {
+        const v = String(o && o.value != null ? o.value : "").trim();
+        const t = String(o && o.text != null ? o.text : "").trim();
+        if (!v && !t) return;
+        const key = `${v || t}||${t || v}`;
+        if (!aggregateMap.has(key)) aggregateMap.set(key, { value: v || t, text: t || v });
+      });
+    };
+    pushAggregate(historicalOptions);
+    pushAggregate(fastOptions);
+    let aggRequests = Number(fast.requests) || 0;
+    let aggCaptures = Number(fast.captures) || 0;
+    let aggTerms = Number(fast.termsTried) || profileTerms.length;
+    let aggElapsed = Number(fast.elapsedMs) || 0;
+    const expectedMin = Math.max(0, Number(profile && profile.minExpected) || 0);
+    const hasStrongHistorical = expectedMin > 0 && historicalOptions.length >= expectedMin;
+
+    if (fastOptions.length > 0 && !isCriticalIaposCatalog) {
+      return {
+        selector,
+        options: fastOptions,
+        requests: Number(fast.requests) || 0,
+        captures: Number(fast.captures) || 0,
+        termsTried: Number(fast.termsTried) || profileTerms.length,
+        elapsedMs: Number(fast.elapsedMs) || 0,
+        mode: directOptions.length > 0 ? "iapos-profiled-direct-fast" : "iapos-profiled-fast"
+      };
+    }
+
+    const gxEventRun = await _captureIaposViaGeneXusHandlers(field, selector, profile, {
+      maxOptions: Number(config.maxOptions) || 60000,
+      maxTerms: isCriticalIaposCatalog ? Math.max(14, Number(config.maxTerms) || 32) : Math.max(4, Number(config.maxTerms) || 8),
+      settleMs: isCriticalIaposCatalog ? Math.max(240, Number(config.eventSettleMs) || 420) : Math.max(90, Number(config.eventSettleMs) || 140)
+    });
+    pushAggregate((gxEventRun && gxEventRun.options) || []);
+    aggRequests += Number(gxEventRun.requests) || 0;
+    aggCaptures += Number(gxEventRun.captures) || 0;
+    aggTerms += Number(gxEventRun.termsTried) || 0;
+    aggElapsed += Number(gxEventRun.elapsedMs) || 0;
+    if (Array.isArray(gxEventRun.options) && gxEventRun.options.length > 0 && !isCriticalIaposCatalog) {
+      return gxEventRun;
+    }
+
+    // Escalada puntual para campos críticos IAPOS: si siguen en 0,
+    // intentamos una pasada de replay más agresiva antes de declarar vacío.
+    let escalation = { options: [], requests: 0, captures: 0, termsTried: 0, elapsedMs: 0 };
+    if (profile && isCriticalIaposCatalog) {
+      escalation = await runReplayCapture(profileTerms, {
+        probeWaitMs: 520,
+        finalSettleMs: 1400,
+        typeWaitMs: 480,
+        perCharMs: 45,
+        maxParallelRequests: 8
+      });
+      const escOptions = _dedupeOptions((Array.isArray(escalation.options) ? escalation.options : [])
+        .filter((o) => !_iaposShouldReject(profile, o && o.value, o && o.text)));
+      pushAggregate(escOptions);
+      aggRequests += Number(escalation.requests) || 0;
+      aggCaptures += Number(escalation.captures) || 0;
+      aggTerms += Number(escalation.termsTried) || 0;
+      aggElapsed += Number(escalation.elapsedMs) || 0;
+
+      const mergedBeforeDeep = _dedupeOptions(Array.from(aggregateMap.values()));
+      if (hasStrongHistorical && mergedBeforeDeep.length >= expectedMin) {
+        return {
+          selector,
+          options: mergedBeforeDeep,
+          requests: aggRequests,
+          captures: aggCaptures,
+          termsTried: aggTerms,
+          elapsedMs: aggElapsed,
+          mode: "iapos-critical-history-accelerated"
+        };
+      }
+
+      // Escaneo profundo con términos de 4+ letras (1-2 letras en IAPOS no disparan resultados útiles).
+      const longProbeTerms = _minimizeProbeTermsByPrefix([
+        ...profileTerms,
+        ...profileTerms.map((t) => String(t || "").trim().toUpperCase()).filter(Boolean).map((t) => t.slice(0, 4)),
+        ...profileTerms.map((t) => String(t || "").trim().toUpperCase()).filter((t) => t.length >= 5).map((t) => t.slice(0, 5))
+      ], 4);
+
+      const prefixScan = await runReplayCapture(longProbeTerms, {
+        probeWaitMs: 620,
+        finalSettleMs: 1800,
+        typeWaitMs: 550,
+        perCharMs: 45,
+        maxParallelRequests: 6,
+        forceTerms: true,
+        maxTerms: Math.max(60, longProbeTerms.length)
+      });
+      const prefixOptions = _dedupeOptions((Array.isArray(prefixScan.options) ? prefixScan.options : [])
+        .filter((o) => !_iaposShouldReject(profile, o && o.value, o && o.text)));
+      pushAggregate(prefixOptions);
+      aggRequests += Number(prefixScan.requests) || 0;
+      aggCaptures += Number(prefixScan.captures) || 0;
+      aggTerms += Number(prefixScan.termsTried) || 0;
+      aggElapsed += Number(prefixScan.elapsedMs) || 0;
+
+      const mergedCritical = _dedupeOptions(Array.from(aggregateMap.values()));
+      if (mergedCritical.length > 0) {
+        return {
+          selector,
+          options: mergedCritical,
+          requests: aggRequests,
+          captures: aggCaptures,
+          termsTried: aggTerms,
+          elapsedMs: aggElapsed,
+          mode: "iapos-critical-full-scan"
+        };
+      }
+    }
+
+    if (config.fastOnly !== false) {
+      return {
+        selector,
+        options: [],
+        requests: aggRequests,
+        captures: aggCaptures,
+        termsTried: aggTerms,
+        elapsedMs: aggElapsed,
+        mode: "iapos-profiled-fast-empty"
+      };
+    }
+
+    const typeWaitMs = Math.max(450, Number(config.typeWaitMs) || 700);
+    const perCharMs = Math.max(25, Number(config.perCharMs) || 55);
     const maxOptions = Math.max(500, Number(config.maxOptions) || 60000);
     const startedAt = Date.now();
     const bag = new Map();
@@ -1826,7 +2997,7 @@
 
     const previousValue = String(field.value == null ? "" : field.value);
     const previousActive = document.activeElement;
-    const terms = _dedupeTerms(profile && profile.terms);
+    const terms = profileTerms;
 
     try {
       try { if (typeof field.focus === "function") field.focus(); } catch (e) { /* ignore */ }
@@ -2125,7 +3296,12 @@
     const maxParallelRequests = Math.max(4, Number(config.maxParallelRequests) || 16);
     const expandToCombos = config.expandToCombos !== false;
     const comboThreshold = Math.max(0, Number(config.comboThreshold) || 200);
-    const adaptiveTerms = _buildAdaptiveTermsForField(field, terms);
+    const forceTerms = config.forceTerms === true;
+    const maxTerms = Math.max(0, Number(config.maxTerms) || 0);
+    const adaptiveTerms = forceTerms
+      ? _dedupeTerms(Array.isArray(terms) ? terms : [])
+      : _buildAdaptiveTermsForField(field, terms);
+    const replayTerms = maxTerms > 0 ? adaptiveTerms.slice(0, maxTerms) : adaptiveTerms;
     const startedAt = Date.now();
     const bag = new Map();
     let requestCount = 0;
@@ -2145,10 +3321,10 @@
       startedAt
     };
 
-    // Probes: 2 strings de 3 letras que comparten prefijo y difieren en última letra.
-    // Cortos (3 chars) para no caer en validaciones de longitud máxima.
-    const seedA = "ABC";
-    const seedB = "ABD";
+    // Probes: 2 strings que comparten prefijo y difieren en última parte.
+    // En perfiles conocidos usamos seeds reales del dominio para disparar GeneXus más rápido.
+    const seedA = String(config.seedA || "ABC");
+    const seedB = String(config.seedB || "ABD");
     debug.probeSeeds = [seedA, seedB];
 
     let activeSeed = "";
@@ -2254,7 +3430,7 @@
 
       // FASE 3: replay paralelo o fallback de tipeo completo
       if (diffTemplates.length > 0) {
-        const singles = adaptiveTerms.length > 0 ? adaptiveTerms : GX_EXPANSION_TERMS;
+        const singles = replayTerms.length > 0 ? replayTerms : GX_EXPANSION_TERMS;
         const tasks1 = [];
         diffTemplates.forEach((tpl) => {
           singles.forEach((term) => tasks1.push({ tpl, term }));
@@ -2285,7 +3461,7 @@
         // Fallback genérico: tipear términos adaptativos por campo.
         // Las XHRs y opciones visibles se capturan con los colectores temporales.
         debug.fallbackTyping = true;
-        const fallbackTerms = adaptiveTerms.length > 0 ? adaptiveTerms : GX_EXPANSION_TERMS;
+        const fallbackTerms = replayTerms.length > 0 ? replayTerms : GX_EXPANSION_TERMS;
         for (let i = 0; i < fallbackTerms.length; i += 1) {
           if (bag.size >= maxOptions) break;
           activeSeed = "";
@@ -2325,7 +3501,7 @@
       options,
       requests: requestCount,
       captures: captureCount,
-      termsTried: adaptiveTerms.length > 0 ? adaptiveTerms.length : GX_EXPANSION_TERMS.length,
+      termsTried: replayTerms.length > 0 ? replayTerms.length : GX_EXPANSION_TERMS.length,
       elapsedMs: Date.now() - startedAt
     };
   }
@@ -2369,6 +3545,7 @@
       }
       // Solo tipeamos sobre inputs/textareas; en selects nativos saltamos extracción por XHR
       const tag = String(field.tagName || "").toLowerCase();
+      const inputType = String((field.getAttribute && field.getAttribute("type")) || "").toLowerCase();
       if (tag === "select") {
         // Para <select>, leemos opciones directamente del DOM
         const opts = Array.from(field.options || []).map((o) => ({
@@ -2386,6 +3563,16 @@
         continue;
       }
 
+      // Nunca intentar extracción de catálogo sobre checks/radios u otros inputs no textuales.
+      if (tag === "input" && (inputType === "checkbox" || inputType === "radio")) {
+        continue;
+      }
+
+      const profileBySelector = IAPOS_FIELD_PROFILES[pickedSelector] || (field.id ? IAPOS_FIELD_PROFILES[`#${field.id}`] : null);
+      if (!profileBySelector && tag === "input" && !["", "text", "search"].includes(inputType) && !_isAutocompleteCandidate(field)) {
+        continue;
+      }
+
       const domBefore = _filterCatalogOptions(_collectDomSuggestionOptions(field, root));
       if (domBefore.length > 0) {
         catalogs[pickedSelector] = _dedupeOptions([...(catalogs[pickedSelector] || []), ...domBefore]);
@@ -2396,13 +3583,12 @@
         });
       }
 
-      const profileBySelector = IAPOS_FIELD_PROFILES[pickedSelector] || (field.id ? IAPOS_FIELD_PROFILES[`#${field.id}`] : null);
       let res;
       if (profileBySelector) {
         extractionMode = "iapos-profiled";
         res = await _captureIaposProfiledCatalogForField(field, pickedSelector, profileBySelector, {
-          typeWaitMs: 1500,
-          perCharMs: 90,
+          typeWaitMs: 260,
+          perCharMs: 40,
           maxOptions: 60000
         });
       } else {
@@ -2772,6 +3958,100 @@
     } catch (e) { /* nunca interrumpir la grabación por el inventario */ }
   }
 
+  const PRE_RUN_RESET_SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security)/i;
+
+  function _isSensitivePreRunField(el) {
+    if (!(el instanceof Element)) return false;
+    const type = String(el.getAttribute("type") || "").toLowerCase();
+    const id = String(el.id || "");
+    const name = String(el.getAttribute("name") || "");
+    const ariaLabel = String(el.getAttribute("aria-label") || "");
+    return type === "password" ||
+      PRE_RUN_RESET_SENSITIVE_RE.test(id) ||
+      PRE_RUN_RESET_SENSITIVE_RE.test(name) ||
+      PRE_RUN_RESET_SENSITIVE_RE.test(ariaLabel);
+  }
+
+  function _capturePreRunControlsInDoc(doc, out, seen) {
+    if (!doc) return;
+    let fields = [];
+    try {
+      fields = Array.from(doc.querySelectorAll("input, select, textarea"));
+    } catch (_e) {
+      fields = [];
+    }
+
+    fields.forEach((el) => {
+      try {
+        if (el.closest && (el.closest("#webmatic-panel-root") || el.closest("#webmatic-floating-recorder-global") || el.closest("#webmatic-floating-player-global"))) {
+          return;
+        }
+        const tag = String(el.tagName || "").toLowerCase();
+        const type = String(el.type || "").toLowerCase();
+        if (type === "hidden" || type === "submit" || type === "button" || type === "image" || type === "file" || type === "reset") return;
+        if (el.disabled || el.readOnly) return;
+
+        const selector = buildSelector(el);
+        if (!selector || seen.has(selector)) return;
+        seen.add(selector);
+
+        const ctrl = {
+          selector,
+          tag,
+          type,
+          id: String(el.id || ""),
+          name: String(el.getAttribute("name") || "")
+        };
+
+        if (_isSensitivePreRunField(el)) {
+          out.push(ctrl);
+          return;
+        }
+
+        if (tag === "select") {
+          ctrl.value = String(el.value == null ? "" : el.value);
+          ctrl.selectedIndex = Number.isFinite(Number(el.selectedIndex)) ? Number(el.selectedIndex) : 0;
+        } else if (type === "checkbox" || type === "radio") {
+          ctrl.checked = Boolean(el.checked);
+        } else {
+          ctrl.value = String(el.value == null ? "" : el.value);
+        }
+        out.push(ctrl);
+      } catch (_e) { /* ignore single field */ }
+    });
+
+    try {
+      const frames = doc.querySelectorAll("iframe, frame");
+      frames.forEach((fr) => {
+        try {
+          _capturePreRunControlsInDoc(fr.contentDocument || (fr.contentWindow && fr.contentWindow.document), out, seen);
+        } catch (_e) { /* cross-origin */ }
+      });
+    } catch (_e) { /* ignore */ }
+  }
+
+  function _captureInitialPreRunReset() {
+    const RecorderClass = globalScope.WebMaticRecorder;
+    if (RecorderClass && typeof RecorderClass.captureInitialPreRunReset === "function") {
+      return RecorderClass.captureInitialPreRunReset(
+        document,
+        String(location && location.href ? location.href : ""),
+        String(document && document.title ? document.title : ""),
+        buildSelector
+      );
+    }
+    const controls = [];
+    _capturePreRunControlsInDoc(document, controls, new Set());
+    if (controls.length === 0) return null;
+    return {
+      version: 1,
+      capturedAt: Date.now(),
+      url: String(location && location.href ? location.href : ""),
+      title: String(document && document.title ? document.title : ""),
+      controls
+    };
+  }
+
   /**
    * Recaptura el inventario final y asocia cada step con su control (controlRef).
    * Devuelve los steps con controlRef cuando hay coincidencia; si no hay módulo
@@ -2798,10 +4078,14 @@
     }
     const catalogs = _serializeAutocompleteCatalogs();
     const hasCatalogs = Object.keys(catalogs).length > 0;
-    if ((!Array.isArray(list) || list.length === 0) && !hasCatalogs) return undefined;
+    const preRunReset = recorderRuntime.preRunReset && typeof recorderRuntime.preRunReset === "object"
+      ? recorderRuntime.preRunReset
+      : null;
+    if ((!Array.isArray(list) || list.length === 0) && !hasCatalogs && !preRunReset) return undefined;
     const meta = {};
     if (Array.isArray(list) && list.length > 0) meta.pageInventories = list.slice();
     if (hasCatalogs) meta.autocompleteCatalogs = catalogs;
+    if (preRunReset) meta.preRunReset = JSON.parse(JSON.stringify(preRunReset));
     return meta;
   }
 
@@ -2826,11 +4110,24 @@
       emit(p, "hidden-catalogs");
     }, selectedSelectors);
     emit(88, "merge-catalogs");
-    const invCatalogs = _catalogsFromInventories([snapshot]);
-    const runtimeCatalogs = _serializeAutocompleteCatalogs();
-    const mergedCatalogs = _mergeCatalogMaps(invCatalogs, runtimeCatalogs, hiddenCatalogs.catalogs);
-
+    const invCatalogs = _catalogsFromInventories([snapshot], selectedSelectors);
+    const runtimeCatalogs = _filterCatalogMapBySelectors(_serializeAutocompleteCatalogs(), selectedSelectors);
+    const hiddenCatalogMap = _filterCatalogMapBySelectors(hiddenCatalogs.catalogs, selectedSelectors);
+    const mergedCatalogs = _mergeCatalogMaps(invCatalogs, runtimeCatalogs, hiddenCatalogMap);
     const page = _safeUrlParts((snapshot && snapshot.url) || (location && location.href) || "");
+    const mergedWithHistory = _reuseHistoricalCatalogsForSelectors(page.url, selectedSelectors, mergedCatalogs);
+    const isIaposAuditPage = _isIaposAuditContext(document);
+    if (isIaposAuditPage) {
+      const criticalSelectors = ["#vDELEGACION", "#vAUCAESPEFC"];
+      const selectedSet = new Set((Array.isArray(selectedSelectors) ? selectedSelectors : []).map((s) => String(s || "").trim()));
+      const missingCritical = criticalSelectors.filter((sel) => {
+        if (!selectedSet.has(sel)) return false;
+        return _dedupeOptions(mergedWithHistory[sel]).length === 0;
+      });
+      if (missingCritical.length > 0) {
+        throw new Error(`IAPOS sin catalogos criticos: ${missingCritical.join(", ")}. No se guarda perfil incompleto.`);
+      }
+    }
     const selectionFingerprint = _buildSelectionFingerprint(page.url, selectedSelectors);
     const profile = _normalizePageMetaProfile({
       capturedAt: Date.now(),
@@ -2844,16 +4141,36 @@
       },
       inventories: [snapshot],
       domElements: domSnap.items,
-      autocompleteCatalogs: mergedCatalogs
+      selectedSelectors,
+      autocompleteCatalogs: mergedWithHistory
     });
 
+    // Construir mapa de defaults: selector → valor actual al momento de captura
+    const defaultsMap = {};
+    selectedSelectors.forEach((sel) => {
+      try {
+        const el = document.querySelector(sel);
+        if (!el) return;
+        const tag = String(el.tagName || "").toLowerCase();
+        const inputType = String((el.getAttribute && el.getAttribute("type")) || "").toLowerCase();
+        if (tag === "input" && (inputType === "checkbox" || inputType === "radio")) {
+          defaultsMap[sel] = el.checked ? "checked" : "unchecked";
+        } else if (tag === "select") {
+          defaultsMap[sel] = el.value != null ? String(el.value) : "";
+        } else {
+          defaultsMap[sel] = String(el.value != null ? el.value : "");
+        }
+      } catch (_e) { /* ignore */ }
+    });
+
+    const profileWithDefaults = _normalizePageMetaProfile({ ...profile, defaults: defaultsMap });
     const current = Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles.slice() : [];
-    current.unshift(profile);
+    current.unshift(profileWithDefaults);
     emit(95, "persist");
     const saved = await _savePageMetadataProfiles(current);
     emit(100, "done");
     return {
-      profile,
+      profile: profileWithDefaults,
       total: saved.length,
       domElementsTotal: domSnap.total,
       domElementsStored: domSnap.items.length,
@@ -2869,15 +4186,22 @@
     if (busy) {
       if (!btn.dataset.origLabel) btn.dataset.origLabel = btn.textContent || "Capturar contenido";
       btn.disabled = true;
-      const pct = Math.max(0, Math.min(100, Number(percent) || 0));
-      const blocks = Math.round(pct / 10);
-      const bar = `[${"#".repeat(blocks)}${".".repeat(10 - blocks)}]`;
-      btn.textContent = `Capturando ${bar} ${pct}%`;
+      btn.classList.add("is-busy");
+      btn.setAttribute("aria-busy", "true");
+      btn.replaceChildren();
+      const spinner = document.createElement("span");
+      spinner.className = "wm-capture-spinner";
+      const label = document.createElement("span");
+      label.textContent = "Capturando";
+      btn.appendChild(spinner);
+      btn.appendChild(label);
       return;
     }
     const orig = btn.dataset.origLabel || "Capturar contenido";
     btn.textContent = orig;
     btn.disabled = false;
+    btn.classList.remove("is-busy");
+    btn.removeAttribute("aria-busy");
     delete btn.dataset.origLabel;
   }
 
@@ -2971,14 +4295,29 @@
     const barEl = box.querySelector("[data-progress-bar]");
     const lineEl = box.querySelector("[data-progress-line]");
     const titleEl = box.querySelector("[data-progress-title]");
+    const phaseMap = {
+      init: "Iniciando",
+      inventory: "Leyendo controles",
+      hidden_catalogs: "Catalogos ocultos",
+      "hidden-catalogs": "Catalogos ocultos",
+      dom_snapshot: "Snapshot del DOM",
+      "dom-snapshot": "Snapshot del DOM",
+      persist: "Guardando",
+      done: "Finalizando"
+    };
     if (barEl) barEl.style.width = `${pct}%`;
-    if (titleEl) titleEl.textContent = pct < 100 ? "Analizando campos (modo silencioso)" : "Completado";
-    if (lineEl) lineEl.textContent = `${String(text || "Procesando")} · ${pct}%`;
+    if (titleEl) titleEl.textContent = pct < 100 ? "Analizando campos" : "Completado";
+    if (lineEl) {
+      const raw = String(text || "Procesando").trim();
+      const pretty = phaseMap[raw] || raw.replace(/[-_]+/g, " ");
+      lineEl.textContent = `${pretty} · ${pct}%`;
+    }
   }
 
   const playerRuntime = {
     activePlayer: null,
-    runtimeAutoFillLocks: new Map()
+    runtimeAutoFillLocks: new Map(),
+    lastFallbacks: []
   };
 
   // ── Visual step editor state ─────────────────────────────────────────
@@ -3859,8 +5198,26 @@
     } else if (!isPlaying && currentStepIndex >= total && total > 0) {
       // Completed successfully
       if (dot) { dot.style.background = "#16a34a"; dot.style.animation = "none"; }
-      if (infoEl) { infoEl.textContent = "\u2713 Completado sin errores \u2014 " + total + "/" + total + " pasos"; infoEl.style.color = "#16a34a"; infoEl.style.fontWeight = "700"; infoEl.title = ""; }
-      if (progress) { progress.style.width = "100%"; progress.style.background = "#16a34a"; }
+      const _fbList = (playerRuntime && Array.isArray(playerRuntime.lastFallbacks)) ? playerRuntime.lastFallbacks : [];
+      const _fbCount = _fbList.length;
+      if (infoEl) {
+        if (_fbCount > 0) {
+          const _label = _fbCount === 1 ? "fallback aplicado" : "fallbacks aplicados";
+          infoEl.textContent = "\u2713 Completado con " + _fbCount + " " + _label + " \u2014 " + total + "/" + total + " pasos";
+          infoEl.style.color = "#b45309";
+          infoEl.style.fontWeight = "700";
+          try {
+            const _detail = _fbList.map((f) => `${f.kind}${f.action ? ":" + f.action : ""}${f.selector ? " " + f.selector : ""}`).join("\n");
+            infoEl.title = _detail;
+          } catch (_e) { infoEl.title = ""; }
+        } else {
+          infoEl.textContent = "\u2713 Completado sin errores \u2014 " + total + "/" + total + " pasos";
+          infoEl.style.color = "#16a34a";
+          infoEl.style.fontWeight = "700";
+          infoEl.title = "";
+        }
+      }
+      if (progress) { progress.style.width = "100%"; progress.style.background = _fbCount > 0 ? "#f59e0b" : "#16a34a"; }
       if (addWaitEl) addWaitEl.style.display = "none";
       if (stopEl) stopEl.style.display = "none";
       if (replayEl) replayEl.style.display = "inline-flex";
@@ -3987,6 +5344,64 @@
     return classes ? `${tag}.${classes}` : tag;
   }
 
+  function normalizeCaptureTarget(element) {
+    if (!(element instanceof Element)) return element;
+
+    let target = element;
+    const svgTag = (el) => {
+      const t = String(el && el.tagName ? el.tagName : "").toLowerCase();
+      return t === "path" || t === "svg" || t === "g" || t === "use";
+    };
+
+    if (svgTag(target)) {
+      const promoted = target.closest("button, a[href], [role='button'], [role='link'], input, textarea, select, label, [aria-label]");
+      if (promoted instanceof Element) {
+        target = promoted;
+      } else {
+        let walker = target.parentElement;
+        while (walker && svgTag(walker)) walker = walker.parentElement;
+        if (walker instanceof Element) target = walker;
+      }
+    }
+
+    return target;
+  }
+
+  function _isInteractableCaptureTarget(el) {
+    try {
+      if (!(el instanceof Element)) return false;
+      if (el instanceof HTMLElement && el.hidden) return false;
+      const view = (el.ownerDocument && el.ownerDocument.defaultView) || window;
+      const cs = view && typeof view.getComputedStyle === "function"
+        ? view.getComputedStyle(el)
+        : null;
+      if (cs && (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none")) return false;
+      if (el.getClientRects && el.getClientRects().length === 0) return false;
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _shouldPreferClickOverCheck(originalTarget, checkTarget) {
+    if (!(originalTarget instanceof Element) || !(checkTarget instanceof HTMLInputElement)) return false;
+
+    // If user directly clicks the control, keep check semantics.
+    if (originalTarget === checkTarget) return false;
+
+    const type = String(checkTarget.type || "").toLowerCase();
+    if (type !== "checkbox" && type !== "radio") return false;
+
+    const normalized = normalizeCaptureTarget(originalTarget);
+    const explicitClickable = normalized instanceof Element
+      && !!normalized.closest("a[href], button, [role='button'], [role='link']");
+    const checkIsHidden = !_isInteractableCaptureTarget(checkTarget);
+
+    // For custom galleries/carousels (visible links controlling hidden radios),
+    // recording click is more robust than recording check on hidden input.
+    return explicitClickable && checkIsHidden;
+  }
+
   function captureStep(step) {
     const stamped = Object.assign({ _ts: Date.now() }, step);
     chrome.runtime.sendMessage({ type: "RECORD_STEP", step: stamped }, () => { void chrome.runtime.lastError; });
@@ -4006,6 +5421,7 @@
     }
 
     const _lastCheckChangeAt = new WeakMap();
+    const _preferClickOnCheckTargetAt = new WeakMap();
 
     const onClick = (event) => {
       let target = event.target;
@@ -4025,6 +5441,10 @@
         }
       }
       if (checkTarget instanceof HTMLInputElement) {
+        if (_shouldPreferClickOverCheck(target, checkTarget)) {
+          _preferClickOnCheckTargetAt.set(checkTarget, Date.now());
+          // Fall through and capture clickable target below.
+        } else {
         // Some legacy UIs toggle checkbox/radio without emitting change reliably.
         // Capture from click as a fallback, but skip if change was already captured.
         setTimeout(() => {
@@ -4034,6 +5454,7 @@
           captureStep({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked });
         }, 30);
         return;
+        }
       }
       // For <img> and imageless clicks inside <a>, bubble up to the anchor
       const tag = target.tagName.toLowerCase();
@@ -4054,6 +5475,7 @@
           }
         } catch (_e) {}
       }
+      target = normalizeCaptureTarget(target);
       flashElement(target);
       captureStep({ type: "click", selector: buildSelector(target) });
     };
@@ -4071,12 +5493,18 @@
       flashElement(target);
       // For checkboxes capture the boolean checked state, not the raw .value attr
       if (target instanceof HTMLInputElement && target.type === "checkbox") {
+        const preferTs = _preferClickOnCheckTargetAt.get(target) || 0;
+        if (Date.now() - preferTs < 600) return;
+        if (!_isInteractableCaptureTarget(target)) return;
         _lastCheckChangeAt.set(target, Date.now());
         captureStep({ type: "check", selector: buildSelector(target), checked: target.checked });
         return;
       }
       // Radio buttons: record as check with checked:true (the selected option)
       if (target instanceof HTMLInputElement && target.type === "radio") {
+        const preferTs = _preferClickOnCheckTargetAt.get(target) || 0;
+        if (Date.now() - preferTs < 600) return;
+        if (!_isInteractableCaptureTarget(target)) return;
         _lastCheckChangeAt.set(target, Date.now());
         captureStep({ type: "check", selector: buildSelector(target), checked: true });
         return;
@@ -4187,6 +5615,7 @@
         const anchor = target.closest("a[href]");
         if (anchor) target = anchor;
       }
+      target = normalizeCaptureTarget(target);
       flashElement(target);
       captureStep({ type: "dblclick", selector: buildSelector(target) });
     };
@@ -4414,6 +5843,7 @@
     let _scrollTimer = null;
     let lastCopiedText = null, lastCopiedVar = null, varCounter = 0;
     const _lastInlineCheckChangeAt = new WeakMap();
+    const _preferInlineClickOnCheckTargetAt = new WeakMap();
 
     function _updateCount() {
       const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
@@ -4450,6 +5880,10 @@
         }
       }
       if (checkTarget instanceof HTMLInputElement) {
+        if (_shouldPreferClickOverCheck(t, checkTarget)) {
+          _preferInlineClickOnCheckTargetAt.set(checkTarget, Date.now());
+          // Fall through and capture clickable target below.
+        } else {
         setTimeout(() => {
           const lastTs = _lastInlineCheckChangeAt.get(checkTarget) || 0;
           if (Date.now() - lastTs < 120) return;
@@ -4457,6 +5891,7 @@
           addStep({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked });
         }, 30);
         return;
+        }
       }
       const tag = t.tagName.toLowerCase();
       if (tag === "img" || (tag === "input" && t.type === "image" && !t.id)) {
@@ -4474,6 +5909,7 @@
           }
         } catch (_e) {}
       }
+      t = normalizeCaptureTarget(t);
       flashElement(t);
       addStep({ type: "click", selector: buildSelector(t) });
     };
@@ -4484,8 +5920,22 @@
       if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
       if (t.readOnly || t.disabled) return;
       flashElement(t);
-      if (t instanceof HTMLInputElement && t.type === "checkbox") { _lastInlineCheckChangeAt.set(t, Date.now()); addStep({ type: "check", selector: buildSelector(t), checked: t.checked }); return; }
-      if (t instanceof HTMLInputElement && t.type === "radio")    { _lastInlineCheckChangeAt.set(t, Date.now()); addStep({ type: "check", selector: buildSelector(t), checked: true }); return; }
+      if (t instanceof HTMLInputElement && t.type === "checkbox") {
+        const preferTs = _preferInlineClickOnCheckTargetAt.get(t) || 0;
+        if (Date.now() - preferTs < 600) return;
+        if (!_isInteractableCaptureTarget(t)) return;
+        _lastInlineCheckChangeAt.set(t, Date.now());
+        addStep({ type: "check", selector: buildSelector(t), checked: t.checked });
+        return;
+      }
+      if (t instanceof HTMLInputElement && t.type === "radio") {
+        const preferTs = _preferInlineClickOnCheckTargetAt.get(t) || 0;
+        if (Date.now() - preferTs < 600) return;
+        if (!_isInteractableCaptureTarget(t)) return;
+        _lastInlineCheckChangeAt.set(t, Date.now());
+        addStep({ type: "check", selector: buildSelector(t), checked: true });
+        return;
+      }
       if (t instanceof HTMLSelectElement) { addStep({ type: "choose_option", selector: buildSelector(t), value: t.value }); return; }
       const raw = t.value;
       const val = (lastCopiedText !== null && lastCopiedVar !== null && raw.trim() === lastCopiedText)
@@ -4521,7 +5971,9 @@
       if (tag === "img" || (tag === "input" && t.type === "image" && !t.id)) {
         const anchor = t.closest("a[href]"); if (anchor) t = anchor;
       }
-      flashElement(t); addStep({ type: "dblclick", selector: buildSelector(t) });
+      t = normalizeCaptureTarget(t);
+      flashElement(t);
+      addStep({ type: "dblclick", selector: buildSelector(t) });
     };
 
     const _onCopy = (e) => {
@@ -4784,6 +6236,20 @@
    */
   function _cleanupSteps(steps) {
     const isTypeLike = (t) => t === "input" || t === "text";
+    const _navigateKey = (rawUrl) => {
+      try {
+        const u = new URL(String(rawUrl || ""), location.href);
+        const keep = ["q", "query", "search", "text", "wd", "p", "s", "page", "id", "v"];
+        const picked = [];
+        keep.forEach((k) => {
+          const v = u.searchParams.get(k);
+          if (v != null && v !== "") picked.push(`${k}=${v}`);
+        });
+        return `${u.origin}${u.pathname}?${picked.join("&")}`;
+      } catch (_e) {
+        return String(rawUrl || "");
+      }
+    };
     const _norm = (v) => String(v == null ? "" : v)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -4901,22 +6367,115 @@
       return true;
     });
 
+    // Pass 3b: deduplicate near-duplicate navigates by canonical key.
+    // Keeps first navigate when multiple navigates point to the same logical
+    // destination before any interaction step.
+    const pass3b = pass3.filter((step, i, arr) => {
+      if (step.type !== "navigate" || !step.url) return true;
+      const key = _navigateKey(step.url);
+      for (let j = i - 1; j >= 0; j--) {
+        const prev = arr[j];
+        if (!prev) break;
+        if (prev.type === "wait" || prev.type === "wait_for") continue;
+        if (prev.type === "navigate") {
+          return _navigateKey(prev.url) !== key;
+        }
+        break;
+      }
+      return true;
+    });
+
+    // Pass 3c: remove click steps that are only a prelude to a navigate.
+    // This keeps the replay deterministic when the click already caused the
+    // navigation and a later navigate step encodes the real destination.
+    const pass3c = pass3b.filter((step, i, arr) => {
+      if (step.type !== "click" || !step.selector) return true;
+
+      let nextStep = null;
+      for (let j = i + 1; j < arr.length; j++) {
+        if (arr[j].type === "wait" || arr[j].type === "wait_for") continue;
+        nextStep = arr[j];
+        break;
+      }
+
+      if (!nextStep || nextStep.type !== "navigate" || !nextStep.url) return true;
+      // If navigation is explicitly recorded next, the prior click is redundant
+      // and often brittle across locales/AB-tests. Keep navigate as source of truth.
+      return false;
+    });
+
+    // Pass 3d: remove transient wait_for near navigate jumps.
+    // Patterns removed:
+    // 1) navigate(A) -> wait_for(X) -> navigate(B)
+    // 2) navigate(A) -> wait_for(X) -> (hover/scroll/wait)* -> navigate(B)
+    // In these cases X is usually a transient UI control (next/close button,
+    // carousel arrow, overlay actions, etc.) and waiting for it can break
+    // deterministic replay across locales, experiments or responsive variants.
+    const pass3d = pass3c.filter((step, i, arr) => {
+      if (step.type !== "wait_for") return true;
+
+      let prev = null;
+      for (let j = i - 1; j >= 0; j--) {
+        if (arr[j].type === "wait") continue;
+        prev = arr[j];
+        break;
+      }
+
+      let next = null;
+      let onlyTransientBeforeNavigate = true;
+      for (let j = i + 1; j < arr.length; j++) {
+        const cand = arr[j];
+        if (cand.type === "wait") continue;
+        if (cand.type === "navigate") {
+          next = cand;
+          break;
+        }
+        if (cand.type === "hover" || cand.type === "scroll_to") {
+          continue;
+        }
+        onlyTransientBeforeNavigate = false;
+        break;
+      }
+
+      if (
+        prev &&
+        next &&
+        prev.type === "navigate" &&
+        next.type === "navigate" &&
+        onlyTransientBeforeNavigate
+      ) {
+        return false;
+      }
+      return true;
+    });
+
     // Pass 4: auto-inject wait_for after navigate steps
     // Inserts wait_for for the first selector-bearing step after each navigate,
     // making macros robust on full page loads and SPA transitions.
+    const _stableWaitTargetTypes = new Set(["input", "text", "check", "choose_option", "extract"]);
     const pass4 = [];
-    for (let i = 0; i < pass3.length; i++) {
-      pass4.push(pass3[i]);
-      if (pass3[i].type === "navigate") {
-        const nextStep = pass3[i + 1];
-        // Skip if already followed by a wait/wait_for
-        if (nextStep && nextStep.type !== "wait" && nextStep.type !== "wait_for") {
-          for (let j = i + 1; j < pass3.length; j++) {
-            if (pass3[j].type === "wait" || pass3[j].type === "navigate") continue;
-            if (pass3[j].selector) {
-              pass4.push({ type: "wait_for", selector: pass3[j].selector, timeout: 10000 });
+    for (let i = 0; i < pass3d.length; i++) {
+      pass4.push(pass3d[i]);
+      if (pass3d[i].type === "navigate") {
+        const nextStep = pass3d[i + 1];
+        // Skip if already followed by a wait/wait_for or another navigate.
+        if (nextStep && nextStep.type !== "wait" && nextStep.type !== "wait_for" && nextStep.type !== "navigate") {
+          let waitSelector = null;
+          let sawAnotherNavigate = false;
+          for (let j = i + 1; j < pass3d.length; j++) {
+            const cand = pass3d[j];
+            if (cand.type === "wait") continue;
+            if (cand.type === "navigate") {
+              sawAnotherNavigate = true;
+              break;
+            }
+            if (cand.selector && _stableWaitTargetTypes.has(cand.type)) {
+              waitSelector = cand.selector;
             }
             break;
+          }
+          if (waitSelector && !sawAnotherNavigate) {
+            pass4.push({ type: "wait_for", selector: waitSelector, timeout: 10000 });
           }
         }
       }
@@ -4953,18 +6512,32 @@
       }
     }
 
-    // Pass 5: deduplicate consecutive navigate steps with the same URL
+    // Pass 5: deduplicate consecutive navigate steps with the same logical URL
     // (SPA nav patch or manual re-triggers can emit duplicate navigates)
     const pass5 = pass4b.filter((step, i, arr) => {
       if (step.type !== "navigate" || !step.url) return true;
-      // Remove if the immediately preceding non-wait step is also a navigate to the same URL
+      // Remove if the immediately preceding non-wait step is also a navigate to the same logical URL
       for (let j = i - 1; j >= 0; j--) {
-        if (arr[j].type === "wait") continue;
-        return !(arr[j].type === "navigate" && arr[j].url === step.url);
+        if (arr[j].type === "wait" || arr[j].type === "wait_for") continue;
+        return !(arr[j].type === "navigate" && _navigateKey(arr[j].url) === _navigateKey(step.url));
       }
       return true;
     });
-    return pass5;
+
+    // Pass 6: deduplicate repeated wait_for on same selector (keeping first)
+    const pass6 = pass5.filter((step, i, arr) => {
+      if (step.type !== "wait_for" || !step.selector) return true;
+      for (let j = i - 1; j >= 0; j--) {
+        const prev = arr[j];
+        if (prev.type === "wait") continue;
+        if (prev.type === "wait_for") {
+          return prev.selector !== step.selector;
+        }
+        break;
+      }
+      return true;
+    });
+    return pass6;
   }
 
   /**
@@ -5130,9 +6703,7 @@
             const utils = globalScope.WebMaticUtils;
             const threshold = (afterStop.settings && afterStop.settings.waitThreshold) || 3;
             const recorded = afterStop.draft.steps;
-            const navigateSteps = recorded.filter((s) => s.type === "navigate");
-            const interactions = recorded.filter((s) => s.type !== "navigate");
-            const allSteps = _cleanupSteps([...navigateSteps, ...interactions]);
+            const allSteps = _cleanupSteps(recorded);
             const processedSteps = _finalizeWithInventory(utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps);
             const resolvedInv = [
               ...recorderRuntime.pageInventories,
@@ -5150,6 +6721,7 @@
           recorderRuntime._autocompleteExpansionPromises = {};
           recorderRuntime.pageInventories = [];
           captureScreenInventory();
+          recorderRuntime.preRunReset = _captureInitialPreRunReset();
           startRecorderSession();
           createFloatingBtn(() => {
             stopRecorderSession();
@@ -5162,9 +6734,7 @@
               const utils = globalScope.WebMaticUtils;
               const threshold = (afterStop.settings && afterStop.settings.waitThreshold) || 3;
               const recorded = afterStop.draft.steps;
-              const navigateSteps = recorded.filter((s) => s.type === "navigate");
-              const interactions = recorded.filter((s) => s.type !== "navigate");
-              const allSteps = _cleanupSteps([...navigateSteps, ...interactions]);
+              const allSteps = _cleanupSteps(recorded);
               const processedSteps = _finalizeWithInventory(utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps);
               const resolvedInv = [
                 ...recorderRuntime.pageInventories,
@@ -5594,26 +7164,36 @@
           if (!_PlayerClass || !Array.isArray(_macro.steps) || _macro.steps.length === 0) return;
           const _player = new _PlayerClass();
           playerRuntime.activePlayer = _player;
+          playerRuntime.lastFallbacks = [];
           resetRuntimeAutoFillSession();
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _resolvedSteps = _resolveCallMacros(_macro.steps, _state.library.macros);
           const _preparedSteps = applyRuntimeDataToSteps(_resolvedSteps, _state.settings);
+          // Restaurar campos a defaults del perfil capturado, silenciosamente
+          _restoreProfileDefaultsForCurrentPage();
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _preparedSteps } });
           _player.play(_preparedSteps, {
             speed: _state.settings.speed ?? 1,
             vars: buildRuntimeVars(null, _state.settings),
             macroId: _macro.id,
+            preRunReset: (_macro.meta && _macro.meta.preRunReset) || null,
             autoCaptureDefaults: true,
             onStep: (step, index) => {
               tryAutoFillRuntimeDataOnPage(_state.settings);
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _preparedSteps } });
             },
-            onDone: () => {
+            onDone: (summary) => {
               playerRuntime.activePlayer = null;
+              const _fb = (summary && Array.isArray(summary.fallbacks)) ? summary.fallbacks : [];
+              playerRuntime.lastFallbacks = _fb;
               // Mark all steps done, then stop
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _preparedSteps.length, steps: _preparedSteps } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-              store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+              const _statusMsg = _fb.length > 0
+                ? `Reproduccion completada con ${_fb.length} ${_fb.length === 1 ? "fallback aplicado" : "fallbacks aplicados"}`
+                : "Reproduccion completada";
+              store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: _statusMsg });
+              try { console.info("[WebMatic][playback] summary", summary || {}); } catch (_e) { /* ignore */ }
             },
             onError: (err) => {
               playerRuntime.activePlayer = null;
@@ -5649,6 +7229,7 @@
             let _fbIter = 0;
             const _fbResolved = _resolveCallMacros(_fbMacro.steps, _fbState.library.macros);
             const _fbPrepared = applyRuntimeDataToSteps(_fbResolved, _fbState.settings);
+            _restoreProfileDefaultsForCurrentPage();
             store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _fbPrepared } });
             function _fbNext() {
               if (_fbIter >= n || _fbPlayer._abort) {
@@ -5663,6 +7244,7 @@
                 speed: _fbState.settings.speed ?? 1,
                 vars: buildRuntimeVars(null, _fbState.settings),
                 macroId: _fbMacro.id,
+                preRunReset: (_fbMacro.meta && _fbMacro.meta.preRunReset) || null,
                 autoCaptureDefaults: true,
                 onStep: (step, index) => {
                   tryAutoFillRuntimeDataOnPage(_fbState.settings);
@@ -5704,6 +7286,7 @@
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _lResolvedSteps = _resolveCallMacros(_lmacro.steps, _lstate.library.macros);
           const _lPreparedSteps = applyRuntimeDataToSteps(_lResolvedSteps, _lstate.settings);
+          _restoreProfileDefaultsForCurrentPage();
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lPreparedSteps } });
           function _lNext() {
             if (_lIter >= _lCount || _lPlayer._abort) {
@@ -5718,6 +7301,7 @@
               speed: _lstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lstate.settings),
               macroId: _lmacro.id,
+              preRunReset: (_lmacro.meta && _lmacro.meta.preRunReset) || null,
               autoCaptureDefaults: true,
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lstate.settings);
@@ -5761,6 +7345,7 @@
               speed: _lnstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lnstate.settings),
               macroId: _lnmacro.id,
+              preRunReset: (_lnmacro.meta && _lnmacro.meta.preRunReset) || null,
               autoCaptureDefaults: true,
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lnstate.settings);
@@ -5980,8 +7565,9 @@
         const payload = macroJsonApi.createMacroPayload(exportMacro);
         const content = JSON.stringify(payload, null, 2);
         const safeName = macro.name.replace(/[^a-z0-9_\-]/gi, "_") + ".json";
-        chrome.runtime.sendMessage({ type: "EXPORT_FILE", filename: safeName, content }, (resp) => {
+        chrome.runtime.sendMessage({ type: "EXPORT_FILE", filename: `macros/${safeName}`, content, saveAs: true }, (resp) => {
           void chrome.runtime.lastError;
+          void _incrementAppContentStats({ macroExports: 1 });
           if (resp && resp.folder) {
             store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Guardado en ${resp.folder}` });
           }
@@ -6043,6 +7629,7 @@
               store.dispatch({ type: contracts.ActionTypes.MACRO_SAVED, payload: macro });
               store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: macro.id });
               chrome.storage.local.set({ webmaticMacros: store.getState().library.macros });
+              void _incrementAppContentStats({ macroImports: 1 });
               store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro JSON importada: "${macroName}"` });
             } catch (err) {
               store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Error al importar archivo JSON." });
@@ -6055,6 +7642,31 @@
 
         fileInput.addEventListener("change", onJsonChosen);
         fileInput.click();
+      }
+
+      if (actionId === "macros-restore-internal") {
+        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Restaurando macros internas..." });
+        const restored = await _restoreMacrosFromInternalSnapshot("replace");
+        if (!restored || !restored.ok) {
+          const reason = restored && restored.reason === "empty-sync"
+            ? "No hay backup interno disponible en este navegador/perfil."
+            : "No se pudo restaurar desde backup interno.";
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: reason });
+          await uiShell.wmModal("alert", {
+            message: `${reason}\n\nSugerencia: usa "Importar backup (.json)" con tu archivo de backup.` ,
+            okLabel: "Aceptar"
+          });
+          return;
+        }
+        const sourceLabel = restored.source === "site" ? "sitio" : "sync";
+        store.dispatch({
+          type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+          payload: `Restauradas ${restored.restored} macro(s) desde ${sourceLabel}. Total actual: ${restored.total}.`
+        });
+        await uiShell.wmModal("alert", {
+          message: `Restauración interna completada.\nFuente: ${sourceLabel}\nMacros recuperadas: ${restored.restored}\nTotal actual: ${restored.total}`,
+          okLabel: "Aceptar"
+        });
       }
 
       if (actionId === "macros-backup-all") {
@@ -6075,16 +7687,18 @@
             mode: currentState.ui.mode
           },
           metadata: {
+            profiles: Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles : [],
             storage: {
               webmaticExportFolder: storage.webmaticExportFolder || "",
               webmaticHelpTheme: storage.webmaticHelpTheme || null
             }
           }
         });
-        const filename = "webmatic-full-backup-v1.json";
+        const filename = "backup/webmatic-full-backup-v1.json";
         const content = JSON.stringify(payload, null, 2);
-        chrome.runtime.sendMessage({ type: "EXPORT_FILE", filename, content, saveAs: false }, (resp) => {
+        chrome.runtime.sendMessage({ type: "EXPORT_FILE", filename, content, saveAs: true }, (resp) => {
           void chrome.runtime.lastError;
+          void _incrementAppContentStats({ fullBackupsCreated: 1 });
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Backup completo guardado: ${filename}` });
         });
       }
@@ -6121,6 +7735,7 @@
                   const merged = [...kept, ...importedMacros];
                   store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: merged });
                   chrome.storage.local.set({ webmaticMacros: merged });
+                  void _incrementAppContentStats({ macroImports: 1 });
                   store.dispatch({
                     type: contracts.ActionTypes.STATUS_MESSAGE_SET,
                     payload: `${importedMacros.length} macro${importedMacros.length !== 1 ? "s" : ""} importada${importedMacros.length !== 1 ? "s" : ""} (backup legacy)`
@@ -6130,15 +7745,21 @@
 
                 const full = parsed.data;
                 const importedMacros = full.macros || [];
+                const importedProfiles = Array.isArray(full.metadata && full.metadata.profiles) ? full.metadata.profiles : [];
                 const ok = await uiShell.wmModal("confirm", {
-                  message: `Se restaurarán ${importedMacros.length} macro(s) y configuración completa. Esto reemplaza macros actuales.`,
+                  message: `Se importarán ${importedMacros.length} macro(s) y ${importedProfiles.length} perfil(es) de metadatos. Las macros con el mismo ID se actualizarán, sin borrar macros no incluidas.`,
                   okLabel: "Restaurar",
                   cancelLabel: "Cancelar"
                 });
                 if (!ok) return;
 
-                store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: importedMacros });
-                chrome.storage.local.set({ webmaticMacros: importedMacros });
+                const existingMacrosForMerge = Array.isArray(store.getState().library.macros) ? store.getState().library.macros : [];
+                const importedIdsFull = new Set(importedMacros.map((m) => m.id));
+                const keptFull = existingMacrosForMerge.filter((m) => !importedIdsFull.has(m.id));
+                const mergedFull = [...keptFull, ...importedMacros];
+                store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: mergedFull });
+                chrome.storage.local.set({ webmaticMacros: mergedFull });
+                await _savePageMetadataProfiles(importedProfiles);
 
                 const mergedSettings = await settingsApi.saveSettings(full.settings || {});
                 const themeSettings = resolveTheme(mergedSettings.themeMode, mergedSettings.themeVariant);
@@ -6178,9 +7799,10 @@
                   chrome.storage.local.set(patch);
                 }
 
+                void _incrementAppContentStats({ fullBackupsImported: 1 });
                 store.dispatch({
                   type: contracts.ActionTypes.STATUS_MESSAGE_SET,
-                  payload: `Restauración completa OK: ${importedMacros.length} macro(s) + settings`
+                  payload: `Importación completa OK: ${importedMacros.length} macro(s), ${importedProfiles.length} perfil(es) y settings`
                 });
               } catch (err) {
                 store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Error al importar backup." });
@@ -6197,19 +7819,46 @@
       }
 
       if (actionId === "page-meta-capture") {
-        const detectedFields = _collectFieldsForSelection(document);
-        if (detectedFields.length === 0) {
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No se detectaron campos para censar en esta página." });
+        const classification = _collectCensableFieldsForCapture(document);
+        try {
+          globalScope.__webmaticLastCaptureClassification = {
+            at: Date.now(),
+            isIaposAuditPage: !!classification.isIaposAuditPage,
+            included: classification.included.map((f) => ({ selector: f.selector, id: f.id, name: f.name, kind: f.captureKind, reason: f.reason })),
+            excluded: classification.excluded.slice(0, 80)
+          };
+        } catch (_e) { /* ignore */ }
+        const autoSelected = classification.included;
+
+        if (autoSelected.length === 0) {
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No se detectaron campos censables en esta página." });
           return;
         }
 
-        const selectedSelectors = await _openFieldSelectionModal(detectedFields);
-        if (!Array.isArray(selectedSelectors)) {
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Captura cancelada por el usuario." });
+        // Confirmación breve y limpia, sin listar todos los campos.
+        const autoSelectedCounts = autoSelected.reduce((acc, f) => {
+          const el = (() => { try { return document.querySelector(f.selector); } catch (_e) { return null; } })();
+          const tag = String(el && el.tagName ? el.tagName : "").toLowerCase();
+          const inputType = String((el && el.getAttribute && el.getAttribute("type")) || "").toLowerCase();
+          if (tag === "select") acc.selects += 1;
+          else if (tag === "input" && (inputType === "checkbox" || inputType === "radio")) acc.checks += 1;
+          else acc.autocomplete += 1;
+          return acc;
+        }, { selects: 0, checks: 0, autocomplete: 0 });
+        const okCapture = await uiShell.wmModal("confirm", {
+          message: `Se censarán ${autoSelected.length} campos de la página.\nSelects: ${autoSelectedCounts.selects} · Checks: ${autoSelectedCounts.checks} · Autocomplete: ${autoSelectedCounts.autocomplete}\n\n¿Continuar?`,
+          okLabel: "Capturar",
+          cancelLabel: "Cancelar"
+        });
+        if (!okCapture) {
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Captura cancelada." });
           return;
         }
+
+        const selectedFieldBySelector = new Map(autoSelected.map((f) => [f.selector, f]));
+        const selectedSelectors = autoSelected.map((f) => f.selector);
         if (selectedSelectors.length === 0) {
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Debes seleccionar al menos un campo para censar." });
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No hay selectores válidos para censar." });
           return;
         }
 
@@ -6248,7 +7897,10 @@
             _setPageMetaCaptureButtonProgress(pct, true);
             _setPageMetaCaptureOverlayProgress(pct, true, phase || "Capturando");
           };
+          const captureStartedAt = Date.now();
           const res = await _captureAndStoreReusablePageMetadata(selectedSelectors);
+          const captureElapsedMs = Math.max(0, Date.now() - captureStartedAt);
+          const captureElapsedSeconds = Math.round((captureElapsedMs / 100)) / 10;
           const controls = res && res.profile && res.profile.stats ? res.profile.stats.controls : 0;
           const opts = res && res.profile && res.profile.stats ? res.profile.stats.selectorsWithOptions : 0;
           const hidden = (res && res.hiddenCatalogSummary) || {};
@@ -6265,8 +7917,36 @@
           // Cerrar overlay ANTES del modal
           _setPageMetaCaptureOverlayProgress(100, false);
           _setPageMetaCaptureButtonProgress(100, false);
+
+          // Armar badges por campo seleccionado con su conteo de opciones
+          const catalogs = (res && res.profile && res.profile.autocompleteCatalogs) || {};
+          const fieldRows = selectedSelectors.map((sel) => {
+            const label = _friendlyCaptureFieldName(selectedFieldBySelector.get(sel) || sel);
+            const optCount = Array.isArray(catalogs[sel]) ? catalogs[sel].length : 0;
+            return { label, optCount };
+          });
+
+          // Agregar por nombre normalizado para evitar badges duplicados.
+          const grouped = new Map();
+          fieldRows.forEach((r) => {
+            const key = String(r.label || "").toLowerCase().replace(/\s+/g, " ").trim();
+            const prev = grouped.get(key) || { label: r.label, optCount: 0 };
+            prev.optCount += Number(r.optCount) || 0;
+            grouped.set(key, prev);
+          });
+          const uniqueRows = Array.from(grouped.values());
+          const fieldBadgesHtml = uniqueRows.map((r) => {
+            const safeLabel = String(r.label || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            const safeCount = Number(r.optCount) || 0;
+            return `<span class="wm-badge"><span>${safeLabel}</span><span class="wm-badge-count">${safeCount}</span></span>`;
+          }).join("");
+
+          const totalOpts = uniqueRows.reduce((acc, r) => {
+            return acc + (Number(r.optCount) || 0);
+          }, 0) || hiddenOptions;
+
           await uiShell.wmModal("alert", {
-            message: `Metadatos guardados correctamente.\nOpciones ocultas capturadas: ${hiddenOptions}\nCampos censados: ${hiddenScanned}\nMétodo: ${hiddenMode}\nPerfiles totales: ${total}`,
+            messageHtml: `<span class="wm-line-title">Metadatos guardados correctamente.</span><span>Campos censados: ${uniqueRows.length}</span><span>Tiempo total de recoleccion: ${captureElapsedSeconds}s</span><span style="display:block;margin-top:6px;">Nombres de campo:</span><span class="wm-badge-wrap">${fieldBadgesHtml}</span><span>Total opciones ocultas capturadas: ${totalOpts}</span>`,
             okLabel: "Aceptar"
           });
         } catch (err) {
@@ -6303,10 +7983,49 @@
           const filename = hasConfiguredFolder
             ? "metadata/webmatic-page-metadata-v1.json"
             : "WebMatic/metadata/webmatic-page-metadata-v1.json";
-          chrome.runtime.sendMessage({ type: "EXPORT_FILE", filename, content, saveAs: false }, () => {
+          chrome.runtime.sendMessage({ type: "EXPORT_FILE", filename, content, saveAs: true }, () => {
             void chrome.runtime.lastError;
+            void _incrementAppContentStats({ pageMetaExports: 1 });
             store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Metadatos exportados: ${filename}` });
           });
+        });
+      }
+
+      if (actionId === "page-meta-export-tables") {
+        const list = Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles : [];
+        if (list.length === 0) {
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No hay metadatos para exportar en tablas." });
+          return;
+        }
+        const files = _buildPageMetadataFieldExports(list);
+        if (!Array.isArray(files) || files.length === 0) {
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No se generaron tablas de metadatos." });
+          return;
+        }
+        chrome.runtime.sendMessage({ type: "GET_FOLDER_NAME" }, (resp) => {
+          void chrome.runtime.lastError;
+          let pending = files.length;
+          files.forEach((f, idx) => {
+            chrome.runtime.sendMessage({
+              type: "EXPORT_FILE",
+              filename: String(f && f.filename ? f.filename : "metadata/fields/field.txt"),
+              content: String(f && f.content ? f.content : ""),
+              saveAs: false
+            }, () => {
+              void chrome.runtime.lastError;
+              pending -= 1;
+              if (pending > 0) return;
+              void _incrementAppContentStats({ pageMetaExports: 1 });
+              store.dispatch({
+                type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+                payload: `Tablas de metadatos exportadas (${files.length} archivo(s), ${Math.max(0, files.length - 1)} campo(s)).`
+              });
+            });
+          });
+          if (files.length === 0) {
+            void chrome.runtime.lastError;
+            store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No se generaron archivos de tablas." });
+          }
         });
       }
 
@@ -6331,6 +8050,7 @@
                 const existing = Array.isArray(pageMetadataProfiles) ? pageMetadataProfiles.slice() : [];
                 const merged = [...imported, ...existing];
                 const saved = await _savePageMetadataProfiles(merged);
+                void _incrementAppContentStats({ pageMetaImports: 1 });
                 store.dispatch({
                   type: contracts.ActionTypes.STATUS_MESSAGE_SET,
                   payload: `Metadatos importados: ${imported.length} perfil(es). Total: ${saved.length}`
@@ -6347,24 +8067,6 @@
 
         fileInput.addEventListener("change", onFileChosen);
         fileInput.click();
-      }
-
-      if (actionId === "page-meta-profiles-list") {
-        const list = _listCurrentPageProfiles(12);
-        if (!Array.isArray(list) || list.length === 0) {
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No hay perfiles capturados para esta página." });
-          return;
-        }
-        const lines = list.map((p, idx) => {
-          const d = Number(p.capturedAt) ? new Date(Number(p.capturedAt)).toLocaleString() : "desconocido";
-          const st = p.stats || {};
-          const fp = String(p.fingerprint || "").slice(0, 8);
-          return `${idx + 1}. ${d} | controles: ${Number(st.controls) || 0} | opciones: ${Number(st.selectorsWithOptions) || 0} | fp: ${fp}`;
-        }).join("\n");
-        await uiShell.wmModal("alert", {
-          message: `Perfiles encontrados para esta página (${list.length}):\n\n${lines}`,
-          okLabel: "Cerrar"
-        });
       }
 
       if (actionId === "save-confirm") {
@@ -6499,7 +8201,26 @@
     }
   });
 
-  settingsApi.getSettings().then((settings) => {
+  (async () => {
+    const localSettingsRaw = await getLocalStorageValues([SETTINGS_STORAGE_KEY]);
+    const hasLocalSettings = !!(localSettingsRaw && localSettingsRaw[SETTINGS_STORAGE_KEY] && typeof localSettingsRaw[SETTINGS_STORAGE_KEY] === "object");
+    let settings = await settingsApi.getSettings();
+    let restoredSettingsFrom = "local";
+    if (!hasLocalSettings) {
+      const recoveredSettings = await _loadSettingsSyncSnapshot();
+      if (recoveredSettings && typeof recoveredSettings === "object") {
+        settings = { ...settings, ...recoveredSettings };
+        restoredSettingsFrom = "sync";
+        await setLocalStorageValues({ [SETTINGS_STORAGE_KEY]: settings });
+      } else {
+        const siteSettings = _loadSiteSurvivalSettings();
+        if (siteSettings && typeof siteSettings === "object") {
+          settings = { ...settings, ...siteSettings };
+          restoredSettingsFrom = "site";
+          await setLocalStorageValues({ [SETTINGS_STORAGE_KEY]: settings });
+        }
+      }
+    }
     const themeSettings = resolveTheme(settings.themeMode, settings.themeVariant);
     const runtimeDataTemplates = normalizeRuntimeDataTemplates(settings.runtimeDataTemplates);
     const runtimeTemplateSelectedId = sanitizeRuntimeTemplateSelectedId(settings.runtimeTemplateSelectedId, runtimeDataTemplates);
@@ -6527,11 +8248,26 @@
     if (Array.isArray(pageMetadataProfiles) && pageMetadataProfiles.length > pageMetaMaxProfiles) {
       void _savePageMetadataProfiles(pageMetadataProfiles.slice(0, pageMetaMaxProfiles));
     }
-    store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Configuracion cargada" });
+    lastSettingsPersistHash = _simpleStableHash(JSON.stringify(settings && typeof settings === "object" ? settings : {}));
+    settingsPersistenceReady = true;
+    store.dispatch({
+      type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+      payload: restoredSettingsFrom === "local"
+        ? "Configuracion cargada"
+        : `Configuracion restaurada desde backup ${restoredSettingsFrom}.`
+    });
+  })();
+
+  _loadAppContentStats().then(() => {
+    _refreshPlaySummary();
+  }).catch(() => {
+    appContentStats = { ...DEFAULT_APP_CONTENT_STATS };
+    _refreshPlaySummary();
   });
 
   _loadPageMetadataProfiles().catch(() => {
     pageMetadataProfiles = [];
+    _refreshPlaySummary();
   });
 
   // Restore saved export folder name from background (extension-origin IndexedDB)
@@ -6542,10 +8278,50 @@
     }
   });
 
-  chrome.storage.local.get("webmaticMacros", (result) => {
-    const macros = Array.isArray(result.webmaticMacros) ? result.webmaticMacros : [];
+  (async () => {
+    const local = await getLocalStorageValues([MACROS_STORAGE_KEY]);
+    let macros = Array.isArray(local[MACROS_STORAGE_KEY]) ? local[MACROS_STORAGE_KEY] : [];
+    let recoveredFromInternal = false;
+    let recoveredSource = "local";
+    if (macros.length === 0) {
+      const recovered = await _loadMacrosSyncSnapshot();
+      if (Array.isArray(recovered) && recovered.length > 0) {
+        macros = recovered;
+        recoveredFromInternal = true;
+        recoveredSource = "sync";
+        await setLocalStorageValues({ [MACROS_STORAGE_KEY]: recovered });
+        store.dispatch({
+          type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+          payload: `Recuperadas ${recovered.length} macro(s) desde backup interno.`
+        });
+      } else {
+        const recoveredSite = _loadSiteSurvivalMacros();
+        if (Array.isArray(recoveredSite) && recoveredSite.length > 0) {
+          macros = recoveredSite;
+          recoveredFromInternal = true;
+          recoveredSource = "site";
+          await setLocalStorageValues({ [MACROS_STORAGE_KEY]: recoveredSite });
+          store.dispatch({
+            type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+            payload: `Recuperadas ${recoveredSite.length} macro(s) desde backup del sitio.`
+          });
+        }
+      }
+    }
     store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: macros });
-  });
+    if (!recoveredFromInternal && macros.length === 0) {
+      store.dispatch({
+        type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+        payload: "Sin macros locales ni backup interno. Importa un backup JSON para restaurar."
+      });
+    }
+    lastMacrosPersistHash = _simpleStableHash(JSON.stringify(Array.isArray(macros) ? macros : []));
+    if (recoveredSource !== "local") {
+      void _saveMacrosSyncSnapshot(macros);
+      _writeSiteSurvivalSnapshot({ macros, macrosSavedAt: Date.now() });
+    }
+    macrosPersistenceReady = true;
+  })();
 
   // Check if there's a pending playback that was interrupted by page navigation
   chrome.runtime.sendMessage({ type: "QUERY_PENDING_PLAYBACK" }, (resp) => {
@@ -6605,6 +8381,7 @@
             speed: p.speed,
             vars: buildRuntimeVars(p.vars, _rstate.settings),
             macroId: p.macroId,
+            preRunReset: (_rmacro.meta && _rmacro.meta.preRunReset) || null,
             autoCaptureDefaults: true,
             onStep: (step, index) => {
               tryAutoFillRuntimeDataOnPage(_rstate.settings);
@@ -6655,6 +8432,7 @@
               speed: p.speed,
               vars: buildRuntimeVars(p.vars, _rnstate.settings),
               macroId: p.macroId,
+              preRunReset: (_rnmacro.meta && _rnmacro.meta.preRunReset) || null,
               autoCaptureDefaults: true,
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_rnstate.settings);
@@ -6685,6 +8463,7 @@
         startIndex: p.index,
         vars: buildRuntimeVars(p.vars, store.getState().settings),
         macroId: p.macroId,
+        preRunReset: ((store.getState().library.macros.find((m) => m.id === p.macroId) || {}).meta || {}).preRunReset || null,
         autoCaptureDefaults: true,
         onStep: (step, index) => {
           tryAutoFillRuntimeDataOnPage(store.getState().settings);
@@ -6865,6 +8644,9 @@
       store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
       recorderRuntime.pageInventories = [];
       captureScreenInventory();
+      if (!recorderRuntime.preRunReset) {
+        recorderRuntime.preRunReset = _captureInitialPreRunReset();
+      }
       // Restore steps accumulated on previous pages in this recording session
       if (message.steps && message.steps.length > 0) {
         message.steps.forEach((step) => {
@@ -6884,9 +8666,7 @@
           const utils = globalScope.WebMaticUtils;
           const threshold = (afterStop.settings && afterStop.settings.waitThreshold) || 3;
           const recorded = afterStop.draft.steps;
-          const navigateSteps = recorded.filter((s) => s.type === "navigate");
-          const interactions = recorded.filter((s) => s.type !== "navigate");
-          const allSteps = _cleanupSteps([...navigateSteps, ...interactions]);
+          const allSteps = _cleanupSteps(recorded);
           const waitedSteps = utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps;
           const processedSteps = _finalizeWithInventory(waitedSteps);
               const resolvedInv = [
@@ -6939,7 +8719,9 @@
         playerRuntime.activePlayer.stop();
         playerRuntime.activePlayer = null;
       }
-      chrome.runtime.sendMessage({ type: "RECORDING_STATE", active: false }, () => { void chrome.runtime.lastError; });
+      // IMPORTANT: do not force RECORDING_STATE=false here.
+      // This destroy path also runs during content-script reinjection/navigation,
+      // and forcing a global stop would wipe recorded steps accumulated in background.
       chrome.runtime.onMessage.removeListener(onRuntimeMessage);
       chrome.storage.onChanged.removeListener(onStorageChanged);
       if (typeof unsubscribeRender === "function") {

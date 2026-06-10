@@ -49,13 +49,16 @@ function renderSwatches() {
   }
 
   const colors = themePalettes[selectedThemeMode];
-  row.innerHTML = colors
-    .map((color, index) => {
-      const variant = index + 1;
-      const activeClass = variant === selectedThemeVariant ? " active" : "";
-      return `<button type="button" class="swatch${activeClass}" data-variant="${variant}" style="background:${color}"></button>`;
-    })
-    .join("");
+  row.replaceChildren();
+  colors.forEach((color, index) => {
+    const variant = index + 1;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `swatch${variant === selectedThemeVariant ? " active" : ""}`;
+    button.dataset.variant = String(variant);
+    button.style.background = color;
+    row.appendChild(button);
+  });
 }
 
 async function loadForm() {
@@ -173,7 +176,10 @@ function initOptionsPage() {
   const folderClearBtn = document.getElementById("folderClearBtn");
   if (folderInput) {
     const applyFolder = async () => {
-      const name = folderInput.value.trim().replace(/[\\/]/g, "");
+      const fsHandle = (typeof WebMaticFsHandle !== "undefined") ? WebMaticFsHandle : null;
+      const name = fsHandle && typeof fsHandle.sanitizeFolderName === "function"
+        ? fsHandle.sanitizeFolderName(folderInput.value)
+        : folderInput.value.trim().replace(/[\\/]/g, "");
       folderInput.value = name;
       await saveFolderName(name);
       if (folderClearBtn) {

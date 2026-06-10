@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GeneXus Fixture - Detail</title>
+</head>
+<body style="font-family:Segoe UI,sans-serif;margin:20px;">
+  <h1>GeneXus-like Detail Subpage</h1>
+  <p>Usar esta pantalla para validar que WebMatic siga activa despues de navegar.</p>
+
+  <label for="gx-detail-input">Detalle</label>
+  <input id="gx-detail-input" type="text" autocomplete="off" />
+
+  <div style="margin-top:14px;">
+    <button id="gx-back" type="button">Volver</button>
+  </div>
+
+  <script>
+    document.getElementById("gx-back").addEventListener("click", function () {
+      location.href = "./genexus-subpage.html";
+    });
+  </script>
+</body>
+</html>

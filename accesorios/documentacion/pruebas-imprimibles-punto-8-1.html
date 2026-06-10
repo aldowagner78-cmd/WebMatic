@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebMatic - Pruebas imprimibles punto 8.1</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #4b5563;
+      --line: #d1d5db;
+      --soft: #f9fafb;
+      --accent: #0f766e;
+      --accent-2: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 32px;
+      color: var(--ink);
+      font-family: Arial, Helvetica, sans-serif;
+      background: #fff;
+    }
+
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: 26px; margin-bottom: 8px; }
+    h2 { font-size: 18px; margin: 24px 0 10px; }
+    h3 { font-size: 15px; margin: 18px 0 8px; }
+    p, li { line-height: 1.5; font-size: 14px; }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0 24px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--soft);
+    }
+
+    .label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .value {
+      min-height: 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .intro {
+      border-left: 4px solid var(--accent);
+      padding: 12px 14px;
+      background: #f0fdfa;
+      color: #134e4a;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 10px;
+      margin: 10px 0 0;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: 20px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+    }
+
+    .tick {
+      width: 18px;
+      height: 18px;
+      border: 1.8px solid #6b7280;
+      border-radius: 4px;
+      margin-top: 2px;
+      flex: 0 0 auto;
+    }
+
+    .muted { color: var(--muted); }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+
+    .notes {
+      min-height: 110px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+    }
+
+    .small { font-size: 12px; color: var(--muted); }
+
+    .page-break { page-break-after: always; break-after: page; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #f3f4f6; }
+
+    ul { margin: 8px 0 0 18px; }
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    @media print {
+      body { padding: 18px; }
+      .box, .item, .intro { break-inside: avoid; }
+      .page { max-width: none; }
+      a { color: inherit; text-decoration: none; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>WebMatic - Pruebas imprimibles del punto 8.1</h1>
+    <p class="muted">Fixture recomendada: <code>accesorios/pruebas/tests/fixtures/universal-macro-fixture.html</code></p>
+
+    <div class="intro">
+      Estas pruebas están pensadas para grabar una macro base y luego revisar si WebMatic captura controles modernos, legacy, GeneXus-like, modales y elementos mixtos sin perder coherencia.
+    </div>
+
+    <div class="meta">
+      <div class="box">
+        <span class="label">Fecha</span>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div class="box">
+        <span class="label">Nombre del probador</span>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div class="box">
+        <span class="label">Versión / rama</span>
+        <div class="value">master</div>
+      </div>
+    </div>
+
+    <h2>Objetivo</h2>
+    <p>Grabar una macro de prueba en una página universal que incluya controles de distintos estilos para validar qué captura la extensión, cómo lo representa en el editor y si conserva la reproducción correcta.</p>
+
+    <h2>Cómo ejecutar</h2>
+    <ol>
+      <li>Abrí la fixture universal en Firefox.</li>
+      <li>Iniciá la grabación de WebMatic.</li>
+      <li>Ejecutá la secuencia de pruebas de abajo en orden.</li>
+      <li>Guardá/exportá la macro resultante.</li>
+      <li>Luego revisá el editor y la reproducción con esa macro.</li>
+    </ol>
+
+    <div class="page-break"></div>
+
+    <h2>Secuencia principal de grabación</h2>
+    <div class="checklist">
+      <div class="item"><div class="tick"></div><div><strong>1. Formulario principal</strong><div class="small">Completar nombre, apellido, DNI, edad, fecha y hora.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>2. Selects clásicos</strong><div class="small">Elegir País y Modalidad.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>3. Checkboxes y radios</strong><div class="small">Marcar Tiene archivo adjunto y Ver bajas; dejar Requiere compra desmarcado; seleccionar Activo.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>4. Texto libre</strong><div class="small">Escribir observaciones y contenido en el bloque editable.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>5. Autocomplete moderno</strong><div class="small">Escribir en Afiliado moderno y seleccionar una sugerencia; elegir una Especialidad moderna del datalist.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>6. GeneXus-like</strong><div class="small">Escribir Delegación y Especialidad GeneXus-like y elegir una opción sugerida.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>7. Legacy</strong><div class="small">Completar Buscar afiliado, Buscar delegación y cambiar Classic select.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>8. Resultados y acciones</strong><div class="small">Hacer clic en Ver, Editar y Autorizar en la tabla.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>9. Modal</strong><div class="small">Abrir modal, completar campos internos, aceptar y verificar que el cierre quede registrado.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>10. Shadow DOM</strong><div class="small">Buscar una ciudad dentro del componente shadow y elegirla.</div></div></div>
+      <div class="item"><div class="tick"></div><div><strong>11. Guardado final</strong><div class="small">Hacer clic en Guardar para cerrar la secuencia.</div></div></div>
+    </div>
+
+    <h2>Datos sugeridos para la prueba</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Campo</th>
+          <th>Valor sugerido</th>
+          <th>Observación</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Nombre</td><td>Ana</td><td>Texto corto</td></tr>
+        <tr><td>Apellido</td><td>Torres</td><td>Texto corto</td></tr>
+        <tr><td>DNI</td><td>30111222</td><td>Número</td></tr>
+        <tr><td>Edad</td><td>32</td><td>Input numérico</td></tr>
+        <tr><td>País</td><td>Argentina</td><td>Select clásico</td></tr>
+        <tr><td>Modalidad</td><td>Internación</td><td>Select clásico</td></tr>
+        <tr><td>Observaciones</td><td>Prueba de captura universal</td><td>Textarea</td></tr>
+        <tr><td>Afiliado moderno</td><td>wa</td><td>Elegir sugerencia</td></tr>
+        <tr><td>Delegación GeneXus-like</td><td>ros</td><td>Elegir sugerencia</td></tr>
+        <tr><td>Especialidad GeneXus-like</td><td>card</td><td>Elegir sugerencia</td></tr>
+        <tr><td>Buscar afiliado legacy</td><td>alv</td><td>Elegir sugerencia</td></tr>
+        <tr><td>Buscar delegación legacy</td><td>bel</td><td>Elegir sugerencia</td></tr>
+        <tr><td>Modal</td><td>Validación / Urgente</td><td>Probar foco y cierre</td></tr>
+      </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>Qué debe aparecer en la macro grabada</h2>
+    <div class="grid-2">
+      <div class="box">
+        <h3>Debe capturar</h3>
+        <ul>
+          <li>Inputs de texto, número, fecha y hora.</li>
+          <li>Selects visibles y radios/checkboxes.</li>
+          <li>Autocompletes modernos, legacy y GeneXus-like.</li>
+          <li>Clics sobre botones, acciones y modal.</li>
+          <li>Shadow DOM si el grabador lo soporta en este flujo.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>No debería confundir</h3>
+        <ul>
+          <li>Controles con el mismo tipo pero distinto origen.</li>
+          <li>Opciones de otro campo no relacionado.</li>
+          <li>Clicks de navegación con cambios de contenido no esperados.</li>
+          <li>Campos derivados que no deban censarse en la práctica.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Registro de resultados</h2>
+    <div class="grid-3">
+      <div class="box">
+        <span class="label">¿Grabó el formulario principal?</span>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div class="box">
+        <span class="label">¿Grabó autocompletes?</span>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div class="box">
+        <span class="label">¿Grabó modal y shadow DOM?</span>
+        <div class="value">&nbsp;</div>
+      </div>
+    </div>
+
+    <h3>Notas</h3>
+    <div class="notes"></div>
+
+    <h2>Checklist rápido para validar</h2>
+    <div class="checklist">
+      <div class="item"><div class="tick"></div><div>La macro quedó grabada con pasos claros y en el orden esperado.</div></div>
+      <div class="item"><div class="tick"></div><div>Los autocompletes no se mezclaron entre sí.</div></div>
+      <div class="item"><div class="tick"></div><div>Los checkboxes y radios se reflejaron correctamente.</div></div>
+      <div class="item"><div class="tick"></div><div>El modal generó pasos visibles y reproducibles.</div></div>
+      <div class="item"><div class="tick"></div><div>La reproducción de la macro funciona al volver a correrla.</div></div>
+    </div>
+
+    <p class="small no-print" style="margin-top:18px;">Si quieres, después te preparo una segunda hoja imprimible solo para el flujo IAPOS / GeneXus con pasos más finos.</p>
+  </div>
+</body>
+</html>

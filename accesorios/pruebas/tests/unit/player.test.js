@@ -80,7 +80,7 @@ function runStep(step, vars = {}, playerOpts = {}) {
 test("wait_for: resuelve cuando el elemento ya existe en el DOM", async () => {
   resetBody('<button id="existe">OK</button>');
   const result = await runStep({ type: "wait_for", selector: "#existe" });
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, result.error || "check oculto falló");
 });
 
 test("wait_for: espera hasta que el elemento aparece en el DOM", async () => {
@@ -98,7 +98,7 @@ test("wait_for: espera hasta que el elemento aparece en el DOM", async () => {
     {},
     { retryMs: 20, timeoutMs: 500 }
   );
-  assert.equal(result.ok, true);
+  assert.equal(result.ok, true, result.error || "check via label falló");
 });
 
 test("wait_for: falla si el elemento nunca aparece (timeout propio)", async () => {
@@ -146,14 +146,68 @@ test("hover: dispara eventos mouseenter y mouseover", async () => {
   assert.ok(eventos.includes("mouseenter"), "mouseenter no fue disparado");
 });
 
-test("hover: falla si el selector no existe", async () => {
+test("hover: si el selector no existe, play continúa (best-effort)", async () => {
   resetBody('<div></div>');
   const result = await runStep(
     { type: "hover", selector: "#fantasma" },
     {},
     { retryMs: 20, timeoutMs: 100 }
   );
-  assert.equal(result.ok, false);
+  assert.equal(result.ok, true);
+});
+
+// ── Tests: check (widgets custom) ───────────────────────────────────────────
+
+test("check: usa activador visual asociado cuando el input esta oculto", async () => {
+  resetBody([
+    '<input id="r1" type="radio" name="gal" style="display:none" />',
+    '<label id="r1-label" for="r1">Imagen 1</label>'
+  ].join(""));
+
+  const input = win.document.getElementById("r1");
+  const label = win.document.getElementById("r1-label");
+
+  // Simula componente custom: el estado se sincroniza por click en el activador visual.
+  label.addEventListener("click", () => {
+    input.checked = true;
+    input.dispatchEvent(new win.Event("change", { bubbles: true }));
+  });
+
+  const result = await runStep({ type: "check", selector: "#r1", checked: true });
+  assert.equal(result.ok, true, result.error || "check oculto falló");
+});
+
+test("check: resuelve input asociado cuando el selector apunta al label", async () => {
+  resetBody([
+    '<input id="c1" type="checkbox" style="display:none" />',
+    '<label id="c1-label" for="c1">Toggle</label>'
+  ].join(""));
+
+  const input = win.document.getElementById("c1");
+  const label = win.document.getElementById("c1-label");
+  label.addEventListener("click", () => {
+    input.checked = true;
+    input.dispatchEvent(new win.Event("change", { bubbles: true }));
+  });
+
+  const result = await runStep({ type: "check", selector: "#c1-label", checked: true });
+  assert.equal(result.ok, true, result.error || "check via label falló");
+});
+
+test("check: no aborta en widget custom cuando el input oculto no refleja checked", async () => {
+  resetBody([
+    '<input id="c2" type="checkbox" style="display:none" />',
+    '<label id="c2-label" for="c2">Galeria</label>'
+  ].join(""));
+
+  const label = win.document.getElementById("c2-label");
+  // Simula UI custom que reacciona al click visual pero no sincroniza .checked.
+  label.addEventListener("click", () => {
+    label.setAttribute("data-ui-toggled", "1");
+  });
+
+  const result = await runStep({ type: "check", selector: "#c2", checked: true });
+  assert.equal(result.ok, true, result.error || "check custom best-effort falló");
 });
 
 // ── Tests: set_variable ───────────────────────────────────────────────────────
@@ -540,6 +594,7 @@ test("navigate: URL vacía como no-op permite que pasos siguientes ejecuten", as
     p.play(steps, {
       vars,
       speed: 1,
+      bootstrapToFirstNavigate: false,
       onDone: resolve,
       onError: resolve
     });
@@ -560,11 +615,242 @@ test("navigate: misma URL como no-op permite que pasos siguientes ejecuten", asy
     p.play(steps, {
       vars,
       speed: 1,
+      bootstrapToFirstNavigate: false,
       onDone: resolve,
       onError: resolve
     });
   });
   assert.equal(vars.AFTER_NAV, "ok", "paso siguiente al navigate misma URL debe ejecutar");
+});
+
+test("navigate: cambio solo de hash permite que pasos siguientes ejecuten", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const Player4 = require("../../../../src/modules/player/player.js");
+  const p = new Player4({ retryMs: 20, timeoutMs: 500 });
+  const steps = [
+    { type: "navigate", url: "https://example.com/#gid=1&pid=9" },
+    { type: "set_variable", variable: "AFTER_HASH_NAV", value: "ok" }
+  ];
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  assert.equal(vars.AFTER_HASH_NAV, "ok", "paso siguiente al navigate con hash debe ejecutar");
+});
+
+test("play: ignora wait_for transitorio antes de navigate", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const Player6 = require("../../../../src/modules/player/player.js");
+  const p = new Player6({ retryMs: 20, timeoutMs: 80 });
+  const steps = [
+    { type: "wait_for", selector: "[title=\"Next (arrow right)\"]", timeout: 50 },
+    { type: "click", selector: "[title=\"Next (arrow right)\"]" },
+    { type: "navigate", url: "https://example.com/#gid=1&pid=9" },
+    { type: "set_variable", variable: "AFTER_TRANSIENT_WAIT", value: "ok" }
+  ];
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  assert.equal(vars.AFTER_TRANSIENT_WAIT, "ok", "debe continuar aun con wait_for transitorio ausente");
+});
+
+test("play: si click transitorio falla pero hay navigate cercano, continua", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const Player7 = require("../../../../src/modules/player/player.js");
+  const p = new Player7({ retryMs: 20, timeoutMs: 80 });
+  const steps = [
+    { type: "click", selector: "[title=\"Next (arrow right)\"]" },
+    { type: "navigate", url: "https://example.com/#gid=1&pid=10" },
+    { type: "set_variable", variable: "AFTER_TRANSIENT_CLICK", value: "ok" }
+  ];
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  assert.equal(vars.AFTER_TRANSIENT_CLICK, "ok", "debe continuar aunque el click transitorio no exista");
+});
+
+test("play: ignora hover transitorio antes de navigate", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const Player8 = require("../../../../src/modules/player/player.js");
+  const p = new Player8({ retryMs: 20, timeoutMs: 80 });
+  const sameDocUrl = `${window.location.href.split("#")[0]}#after-hover`;
+  const steps = [
+    { type: "hover", selector: "#_LYIoavCCI8-r1sQPie-4sA8_38" },
+    { type: "wait", seconds: 1 },
+    { type: "navigate", url: sameDocUrl },
+    { type: "set_variable", variable: "AFTER_TRANSIENT_HOVER", value: "ok" }
+  ];
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  assert.equal(vars.AFTER_TRANSIENT_HOVER, "ok", "debe continuar aunque el hover transitorio no exista");
+});
+
+test("play: si hover no encuentra elemento, no aborta la macro", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const Player9 = require("../../../../src/modules/player/player.js");
+  const p = new Player9({ retryMs: 20, timeoutMs: 80 });
+  const steps = [
+    { type: "hover", selector: "#ligthbox div" },
+    { type: "set_variable", variable: "AFTER_MISSING_HOVER", value: "ok" }
+  ];
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  assert.equal(vars.AFTER_MISSING_HOVER, "ok", "debe continuar aunque un hover falle por selector ausente");
+});
+
+test("play: click Next usa fallback semantico (aria-label/data-testid)", async () => {
+  resetBody('<button id="nextBtn" aria-label="Siguiente (flecha derecha)">Next</button>');
+  const vars = {};
+  let clicked = false;
+  const btn = win.document.getElementById("nextBtn");
+  btn.addEventListener("click", () => { clicked = true; });
+  const Player10 = require("../../../../src/modules/player/player.js");
+  const p = new Player10({ retryMs: 20, timeoutMs: 120 });
+  const steps = [
+    { type: "click", selector: "[title=\"Next (arrow right)\"]" },
+    { type: "set_variable", variable: "AFTER_NEXT_FALLBACK", value: "ok" }
+  ];
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  assert.equal(clicked, true, "debe hacer click usando fallback semantico");
+  assert.equal(vars.AFTER_NEXT_FALLBACK, "ok");
+});
+
+test("play: click Next sin control visible despacha tecla ArrowRight", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const seen = [];
+  const handler = (e) => seen.push(e.key);
+  win.document.addEventListener("keydown", handler);
+
+  const Player11 = require("../../../../src/modules/player/player.js");
+  const p = new Player11({ retryMs: 20, timeoutMs: 100 });
+  const steps = [
+    { type: "click", selector: "[title=\"Next (arrow right)\"]" },
+    { type: "set_variable", variable: "AFTER_SYNTH_NEXT", value: "ok" }
+  ];
+
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  win.document.removeEventListener("keydown", handler);
+
+  assert.ok(seen.includes("ArrowRight"), "debe haber despachado ArrowRight");
+  assert.equal(vars.AFTER_SYNTH_NEXT, "ok");
+});
+
+test("play: click Close sin control visible despacha tecla Escape", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const seen = [];
+  const handler = (e) => seen.push(e.key);
+  win.document.addEventListener("keydown", handler);
+
+  const Player12 = require("../../../../src/modules/player/player.js");
+  const p = new Player12({ retryMs: 20, timeoutMs: 100 });
+  const steps = [
+    { type: "click", selector: "[title=\"Close (Esc)\"]" },
+    { type: "set_variable", variable: "AFTER_SYNTH_CLOSE", value: "ok" }
+  ];
+
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+  win.document.removeEventListener("keydown", handler);
+
+  assert.ok(seen.includes("Escape"), "debe haber despachado Escape");
+  assert.equal(vars.AFTER_SYNTH_CLOSE, "ok");
+});
+
+test("play: bootstrap navega a primera URL cuando macro inicia con selector local", async () => {
+  resetBody('<div></div>');
+  const vars = {};
+  const Player5 = require("../../../../src/modules/player/player.js");
+  const p = new Player5({ retryMs: 20, timeoutMs: 500 });
+
+  const originalHref = window.location.href;
+  let requestedHref = null;
+  try {
+    Object.defineProperty(window.location, "href", {
+      configurable: true,
+      get() { return originalHref; },
+      set(v) { requestedHref = String(v || ""); }
+    });
+  } catch (_e) {
+    // Fallback for environments that disallow redefining location.href.
+    requestedHref = null;
+  }
+
+  const steps = [
+    { type: "click", selector: "#APjFqb" },
+    { type: "navigate", url: "https://example.com/search?q=test" }
+  ];
+
+  await new Promise((resolve) => {
+    p.play(steps, {
+      vars,
+      speed: 1,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 50);
+  });
+
+  if (requestedHref !== null) {
+    assert.ok(requestedHref.includes("https://example.com/search?q=test"), "debe solicitar bootstrap a primera navigate URL");
+  }
 });
 
 // ── Tests: choose_option ────────────────────────────────────────────────────────
@@ -750,5 +1036,113 @@ test("capture_defaults explícito sigue ejecutándose (normaliza al default)", a
     });
     assert.equal(win.document.getElementById("other").value, "a");
     assert.equal(win.document.getElementById("trigger").value, "y");
+  });
+});
+
+test("preRunReset: restaura baseline antes del primer paso", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(`
+      <select id="trigger"><option value="x">X</option><option value="y">Y</option></select>
+      <input id="otro" type="text" value="LIMPIO">
+    `);
+
+    // Ensuciamos estado previo del formulario.
+    win.document.getElementById("otro").value = "SUCIO";
+
+    const baseline = {
+      version: 1,
+      controls: [
+        { selector: "#otro", tag: "input", type: "text", value: "LIMPIO" }
+      ]
+    };
+
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    await new Promise((resolve) => {
+      p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
+        vars: {},
+        speed: 1,
+        preRunReset: baseline,
+        onDone: resolve,
+        onError: resolve
+      });
+    });
+
+    assert.equal(win.document.getElementById("otro").value, "LIMPIO");
+    assert.equal(win.document.getElementById("trigger").value, "y");
+  });
+});
+
+test("preRunReset: tolera controles faltantes y no aborta la macro", async () => {
+  await withVisibleLayout(async () => {
+    resetBody('<select id="trigger"><option value="x">X</option><option value="y">Y</option></select>');
+
+    const baseline = {
+      version: 1,
+      controls: [
+        { selector: "#inexistente", tag: "input", type: "text", value: "NOPE" },
+        { selector: "#trigger", tag: "select", type: "select-one", value: "x", selectedIndex: 0 }
+      ]
+    };
+
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    let failed = null;
+    await new Promise((resolve) => {
+      p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
+        vars: {},
+        speed: 1,
+        preRunReset: baseline,
+        onDone: resolve,
+        onError: (err) => { failed = err; resolve(); }
+      });
+    });
+
+    assert.equal(failed, null);
+    assert.equal(win.document.getElementById("trigger").value, "y");
+  });
+});
+
+test("preRunReset: restauracion silenciosa sin interacciones visibles", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(`
+      <input id="campo" type="text" value="LIMPIO">
+      <select id="trigger"><option value="x">X</option><option value="y">Y</option></select>
+    `);
+
+    const campo = win.document.getElementById("campo");
+    campo.value = "SUCIO";
+
+    const counts = { click: 0, mousedown: 0, mouseup: 0, focus: 0 };
+    campo.addEventListener("click", () => { counts.click += 1; });
+    campo.addEventListener("mousedown", () => { counts.mousedown += 1; });
+    campo.addEventListener("mouseup", () => { counts.mouseup += 1; });
+    campo.addEventListener("focus", () => { counts.focus += 1; });
+
+    const baseline = {
+      version: 1,
+      controls: [
+        { selector: "#campo", tag: "input", type: "text", value: "LIMPIO" }
+      ]
+    };
+
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    const seen = [];
+
+    await new Promise((resolve) => {
+      p.play([{ type: "set_variable", variable: "X", value: "1" }], {
+        vars: {},
+        speed: 1,
+        preRunReset: baseline,
+        onStep: (step) => seen.push(step.type),
+        onDone: resolve,
+        onError: resolve
+      });
+    });
+
+    assert.equal(campo.value, "LIMPIO");
+    assert.deepEqual(seen, ["set_variable"]);
+    assert.deepEqual(counts, { click: 0, mousedown: 0, mouseup: 0, focus: 0 });
   });
 });

@@ -8,6 +8,7 @@ const { spawn, spawnSync } = require("child_process");
 const { makeSafeLogger } = require("../iapos-safe/sanitize-log");
 
 const ROOT = path.resolve(__dirname, "../../..");
+const REPO_ROOT = path.resolve(ROOT, "../..");
 const FIXTURE_DIR = path.join(ROOT, "tests", "fixtures");
 const PRIVATE_ARTIFACTS = path.join(ROOT, "tests", "e2e", "artifacts-private");
 const PORT = 18086;
@@ -220,12 +221,41 @@ function buildTemporaryXpi(zipPath) {
   fs.mkdirSync(PRIVATE_ARTIFACTS, { recursive: true });
   const tempDir = fs.mkdtempSync(path.join(PRIVATE_ARTIFACTS, "webmatic-firefox-ext-"));
   const xpiPath = path.join(tempDir, "webmatic-temp.xpi");
+  const packagingCwd = REPO_ROOT;
   const args = ["-qr", xpiPath, "manifest.json", "src", "logo48.png"];
-  const out = spawnSync(zipPath, args, { cwd: ROOT, encoding: "utf8" });
-  if (out.status !== 0) {
-    const stderr = (out.stderr || "").trim();
-    throw new Error(`No se pudo crear XPI temporal con zip: ${stderr || "error desconocido"}`);
+  const out = spawnSync(zipPath, args, { cwd: packagingCwd, encoding: "utf8", windowsHide: true });
+  if (out.status === 0 && fs.existsSync(xpiPath)) {
+    return { tempDir, xpiPath };
   }
+
+  if (process.platform === "win32") {
+    const xpiEsc = xpiPath.replace(/'/g, "''");
+    const psScript = [
+      "$ErrorActionPreference='Stop'",
+      "$tmp = Join-Path ([System.IO.Path]::GetDirectoryName('" + xpiEsc + "')) 'webmatic-temp.zip'",
+      "if (Test-Path $tmp) { Remove-Item $tmp -Force }",
+      "Compress-Archive -Path manifest.json,src,logo48.png -DestinationPath $tmp -Force",
+      "if (Test-Path '" + xpiEsc + "') { Remove-Item '" + xpiEsc + "' -Force }",
+      "Move-Item -Path $tmp -Destination '" + xpiEsc + "' -Force"
+    ].join("; ");
+
+    const ps = spawnSync("powershell", ["-NoProfile", "-Command", psScript], {
+      cwd: packagingCwd,
+      encoding: "utf8",
+      windowsHide: true
+    });
+
+    if (ps.status === 0 && fs.existsSync(xpiPath)) {
+      return { tempDir, xpiPath };
+    }
+
+    const zipErr = String((out.stderr || out.stdout || "").trim() || "error desconocido");
+    const psErr = String((ps.stderr || ps.stdout || "").trim() || "error desconocido");
+    throw new Error(`No se pudo crear XPI temporal. zip=${zipErr} | powershell=${psErr}`);
+  }
+
+  const stderr = (out.stderr || out.stdout || "").trim();
+  throw new Error(`No se pudo crear XPI temporal con zip: ${stderr || "error desconocido"}`);
   return { tempDir, xpiPath };
 }
 
@@ -342,9 +372,361 @@ async function execSync(sessionId, script, args = []) {
   return result.value !== undefined ? result.value : result;
 }
 
+async function getWindowHandles(sessionId) {
+  const res = await wdRequest("GET", `/session/${sessionId}/window/handles`);
+  const value = res.value !== undefined ? res.value : res;
+  return Array.isArray(value) ? value : [];
+}
+
+async function switchToWindow(sessionId, handle) {
+  await wdRequest("POST", `/session/${sessionId}/window`, { handle });
+}
+
+async function closeCurrentWindow(sessionId) {
+  await wdRequest("DELETE", `/session/${sessionId}/window`);
+}
+
+async function waitUntil(sessionId, script, timeoutMs = 10000, intervalMs = 200) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const ok = await execSync(sessionId, script);
+    if (ok) return true;
+    await sleep(intervalMs);
+  }
+  return false;
+}
+
+function sanitizeFixtureName(file) {
+  return String(file || "")
+    .replace(/\.html$/i, "")
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
+}
+
+async function openFixture(sessionId, fixtureFile) {
+  await wdRequest("POST", `/session/${sessionId}/url`, {
+    url: `http://localhost:${PORT}/${fixtureFile}`
+  });
+}
+
+async function ensurePanelVisible(sessionId) {
+  const opened = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    if (!panel) return false;
+    panel.style.display = "block";
+    return true;
+  `);
+  if (!opened) throw new Error("Panel WebMatic no disponible en fixture");
+}
+
+async function startRecordingFromUi(sessionId) {
+  const res = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const btn = panel && panel.querySelector("[data-action='record-toggle'][data-record-btn]");
+    if (!btn) return { ok: false, reason: "record_btn_missing" };
+    btn.click();
+    return { ok: true };
+  `);
+  if (!res || !res.ok) throw new Error(`No se pudo iniciar grabación: ${JSON.stringify(res)}`);
+
+  const recording = await waitUntil(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const btn = panel && panel.querySelector("[data-action='record-toggle'][data-record-btn]");
+    return !!(btn && btn.dataset && btn.dataset.recording === "true");
+  `, 12000, 250);
+
+  if (!recording) throw new Error("La grabación no pasó a estado activo");
+}
+
+async function stopRecordingFromUi(sessionId) {
+  const res = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const btn = panel && panel.querySelector("[data-action='record-toggle'][data-record-btn]");
+    if (!btn) return { ok: false, reason: "record_btn_missing" };
+    btn.click();
+    return { ok: true };
+  `);
+  if (!res || !res.ok) throw new Error(`No se pudo detener grabación: ${JSON.stringify(res)}`);
+
+  const editorVisible = await waitUntil(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const ov = panel && panel.querySelector("[data-script-editor]");
+    return !!(ov && ov.style.display !== "none");
+  `, 15000, 250);
+
+  if (!editorVisible) throw new Error("No se abrió el editor visual tras detener grabación");
+}
+
+async function interactFixture(sessionId, fixtureFile) {
+  const result = await execSync(sessionId, `
+    const fixture = arguments[0];
+    const emitType = (el, txt) => {
+      if (!el) return false;
+      el.focus();
+      el.value = txt;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      return true;
+    };
+    const pickFirst = (sel) => {
+      const el = document.querySelector(sel);
+      if (!el) return false;
+      el.click();
+      return true;
+    };
+
+    if (fixture === "universal-macro-fixture.html") {
+      const a = emitType(document.getElementById("dni"), "30111222");
+      const b = emitType(document.getElementById("apellido"), "ANA TORRES");
+      const c = emitType(document.getElementById("busqueda"), "auditoria");
+      const sel = document.getElementById("ver");
+      if (sel) {
+        sel.value = "all";
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const d = !!pickFirst("#btn-search");
+      return { ok: !!(a && b && c && d) };
+    }
+
+    if (fixture === "modern-autocomplete.html") {
+      const inp = document.getElementById("modern-affiliate");
+      const ok1 = emitType(inp, "wa");
+      const item = document.querySelector("#modern-affiliate-list .suggest-item");
+      if (item) item.click();
+      const mode = document.getElementById("modern-mode");
+      if (mode) {
+        mode.value = "safe";
+        mode.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const notes = emitType(document.getElementById("modern-notes"), "nota-e2e");
+      return { ok: !!(ok1 && notes) };
+    }
+
+    if (fixture === "legacy-autocomplete.html") {
+      const d = document.getElementById("legacy-deleg");
+      const s = document.getElementById("legacy-spec");
+      const ok1 = emitType(d, "ALV");
+      const ok2 = emitType(s, "CAR");
+      if (typeof window.legacySuggest === "function") {
+        window.legacySuggest("legacy-deleg", "legacy-deleg-menu", "legacy-deleg-code", window.LEGACY_DELEG || []);
+        window.legacySuggest("legacy-spec", "legacy-spec-menu", "legacy-spec-code", window.LEGACY_SPEC || []);
+      }
+      pickFirst("#legacy-deleg-menu div");
+      pickFirst("#legacy-spec-menu div");
+      const mode = document.getElementById("legacy-mode");
+      if (mode) {
+        mode.value = "2";
+        mode.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return { ok: !!(ok1 && ok2) };
+    }
+
+    if (fixture === "genexus-subpage.html") {
+      const ok1 = emitType(document.getElementById("vDELEGACION"), "ALV");
+      pickFirst("#vDELEGACION_menu button");
+      const ok2 = emitType(document.getElementById("vAUCAESPEFC"), "CAR");
+      pickFirst("#vAUCAESPEFC_menu button");
+      const ok3 = !!pickFirst("#gx-search");
+      return { ok: !!(ok1 && ok2 && ok3) };
+    }
+
+    if (fixture === "iapos-subpage.html") {
+      const ok1 = emitType(document.getElementById("iapos-deleg"), "BEL");
+      pickFirst("#iapos-deleg-menu button");
+      const ok2 = emitType(document.getElementById("iapos-spec"), "DER");
+      pickFirst("#iapos-spec-menu button");
+      const mode = document.getElementById("iapos-modalidad");
+      if (mode) {
+        mode.value = "int";
+        mode.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const ok3 = !!pickFirst("#iapos-buscar");
+      return { ok: !!(ok1 && ok2 && ok3) };
+    }
+
+    if (fixture === "new-tab-subpage-fixture.html") {
+      const ok1 = emitType(document.getElementById("nt-username"), "usuario-e2e");
+      const mode = document.getElementById("nt-mode");
+      if (mode) {
+        mode.value = "safe";
+        mode.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      const ok2 = !!pickFirst("#nt-open-window");
+      const ok3 = !!pickFirst("#nt-open-blank-link");
+      return { ok: !!(ok1 && ok2 && ok3) };
+    }
+
+    return { ok: false, reason: "fixture_not_supported" };
+  `, [fixtureFile]);
+
+  if (!result || !result.ok) {
+    throw new Error(`No se pudo interactuar con fixture ${fixtureFile}: ${JSON.stringify(result)}`);
+  }
+}
+
+async function saveCurrentRecordingAsMacro(sessionId, macroName) {
+  const saveClicked = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const btn = panel && panel.querySelector("[data-action='script-editor-save']");
+    if (!btn) return { ok: false, reason: "script_save_missing" };
+    btn.click();
+    return { ok: true };
+  `);
+  if (!saveClicked || !saveClicked.ok) throw new Error(`No se pudo accionar Guardar macro: ${JSON.stringify(saveClicked)}`);
+
+  const modalHandled = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const input = panel && panel.querySelector("[data-wm-input]");
+    const ok = panel && panel.querySelector("[data-wm-ok]");
+    if (!input || !ok) return { ok: false, reason: "wm_modal_missing" };
+    input.value = arguments[0];
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    ok.click();
+    return { ok: true };
+  `, [macroName]);
+  if (!modalHandled || !modalHandled.ok) throw new Error(`No se pudo completar modal guardar macro: ${JSON.stringify(modalHandled)}`);
+
+  const saved = await waitUntil(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const names = Array.from(panel.querySelectorAll(".webmatic-macro-item .webmatic-macro-name")).map((n) => (n.textContent || "").trim());
+    const ov = panel && panel.querySelector("[data-script-editor]");
+    return names.includes(arguments[0]) && !(ov && ov.style.display !== "none");
+  `.replace("arguments[0]", JSON.stringify(macroName)), 12000, 250);
+
+  if (!saved) throw new Error(`La macro no apareció guardada: ${macroName}`);
+}
+
+async function readMacroScript(sessionId, macroName) {
+  const opened = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const rows = Array.from(panel.querySelectorAll(".webmatic-macro-item"));
+    const row = rows.find((r) => {
+      const n = r.querySelector(".webmatic-macro-name");
+      return n && (n.textContent || "").trim() === arguments[0];
+    });
+    if (!row) return { ok: false, reason: "macro_row_missing" };
+    const edit = row.querySelector("[data-action='macro-edit']");
+    if (!edit) return { ok: false, reason: "macro_edit_missing" };
+    edit.click();
+    return { ok: true };
+  `, [macroName]);
+  if (!opened || !opened.ok) throw new Error(`No se pudo abrir macro para análisis: ${JSON.stringify(opened)}`);
+
+  const read = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const tab = panel && panel.querySelector("[data-action='script-editor-tab'][data-script-tab='script']");
+    if (!tab) return { ok: false, reason: "script_tab_missing" };
+    tab.click();
+    const area = panel.querySelector("[data-script-editor-area]");
+    if (!area) return { ok: false, reason: "script_area_missing" };
+    return { ok: true, text: String(area.value || "") };
+  `);
+
+  await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const close = panel && panel.querySelector("[data-action='script-editor-close']");
+    if (close) close.click();
+    return true;
+  `);
+
+  if (!read || !read.ok) throw new Error(`No se pudo leer script de macro: ${JSON.stringify(read)}`);
+  return String(read.text || "");
+}
+
+async function validateNewTabFlow(sessionId, fixtureFile, log) {
+  const baseHandles = await getWindowHandles(sessionId);
+  const baseHandle = baseHandles[0] || null;
+  if (!baseHandle) {
+    throw new Error("No se pudo obtener handle base de ventana");
+  }
+
+  await openFixture(sessionId, fixtureFile);
+  await ensurePanelVisible(sessionId);
+  await startRecordingFromUi(sessionId);
+  await interactFixture(sessionId, fixtureFile);
+
+  const opened = await waitUntil(sessionId, `
+    return (window.__wm_e2e_wait = true), true;
+  `, 400, 200);
+  if (!opened) throw new Error("Espera interna no disponible");
+
+  const handlesAfterOpen = await getWindowHandles(sessionId);
+  if (handlesAfterOpen.length < 2) {
+    throw new Error(`No se detectó apertura de nueva pestaña. Handles=${handlesAfterOpen.length}`);
+  }
+
+  const newHandle = handlesAfterOpen.find((h) => !baseHandles.includes(h));
+  if (!newHandle) {
+    throw new Error("No se pudo identificar el handle de la nueva pestaña");
+  }
+
+  await switchToWindow(sessionId, newHandle);
+  const childInfo = await execSync(sessionId, `
+    return { href: location.href, title: document.title || "" };
+  `);
+
+  await closeCurrentWindow(sessionId);
+  await switchToWindow(sessionId, baseHandle);
+
+  await stopRecordingFromUi(sessionId);
+
+  const macroName = `E2E new-tab-subpage ${Date.now()}`;
+  await saveCurrentRecordingAsMacro(sessionId, macroName);
+  const scriptText = await readMacroScript(sessionId, macroName);
+
+  const baseUrl = await execSync(sessionId, `return location.href;`);
+  const playbackStarted = await execSync(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const rows = Array.from(panel.querySelectorAll(".webmatic-macro-item"));
+    const row = rows.find((r) => {
+      const n = r.querySelector(".webmatic-macro-name");
+      return n && (n.textContent || "").trim() === arguments[0];
+    });
+    if (!row) return { ok: false, reason: "macro_row_missing_for_play" };
+    row.click();
+    const play = panel.querySelector("[data-action='macro-play']");
+    if (!play || play.disabled) return { ok: false, reason: "play_disabled_or_missing" };
+    play.click();
+    return { ok: true };
+  `, [macroName]);
+  if (!playbackStarted || !playbackStarted.ok) {
+    throw new Error(`No se pudo iniciar reproducción de macro new-tab: ${JSON.stringify(playbackStarted)}`);
+  }
+
+  const playbackFinished = await waitUntil(sessionId, `
+    const panel = document.getElementById("webmatic-panel-root");
+    const stopBtn = panel && panel.querySelector("[data-action='play-stop']");
+    return !(stopBtn && stopBtn.style.display !== "none");
+  `, 20000, 300);
+  if (!playbackFinished) {
+    throw new Error("La reproducción de macro new-tab quedó trabada");
+  }
+
+  const finalHandles = await getWindowHandles(sessionId);
+  const afterUrl = await execSync(sessionId, `return location.href;`);
+
+  log(`OK: new-tab child=${JSON.stringify(childInfo)} finalHandles=${finalHandles.length}`);
+
+  return {
+    fixture: fixtureFile,
+    macroName,
+    script: scriptText,
+    child: childInfo,
+    baseUrl: String(baseUrl || ""),
+    afterUrl: String(afterUrl || ""),
+    handlesAfterOpen: handlesAfterOpen.length,
+    handlesAfterPlayback: finalHandles.length
+  };
+}
+
 async function main() {
   const log = makeSafeLogger({ secrets: [] });
   log("Inicio test:e2e:firefox-extension (Firefox real, fixture local, read-only)");
+  const headed = process.env.FIREFOX_E2E_HEADED === "1";
+  const runMultiFixtures = process.env.FIREFOX_MULTI_FIXTURES !== "0";
+  const runNewTabFlow = process.env.FIREFOX_NEW_TAB_FLOW !== "0";
 
   const firefoxPath = resolveFirefoxBinary({ log });
   const geckodriverPath = resolveGeckodriverBin();
@@ -353,6 +735,9 @@ async function main() {
 
   log(`Tooling detectado: firefox=${firefoxPath ? "sí" : "no"}, geckodriver=${geckodriverPath ? "sí" : "no"}, web-ext=${webExtPath ? "sí" : "no"}, zip=${zipPath ? "sí" : "no"}`);
   log(`IAPOS_E2E_REAL=${process.env.IAPOS_E2E_REAL === "1" ? "1" : "0"} (debe ser 0 en este runner)`);
+  log(`FIREFOX_E2E_HEADED=${headed ? "1" : "0"}`);
+  log(`FIREFOX_MULTI_FIXTURES=${runMultiFixtures ? "1" : "0"}`);
+  log(`FIREFOX_NEW_TAB_FLOW=${runNewTabFlow ? "1" : "0"}`);
 
   if (process.env.IAPOS_E2E_REAL === "1") {
     log("FAIL: este runner no permite IAPOS_E2E_REAL=1");
@@ -383,6 +768,11 @@ async function main() {
     stepUpdatedFromDropdown: false,
     iimReflectsEditedValue: false,
     playbackAppliedExpectedValue: false,
+    multiFixturesVisited: false,
+    multiMacrosSaved: false,
+    multiScriptsCaptured: false,
+    newTabOpenCloseFlowPassed: false,
+    newTabPlaybackNotStuck: false,
     iaposRealDisabled: process.env.IAPOS_E2E_REAL !== "1",
     dangerousActionsExecuted: false
   };
@@ -408,7 +798,7 @@ async function main() {
           browserName: "firefox",
           acceptInsecureCerts: true,
           "moz:firefoxOptions": {
-            args: ["-headless"],
+            args: headed ? [] : ["-headless"],
             prefs: {
               "xpinstall.signatures.required": false,
               "extensions.autoDisableScopes": 0,
@@ -466,7 +856,7 @@ async function main() {
     // y se ejecuta contra la fixture real para confirmar que captura controles
     // y ofrece las opciones predefinidas de un <select> (VALUE como dropdown).
     const inventorySrc = fs.readFileSync(
-      path.join(ROOT, "src", "modules", "inventory", "page-inventory.js"),
+      path.join(REPO_ROOT, "src", "modules", "inventory", "page-inventory.js"),
       "utf8"
     );
     const invResp = await wdRequest("POST", `/session/${sessionId}/execute/sync`, {
@@ -780,6 +1170,66 @@ async function main() {
       checks.stepUpdatedFromDropdown &&
       checks.iimReflectsEditedValue &&
       checks.playbackAppliedExpectedValue;
+
+    let newTabEvidence = null;
+    if (runNewTabFlow) {
+      log("RUN: validación apertura de nueva pestaña + reproducción sin trabas");
+      newTabEvidence = await validateNewTabFlow(sessionId, "new-tab-subpage-fixture.html", log);
+      checks.newTabOpenCloseFlowPassed = newTabEvidence.handlesAfterOpen >= 2;
+      checks.newTabPlaybackNotStuck = newTabEvidence.handlesAfterPlayback >= 1;
+    }
+
+    if (runMultiFixtures) {
+      const fixtures = [
+        "universal-macro-fixture.html",
+        "modern-autocomplete.html",
+        "legacy-autocomplete.html",
+        "genexus-subpage.html",
+        "iapos-subpage.html",
+        "new-tab-subpage-fixture.html"
+      ];
+
+      const macroBundle = {
+        generatedAt: new Date().toISOString(),
+        headed,
+        fixtures,
+        macros: []
+      };
+
+      if (newTabEvidence) {
+        macroBundle.newTabEvidence = newTabEvidence;
+      }
+
+      for (const fixtureFile of fixtures) {
+        log(`RUN: grabación supervisada en fixture ${fixtureFile}`);
+        await openFixture(sessionId, fixtureFile);
+        await ensurePanelVisible(sessionId);
+        await startRecordingFromUi(sessionId);
+        await interactFixture(sessionId, fixtureFile);
+        await stopRecordingFromUi(sessionId);
+
+        const macroName = `E2E ${sanitizeFixtureName(fixtureFile)} ${Date.now()}`;
+        await saveCurrentRecordingAsMacro(sessionId, macroName);
+        const scriptText = await readMacroScript(sessionId, macroName);
+
+        macroBundle.macros.push({
+          fixture: fixtureFile,
+          name: macroName,
+          script: scriptText
+        });
+      }
+
+      const stamp = Date.now();
+      fs.mkdirSync(PRIVATE_ARTIFACTS, { recursive: true });
+      const outJson = path.join(PRIVATE_ARTIFACTS, `firefox-multi-macros-${stamp}.json`);
+      fs.writeFileSync(outJson, JSON.stringify(macroBundle, null, 2), "utf8");
+
+      checks.multiFixturesVisited = macroBundle.macros.length === fixtures.length;
+      checks.multiMacrosSaved = macroBundle.macros.every((m) => m.name && m.name.length > 0);
+      checks.multiScriptsCaptured = macroBundle.macros.every((m) => /VERSION BUILD=1000/.test(String(m.script || "")));
+
+      log(`OK: macros guardadas para análisis (${macroBundle.macros.length}) en ${outJson}`);
+    }
 
     const failed = Object.entries(checks)
       .filter(([key, value]) => {

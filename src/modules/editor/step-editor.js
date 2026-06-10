@@ -257,7 +257,7 @@
       panel.style.cssText = "display:none;max-height:180px;overflow:auto;border:1px solid rgba(14,165,233,0.45);border-radius:6px;background:#fff;margin-top:4px";
 
       const renderOpts = (filter) => {
-        combo.innerHTML = "";
+        combo.replaceChildren();
         const f = (filter || "").toLowerCase();
         options.forEach((o) => {
           if (f && !((o.text || "").toLowerCase().includes(f) ||
@@ -271,7 +271,7 @@
       };
 
       const renderPanel = (filter) => {
-        panel.innerHTML = "";
+        panel.replaceChildren();
         const f = (filter || "").toLowerCase();
         options.forEach((o) => {
           if (f && !((o.text || "").toLowerCase().includes(f) ||
@@ -391,7 +391,7 @@
     }
 
     unmount() {
-      if (this._container) this._container.innerHTML = "";
+      if (this._container) this._container.replaceChildren();
       this._container = null;
     }
 
@@ -402,7 +402,7 @@
     _render() {
       const c = this._container;
       if (!c) return;
-      c.innerHTML = "";
+      c.replaceChildren();
 
       if (this.steps.length === 0 && !this._addFormOpen) {
         const empty = document.createElement("div");
@@ -559,7 +559,7 @@
       fieldsDiv.className = "wm-sved-fields";
 
       const renderFields = (prefill) => {
-        fieldsDiv.innerHTML = "";
+        fieldsDiv.replaceChildren();
         const ti = STEP_TYPES.find((t) => t.value === typeSelect.value);
         if (!ti) return;
         ti.fields.forEach((field) => {
@@ -748,7 +748,7 @@
       fieldsDiv.className = "wm-sved-fields";
 
       const renderFields = () => {
-        fieldsDiv.innerHTML = "";
+        fieldsDiv.replaceChildren();
         const typeInfo = STEP_TYPES.find((t) => t.value === typeSelect.value);
         if (!typeInfo) return;
         typeInfo.fields.forEach((field) => {

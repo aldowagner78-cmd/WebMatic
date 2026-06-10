@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebMatic - Cobertura del Grabador y Gap de Interacciones</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #cbd5e1;
+      --soft: #f8fafc;
+      --ok: #166534;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --accent: #1d4ed8;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: white;
+    }
+
+    .page {
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3, p, ul { margin-top: 0; }
+    h1 { font-size: 27px; margin-bottom: 8px; }
+    h2 { font-size: 19px; margin: 24px 0 10px; }
+    h3 { font-size: 15px; margin: 14px 0 8px; }
+    p, li { font-size: 14px; line-height: 1.5; }
+
+    .intro {
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      border-radius: 10px;
+      background: #f8fbff;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .meta .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+      padding: 10px;
+    }
+
+    .label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 5px;
+    }
+
+    .value {
+      min-height: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+
+    .ok { color: var(--ok); border-color: #86efac; background: #f0fdf4; }
+    .warn { color: var(--warn); border-color: #fcd34d; background: #fffbeb; }
+    .bad { color: var(--bad); border-color: #fca5a5; background: #fef2f2; }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: white;
+      break-inside: avoid;
+    }
+
+    .pill {
+      display: inline-block;
+      border: 1px solid var(--line);
+      background: var(--soft);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      margin: 3px 5px 0 0;
+    }
+
+    .notes {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      min-height: 110px;
+      padding: 10px;
+      background: white;
+    }
+
+    .break { page-break-after: always; break-after: page; }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f1f5f9;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    @media print {
+      body { padding: 14px; }
+      .card, table, tr { break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Cobertura actual del grabador y gap de interacciones</h1>
+    <div class="intro">
+      <p>Documento enfocado exclusivamente en el grabador de WebMatic. Resume lo que hoy captura según código y fixtures, qué está parcialmente cubierto y qué falta para una cobertura más universal.</p>
+    </div>
+
+    <div class="meta">
+      <div class="box"><span class="label">Fecha</span><div class="value">2026-06-10</div></div>
+      <div class="box"><span class="label">Ámbito</span><div class="value">Solo grabador</div></div>
+      <div class="box"><span class="label">Versión / rama</span><div class="value">master</div></div>
+      <div class="box"><span class="label">Fuente</span><div class="value">código + e2e fixtures</div></div>
+    </div>
+
+    <h2>1) Interacciones que hoy sí puede grabar</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Interacción de usuario</th>
+          <th>Paso grabado</th>
+          <th>Cobertura actual</th>
+          <th>Notas técnicas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Clic simple</td><td>click</td><td><span class="status ok">Sí</span></td><td>Convierte clic sobre imagen dentro de enlace a selector del enlace.</td></tr>
+        <tr><td>Doble clic</td><td>dblclick</td><td><span class="status ok">Sí</span></td><td>Limpia clics precursores para evitar duplicación click/click/dblclick.</td></tr>
+        <tr><td>Checkbox</td><td>check</td><td><span class="status ok">Sí</span></td><td>Detecta por input directo y por label asociado.</td></tr>
+        <tr><td>Radio</td><td>check</td><td><span class="status ok">Sí</span></td><td>Registra checked=true para radios.</td></tr>
+        <tr><td>Cambio de select</td><td>choose_option</td><td><span class="status ok">Sí</span></td><td>Captura valor del option seleccionado.</td></tr>
+        <tr><td>Input/textarea</td><td>input</td><td><span class="status ok">Sí</span></td><td>Captura valor final del campo.</td></tr>
+        <tr><td>Teclas especiales</td><td>key</td><td><span class="status ok">Sí</span></td><td>Enter, Tab, Escape.</td></tr>
+        <tr><td>Escritura por carácter</td><td>text</td><td><span class="status ok">Sí</span></td><td>Merge de pasos consecutivos en mismo selector.</td></tr>
+        <tr><td>Copy de texto</td><td>extract</td><td><span class="status ok">Sí</span></td><td>Crea variable y referencia variable en input posterior si coincide texto copiado.</td></tr>
+        <tr><td>Hover con despliegue real</td><td>hover</td><td><span class="status ok">Sí</span></td><td>Solo si observa mutación visible o aria-expanded=true.</td></tr>
+        <tr><td>Scroll de menú/listbox</td><td>scroll_to</td><td><span class="status ok">Sí</span></td><td>No graba scroll global, solo contenedores tipo menú/lista.</td></tr>
+        <tr><td>Navegación inicial</td><td>navigate</td><td><span class="status ok">Sí</span></td><td>Inserta navigate al iniciar si falta.</td></tr>
+        <tr><td>Navegación SPA</td><td>navigate</td><td><span class="status ok">Sí</span></td><td>Intercepta pushState, replaceState y popstate.</td></tr>
+        <tr><td>Enlace target=_blank</td><td>navigate</td><td><span class="status ok">Sí</span></td><td>Reemplaza click por navigate para mantener flujo en misma pestaña.</td></tr>
+        <tr><td>Contenteditable</td><td>input</td><td><span class="status ok">Sí</span></td><td>Debounce de 400ms para valor final.</td></tr>
+        <tr><td>Iframes mismo origen</td><td>todos los anteriores</td><td><span class="status ok">Sí</span></td><td>Adjunta listeners a documentos de iframe accesibles.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>2) Cobertura parcial o dependiente de contexto</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Interacción</th>
+          <th>Estado</th>
+          <th>Riesgo</th>
+          <th>Comentario</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Shadow DOM profundo</td><td><span class="status warn">Parcial</span></td><td>Medio</td><td>Depende del retargeting del evento y de la estabilidad del selector generado.</td></tr>
+        <tr><td>Autocompletes complejos</td><td><span class="status warn">Parcial</span></td><td>Medio</td><td>Se capturan por click/input; el éxito depende de selector estable y normalización posterior.</td></tr>
+        <tr><td>Campos muy dinámicos</td><td><span class="status warn">Parcial</span></td><td>Medio</td><td>Selectores con ids efímeros pueden degradar la reproducción.</td></tr>
+        <tr><td>File input</td><td><span class="status warn">Parcial</span></td><td>Alto</td><td>El valor puede ser fakepath y no siempre reproducible de forma realista.</td></tr>
+        <tr><td>Scroll de página principal</td><td><span class="status warn">Limitado</span></td><td>Bajo</td><td>El grabador prioriza scroll de menús/listas, no navegación por scroll de documento.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="break"></div>
+
+    <h2>3) Interacciones no cubiertas hoy por el grabador</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Interacción faltante</th>
+          <th>Prioridad sugerida</th>
+          <th>Impacto de negocio</th>
+          <th>Tipo de implementación sugerida</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Drag and drop real</td><td>P0</td><td>Alto</td><td>Capturar dragstart/dragover/drop con selectores from/to.</td></tr>
+        <tr><td>Right click / context menu</td><td>P1</td><td>Medio</td><td>Paso context_click + posible selección en menú contextual.</td></tr>
+        <tr><td>Selección de archivo real</td><td>P0</td><td>Alto</td><td>Paso upload_file con nombre lógico y estrategia controlada.</td></tr>
+        <tr><td>Atajos de teclado combinados (Ctrl+K, Alt+S, etc.)</td><td>P1</td><td>Medio</td><td>Registrar key combos con modificadores.</td></tr>
+        <tr><td>Gestos táctiles (tap, long-press, swipe)</td><td>P1</td><td>Medio</td><td>Eventos pointer/touch con fallback mouse.</td></tr>
+        <tr><td>Scroll de página como intención</td><td>P2</td><td>Medio</td><td>Paso scroll_page o scroll_by con offset reproducible.</td></tr>
+        <tr><td>Resize de ventana/viewport</td><td>P3</td><td>Bajo</td><td>Paso set_viewport opcional para escenarios responsivos.</td></tr>
+        <tr><td>Interacción Canvas/SVG compleja</td><td>P2</td><td>Medio</td><td>Mapear coordenadas relativas y/o atributos de nodo SVG.</td></tr>
+        <tr><td>Contenido dentro de iframes cross-origin</td><td>P0</td><td>Alto</td><td>Requiere estrategia de handoff o integración cooperativa.</td></tr>
+        <tr><td>Paste explícito (ctrl+v) con semántica</td><td>P2</td><td>Bajo</td><td>Paso paste para trazabilidad de fuente/valor.</td></tr>
+      </tbody>
+    </table>
+
+    <h2>4) En qué páginas está validado hoy</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Fixtures e2e existentes</h3>
+        <p>
+          <span class="pill">modern-autocomplete.html</span>
+          <span class="pill">legacy-autocomplete.html</span>
+          <span class="pill">genexus-subpage.html</span>
+          <span class="pill">iapos-subpage.html</span>
+          <span class="pill">iapos-safe-page.html</span>
+          <span class="pill">universal-macro-fixture.html</span>
+        </p>
+      </div>
+      <div class="card">
+        <h3>Tipo de cobertura por familia</h3>
+        <ul>
+          <li>Moderna: inputs, fetch-like autocomplete, datalist, navegación.</li>
+          <li>Legacy: eventos inline, menús antiguos, selects clásicos.</li>
+          <li>GeneXus/IAPOS: autocompletes tipo delegación/especialidad y subpáginas.</li>
+          <li>Universal: mezcla de contextos, modal, sidebar, grilla, shadow.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>5) Roadmap recomendado del grabador</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Fase 1 (máxima ganancia)</h3>
+        <ul>
+          <li>Drag and drop real.</li>
+          <li>Upload de archivos.</li>
+          <li>Mejoras para shadow DOM y selectores dinámicos.</li>
+          <li>Atajos de teclado con modificadores.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Fase 2 (cobertura avanzada)</h3>
+        <ul>
+          <li>Context menu y acciones secundarias.</li>
+          <li>Scroll de página como paso explícito.</li>
+          <li>Pointer/touch gestures.</li>
+          <li>Estrategia para iframes cross-origin.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>6) Validación manual rápida para esta fase</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Chequeo</th>
+          <th>Resultado</th>
+          <th>Notas</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>¿La macro captura correctamente click/input/select/check?</td><td>______</td><td>______</td></tr>
+        <tr><td>¿Se mantiene estable en moderno + legacy + GeneXus?</td><td>______</td><td>______</td></tr>
+        <tr><td>¿Modal y hover quedan reproducibles?</td><td>______</td><td>______</td></tr>
+        <tr><td>¿Hay pasos espurios o ruido de grabación?</td><td>______</td><td>______</td></tr>
+        <tr><td>¿Qué interacción faltante bloquea más casos reales?</td><td>______</td><td>______</td></tr>
+      </tbody>
+    </table>
+
+    <h2>7) Espacio de decisiones</h2>
+    <div class="notes"></div>
+  </div>
+</body>
+</html>

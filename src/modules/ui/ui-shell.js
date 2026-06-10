@@ -46,12 +46,20 @@
       .replace(/'/g, "&#39;");
   }
 
+  function setHtmlContent(element, html) {
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(`<template>${String(html || "")}</template>`, "text/html");
+    const template = parsed.querySelector("template");
+    const nodes = template ? Array.from(template.content.childNodes) : [];
+    element.replaceChildren(...nodes);
+  }
+
   function createPanel() {
     const panel = document.createElement("aside");
     panel.id = PANEL_ID;
     panel.dataset.uiVersion = UI_VERSION;
     panel.className = "webmatic-left";
-    panel.innerHTML = `
+    setHtmlContent(panel, `
       <button class="webmatic-floating-recorder" data-action="record-toggle" type="button">
         <span class="webmatic-floating-dot"></span>
         Grabando
@@ -70,6 +78,9 @@
         <div class="webmatic-view" data-view="play">
           <div class="webmatic-search-row">
             <input class="webmatic-search-input" data-action-input="library-search" type="text" placeholder="Buscar macro..." autocomplete="off" />
+          </div>
+          <div class="webmatic-actions webmatic-play-capture-row">
+            <button class="webmatic-action-btn webmatic-capture-btn" data-action="page-meta-capture">Capturar contenido</button>
           </div>
           <details class="webmatic-play-data-box" aria-label="Dato de ejecucion">
             <summary class="webmatic-play-data-summary">Datos de autocompletado</summary>
@@ -133,6 +144,21 @@
           </div>
           <div class="webmatic-step-progress" data-step-progress style="display:none"></div>
           <button class="webmatic-action-btn webmatic-btn-addwait" data-action="add-wait-here" style="display:none" data-addwait-btn title="Agrega +1s de espera antes del paso actual en la macro guardada">&#9719; +1s aqui</button>
+          <details class="webmatic-play-summary-disclosure">
+            <summary class="webmatic-play-summary-trigger">+ Info</summary>
+            <div class="webmatic-play-summary" data-play-summary>
+              <strong>Resumen</strong>
+              <span data-play-summary-text>Macros: --
+Metadatos: --
+Backups creados: --
+Backups importados: --
+Macros exportadas: --
+Macros importadas: --
+Metadatos exportados: --
+Metadatos importados: --
+Estado: --</span>
+            </div>
+          </details>
         </div>
         <div class="webmatic-view" data-view="settings">
           <section class="webmatic-settings-card" aria-label="Visualizacion">
@@ -183,6 +209,7 @@
               <button class="webmatic-action-btn" data-action="macro-import-json">&#128228; Importar macro (.json)</button>
               <button class="webmatic-action-btn webmatic-btn-backup" data-action="macros-backup-all">&#128190; Backup de todas las macros</button>
               <button class="webmatic-action-btn" data-action="macros-import-all">&#128228; Importar backup (.json)</button>
+              <button class="webmatic-action-btn webmatic-btn-ghost" data-action="macros-restore-internal">&#8635; Restaurar macros (interno)</button>
               <input type="file" data-import-json-file-input accept=".json,application/json,text/json" style="display:none" />
               <input type="file" data-import-file-input accept=".json,application/json" style="display:none" />
             </div>
@@ -190,16 +217,15 @@
           <section class="webmatic-settings-card" aria-label="Metadatos de pagina">
             <h3>Metadatos de pagina</h3>
             <p class="webmatic-settings-hint">Captura una base reutilizable de controles y opciones de la página actual para potenciar el editor visual.</p>
-            <div class="webmatic-subtitle">Limite de perfiles por extensión</div>
+            <div class="webmatic-subtitle">Cantidad maxima de perfiles guardados</div>
             <div class="webmatic-slider-row">
               <input class="webmatic-slider" data-action-input="settings-page-meta-max" type="range" min="10" max="300" step="5" value="60" />
               <span class="webmatic-slider-label" data-page-meta-max-label>60</span>
             </div>
             <div class="webmatic-actions">
-              <button class="webmatic-action-btn" data-action="page-meta-capture">&#128269; Capturar contenido</button>
               <button class="webmatic-action-btn" data-action="page-meta-export">&#11123; Exportar metadatos (.json)</button>
+              <button class="webmatic-action-btn" data-action="page-meta-export-tables">&#11123; Exportar tablas (.txt)</button>
               <button class="webmatic-action-btn" data-action="page-meta-import">&#128228; Importar metadatos (.json)</button>
-              <button class="webmatic-action-btn webmatic-btn-ghost" data-action="page-meta-profiles-list">&#128196; Ver perfiles de esta pagina</button>
               <input type="file" data-import-page-meta-file-input accept=".json,application/json,text/json" style="display:none" />
             </div>
           </section>
@@ -247,7 +273,7 @@
           </div>
         </div>
       </div>
-    `;
+    `);
 
     return panel;
   }
@@ -284,7 +310,11 @@
       const cancelBtn = panel.querySelector("[data-wm-cancel]");
       if (!overlay || !msgEl || !inputEl || !okBtn || !cancelBtn) { resolve(null); return; }
 
-      msgEl.textContent = opts.message || "";
+      if (opts && typeof opts.messageHtml === "string") {
+        setHtmlContent(msgEl, opts.messageHtml);
+      } else {
+        msgEl.textContent = opts.message || "";
+      }
       okBtn.textContent = opts.okLabel || "Aceptar";
       cancelBtn.textContent = opts.cancelLabel || "Cancelar";
 
@@ -359,7 +389,7 @@
     const newIds = filtered.map((m) => m.id).join(",");
 
     if (currentIds !== newIds) {
-      listEl.innerHTML = "";
+      listEl.replaceChildren();
       if (filtered.length === 0) {
         const empty = document.createElement("div");
         empty.className = "webmatic-macro-empty";
@@ -471,7 +501,7 @@
             : "webmatic-step-item";
           return `<div class="${cls}">${label}</div>`;
         }).join("");
-        stepProgress.innerHTML = html;
+        setHtmlContent(stepProgress, html);
         // Scroll current step into view
         const currentEl = stepProgress.querySelector(".webmatic-step-current");
         if (currentEl) currentEl.scrollIntoView({ block: "nearest" });
@@ -534,9 +564,12 @@
       btn.style.textOverflow = "ellipsis";
       btn.style.whiteSpace = "nowrap";
       btn.style.boxShadow = isActive
-        ? "inset 0 0 0 1px rgba(255,255,255,0.45), 0 0 0 2px rgba(0,0,0,0.08)"
+        ? (palette.activeShadow || "inset 0 0 0 1px rgba(255,255,255,0.45), 0 0 0 2px rgba(0,0,0,0.08)")
         : "inset 0 0 0 1px rgba(255,255,255,0.16)";
-      btn.style.filter = isActive ? "saturate(1.15) brightness(1.02)" : "saturate(0.9)";
+      btn.style.filter = isActive
+        ? (palette.activeFilter || "saturate(1.15) brightness(1.02)")
+        : "saturate(0.9)";
+      btn.style.transform = isActive ? (palette.activeTransform || "translateY(0)") : "translateY(0)";
     };
 
     modeButtons.forEach((button) => {
@@ -553,11 +586,17 @@
     });
     _applyModeBtnStyle(playBtnMode, {
       bg: "#16a34a", text: "#ffffff", border: "#15803d",
-      activeBg: "#15803d", activeText: "#ffffff", activeBorder: "#166534"
+      activeBg: "#15803d", activeText: "#ffffff", activeBorder: "#166534",
+      activeShadow: "inset 0 0 0 1px rgba(255,255,255,0.55), 0 0 0 2px rgba(22,101,52,0.35), 0 6px 12px rgba(21,128,61,0.30)",
+      activeFilter: "saturate(1.2) brightness(1.03)",
+      activeTransform: "translateY(-1px)"
     });
     _applyModeBtnStyle(settingsBtnMode, {
       bg: "#facc15", text: "#4a3410", border: "#eab308",
-      activeBg: "#eab308", activeText: "#4a3410", activeBorder: "#ca8a04"
+      activeBg: "#eab308", activeText: "#4a3410", activeBorder: "#ca8a04",
+      activeShadow: "inset 0 0 0 1px rgba(255,255,255,0.58), 0 0 0 2px rgba(74,52,16,0.32), 0 6px 12px rgba(202,138,4,0.32)",
+      activeFilter: "saturate(1.22) brightness(1.04)",
+      activeTransform: "translateY(-1px)"
     });
 
     views.forEach((view) => {
@@ -582,13 +621,18 @@
     if (swatchRow) {
       const mode = state.settings.themeMode === "dark" ? "dark" : "light";
       swatchRow.style.display = "grid";
-      swatchRow.innerHTML = THEME_PALETTES[mode].map((p) => p.accent)
-        .map((color, index) => {
-          const variant = index + 1;
-          const activeClass = variant === state.settings.themeVariant ? " active" : "";
-          return `<button class="webmatic-swatch${activeClass}" data-action="settings-theme-variant" data-variant="${variant}" data-color="${color}" title="Variante ${variant}" style="background:${color}"></button>`;
-        })
-        .join("");
+      swatchRow.replaceChildren();
+      THEME_PALETTES[mode].forEach((color, index) => {
+        const variant = index + 1;
+        const button = document.createElement("button");
+        button.className = `webmatic-swatch${variant === state.settings.themeVariant ? " active" : ""}`;
+        button.dataset.action = "settings-theme-variant";
+        button.dataset.variant = String(variant);
+        button.dataset.color = color.accent;
+        button.title = `Variante ${variant}`;
+        button.style.background = color.accent;
+        swatchRow.appendChild(button);
+      });
     }
 
     const speedSlider = panel.querySelector("[data-action-input='settings-speed']");
@@ -653,8 +697,9 @@
 
     if (playRuntimeType) {
       const currentValue = String(state.settings.runtimeDataType || "generic");
-      if (playRuntimeType.innerHTML !== optionHtml) {
-        playRuntimeType.innerHTML = optionHtml;
+      if (playRuntimeType.dataset.wmHtml !== optionHtml) {
+        setHtmlContent(playRuntimeType, optionHtml);
+        playRuntimeType.dataset.wmHtml = optionHtml;
       }
       if (document.activeElement !== playRuntimeType) {
         playRuntimeType.value = options.some((o) => o.value === currentValue) ? currentValue : "generic";
@@ -670,9 +715,9 @@
     if (runtimeItemList) {
       const items = Array.isArray(state.settings.runtimeDataItems) ? state.settings.runtimeDataItems : [];
       if (items.length === 0) {
-        runtimeItemList.innerHTML = "";
+        runtimeItemList.replaceChildren();
       } else {
-        runtimeItemList.innerHTML = items.map((item, index) => {
+        setHtmlContent(runtimeItemList, items.map((item, index) => {
           const selectedValue = String(item && item.type ? item.type : "generic");
           const selectedOptionsHtml = options
             .map((o) => `<option value="${escapeHtml(o.value)}"${o.value === selectedValue ? " selected" : ""}>${escapeHtml(o.label)}</option>`)
@@ -689,7 +734,7 @@
               <button class="webmatic-action-btn webmatic-btn-ghost" data-action="play-runtime-item-remove" data-index="${index}" type="button">Quitar</button>
             </div>
           `;
-        }).join("");
+        }).join(""));
       }
     }
 
@@ -704,8 +749,9 @@
           return `<option value="${id}">${name}</option>`;
         }))
         .join("");
-      if (runtimeTemplateSelect.innerHTML !== tplHtml) {
-        runtimeTemplateSelect.innerHTML = tplHtml;
+      if (runtimeTemplateSelect.dataset.wmHtml !== tplHtml) {
+        setHtmlContent(runtimeTemplateSelect, tplHtml);
+        runtimeTemplateSelect.dataset.wmHtml = tplHtml;
       }
       if (document.activeElement !== runtimeTemplateSelect) {
         runtimeTemplateSelect.value = templates.some((t) => String(t.id) === selectedId) ? selectedId : "";
@@ -716,11 +762,11 @@
     if (customTypeList) {
       const customTypes = Array.isArray(state.settings.runtimeCustomTypes) ? state.settings.runtimeCustomTypes : [];
       if (customTypes.length === 0) {
-        customTypeList.innerHTML = '<div class="webmatic-macro-empty">Sin tipos personalizados</div>';
+        setHtmlContent(customTypeList, '<div class="webmatic-macro-empty">Sin tipos personalizados</div>');
       } else {
-        customTypeList.innerHTML = customTypes
+        setHtmlContent(customTypeList, customTypes
           .map((label) => `<div class="webmatic-custom-type-item"><span>${escapeHtml(label)}</span><button class="webmatic-action-btn webmatic-btn-ghost" data-action="settings-custom-type-remove" data-custom-label="${escapeHtml(label)}" type="button">Quitar</button></div>`)
-          .join("");
+          .join(""));
       }
     }
 
@@ -880,6 +926,25 @@
           customLabel: actionEl && actionEl.dataset.customLabel ? String(actionEl.dataset.customLabel) : undefined,
           index: actionEl && typeof actionEl.dataset.index !== "undefined" ? Number(actionEl.dataset.index) : undefined
         });
+      }
+    });
+
+    panel.addEventListener("dblclick", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      const macroItem = target.closest("[data-macro-id]");
+      const editBtn = target.closest("[data-action='macro-edit']");
+      if (!macroItem || editBtn) {
+        return;
+      }
+
+      event.preventDefault();
+      if (typeof onActionClicked === "function") {
+        onActionClicked("library-select", { value: macroItem.dataset.macroId });
+        onActionClicked("macro-play", {});
       }
     });
 

@@ -1,0 +1,888 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebMatic Universal Macro Fixture</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --panel-2: #f8fafc;
+      --line: #d8e0ea;
+      --line-strong: #aab7c6;
+      --text: #132238;
+      --muted: #54657a;
+      --accent: #2563eb;
+      --accent-2: #0f766e;
+      --warn: #b45309;
+      --good: #166534;
+      --shadow: 0 18px 40px rgba(14, 30, 54, 0.08);
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 28%),
+        radial-gradient(circle at 90% 12%, rgba(15, 118, 110, 0.10), transparent 25%),
+        linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+      font-family: Segoe UI, system-ui, -apple-system, sans-serif;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(216, 224, 234, 0.9);
+    }
+
+    .topbar {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 18px 22px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2563eb, #14b8a6);
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+      display: grid;
+      place-items: center;
+      color: white;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn,
+    button,
+    input[type="button"],
+    input[type="submit"] {
+      border: 1px solid var(--line-strong);
+      background: linear-gradient(180deg, #ffffff 0%, #f5f8fc 100%);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font: inherit;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+    }
+
+    .btn:hover,
+    button:hover,
+    input[type="button"]:hover,
+    input[type="submit"]:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+    }
+
+    .btn-primary { background: linear-gradient(180deg, #2f6df6 0%, #1d4ed8 100%); color: #fff; border-color: #1d4ed8; }
+    .btn-muted { background: #fff; }
+    .btn-warning { background: linear-gradient(180deg, #fde68a 0%, #f59e0b 100%); color: #3a2500; border-color: #d97706; }
+    .btn-danger { background: linear-gradient(180deg, #fecaca 0%, #ef4444 100%); color: #5f100e; border-color: #dc2626; }
+
+    .layout {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 22px;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr) 320px;
+      gap: 18px;
+    }
+
+    .panel {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(216, 224, 234, 0.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 18px 12px;
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.92), rgba(255, 255, 255, 0.92));
+      border-bottom: 1px solid rgba(216, 224, 234, 0.9);
+    }
+
+    .panel-header h2 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0.01em;
+    }
+
+    .panel-header p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .panel-body { padding: 16px 18px 18px; }
+
+    .sidebar-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      font-size: 14px;
+      text-align: left;
+    }
+
+    .nav-item strong { font-size: 13px; }
+    .nav-item span { color: var(--muted); font-size: 12px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      grid-column: span 12;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 15px;
+    }
+
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .field { display: grid; gap: 5px; }
+    .field label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--text);
+      font: inherit;
+    }
+
+    textarea { min-height: 110px; resize: vertical; }
+    input:focus, select:focus, textarea:focus, button:focus { outline: 2px solid rgba(37, 99, 235, 0.25); outline-offset: 2px; }
+
+    .legacy-box {
+      font-family: Tahoma, Arial, sans-serif;
+      background: #fefefe;
+      border: 1px solid #9ca3af;
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    .legacy-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .legacy-table td,
+    .legacy-table th {
+      border: 1px solid #9ca3af;
+      padding: 6px;
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    .suggest-box {
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      margin-top: 6px;
+      max-height: 150px;
+      overflow: auto;
+      background: #fff;
+    }
+
+    .suggest-item {
+      padding: 8px 10px;
+      cursor: pointer;
+    }
+
+    .suggest-item:hover { background: #dbeafe; }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
+      font-size: 12px;
+    }
+
+    .checklist { display: grid; gap: 8px; }
+    .checkline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+
+    .checkline input { width: 16px; height: 16px; margin: 0; }
+
+    .results {
+      display: grid;
+      gap: 10px;
+    }
+
+    table.results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .results-table th,
+    .results-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px;
+      text-align: left;
+    }
+
+    .results-table th { background: #f1f5f9; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      place-items: center;
+      background: rgba(15, 23, 42, 0.44);
+      z-index: 50;
+      padding: 24px;
+    }
+
+    .modal {
+      width: min(760px, 100%);
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      box-shadow: 0 28px 70px rgba(15, 23, 42, 0.24);
+      overflow: hidden;
+    }
+
+    .modal-header,
+    .modal-footer { padding: 16px 18px; }
+    .modal-header { border-bottom: 1px solid var(--line); background: #f8fafc; }
+    .modal-footer { border-top: 1px solid var(--line); display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-body { padding: 18px; }
+
+    .legacy-inline {
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    wm-shadow-autocomplete {
+      display: block;
+    }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+      .fields { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-badge">WM</div>
+        <div>
+          <h1>Fixture universal para macros</h1>
+          <p>Moderna, legacy y GeneXus en una sola página de prueba.</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button id="btn-search" class="btn-primary" type="button">Buscar</button>
+        <button id="btn-filter" type="button">Filtrar</button>
+        <button id="btn-save" type="button">Guardar</button>
+        <button id="btn-open-modal" class="btn-warning" type="button">Abrir modal</button>
+        <button id="btn-danger" class="btn-danger" type="button">Acción crítica</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <div class="panel-header">
+        <h2>Sidebar / navegación</h2>
+        <p>Controles clásicos y enlaces de prueba.</p>
+      </div>
+      <div class="panel-body sidebar-nav">
+        <button class="nav-item" type="button"><strong>Inicio</strong><span>home</span></button>
+        <button class="nav-item" type="button"><strong>Auditoría médica</strong><span>IAPOS</span></button>
+        <button class="nav-item" type="button"><strong>Autorizaciones</strong><span>legacy</span></button>
+        <button class="nav-item" type="button"><strong>Especialidades</strong><span>autocomplete</span></button>
+        <a class="nav-item" href="#tabla-resultados"><strong>Ir a resultados</strong><span>anchor</span></a>
+      </div>
+    </aside>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Formulario mixto de prueba</h2>
+        <p>Incluye selects, checkboxes, radios, autocomplete, input clásico, legacy y GeneXus.</p>
+      </div>
+      <div class="panel-body">
+        <div class="grid">
+          <article class="card">
+            <h3>Campos clásicos</h3>
+            <div class="fields">
+              <div class="field">
+                <label for="ver">Ver</label>
+                <select id="ver" name="ver">
+                  <option value="audit">Requiere Auditoría Médica</option>
+                  <option value="all">Todos</option>
+                  <option value="none">Ninguno</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="tipo-aut">Tipo Autorización</label>
+                <select id="tipo-aut" name="tipo_autorizacion">
+                  <option value="all">&lt;Todos&gt;</option>
+                  <option value="previa">Autorización Previa</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="estado">Estado</label>
+                <select id="estado" name="estado">
+                  <option value="all">(Todos)</option>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="autorizado">Autorizado</option>
+                  <option value="rechazado">Rechazado</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="cobertura">Cobertura</label>
+                <select id="cobertura" name="cobertura">
+                  <option value="all">(Todos)</option>
+                  <option value="obra-social">Obra social</option>
+                  <option value="prepaga">Prepaga</option>
+                  <option value="particular">Particular</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="adjunto">Tiene archivo adjunto</label>
+                <select id="adjunto" name="adjunto">
+                  <option value="all">Todos</option>
+                  <option value="si">Sí</option>
+                  <option value="no">No</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="modalidad">Modalidad</label>
+                <select id="modalidad" name="modalidad">
+                  <option value="previa">Autorización Previa</option>
+                  <option value="internacion">Internación</option>
+                  <option value="ambulatorio">Ambulatorio</option>
+                </select>
+              </div>
+            </div>
+            <div class="tag-row" aria-label="resumen visual">
+              <span class="tag">Dropdown clásico</span>
+              <span class="tag">Lista visible</span>
+              <span class="tag">Teclado / mouse</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Inputs de texto y control básico</h3>
+            <div class="fields">
+              <div class="field">
+                <label for="dni">N° de Afiliado / DNI</label>
+                <input id="dni" name="dni" type="text" placeholder="Ej: 12345678" />
+              </div>
+              <div class="field">
+                <label for="apellido">Nombre y Apellido</label>
+                <input id="apellido" name="apellido" type="text" placeholder="Se completa desde DNI" />
+              </div>
+              <div class="field">
+                <label for="numero-aut">N° de Autorización</label>
+                <input id="numero-aut" name="numero_autorizacion" type="text" placeholder="Auto generado" />
+              </div>
+              <div class="field">
+                <label for="ord-int">Ord. Int.</label>
+                <input id="ord-int" name="ord_int" type="text" placeholder="Interno" />
+              </div>
+              <div class="field">
+                <label for="busqueda">Buscar</label>
+                <input id="busqueda" name="buscar" type="search" placeholder="Buscar en grilla o sidebar" />
+              </div>
+              <div class="field">
+                <label for="nota">Nota</label>
+                <textarea id="nota" name="nota" placeholder="Área de texto clásica para notas largas"></textarea>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Checklists y radios</h3>
+            <div class="checklist">
+              <label class="checkline"><input id="ver-bajas" name="ver_bajas" type="checkbox" checked /> Ver bajas</label>
+              <label class="checkline"><input id="requiere-compra" name="requiere_compra" type="checkbox" checked /> Requiere compra</label>
+              <label class="checkline"><input id="con-adjunto" name="con_adjunto" type="checkbox" /> Tiene adjunto</label>
+              <label class="checkline"><input id="interno" name="interno" type="radio" value="interno" checked /> Interno</label>
+              <label class="checkline"><input id="externo" name="tipo_origen" type="radio" value="externo" /> Externo</label>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Autocomplete moderno</h3>
+            <div class="fields">
+              <div class="field">
+                <label for="modern-affiliate">Afiliado (fetch-like)</label>
+                <input id="modern-affiliate" name="modern_affiliate" autocomplete="off" placeholder="Escribí 2 o más letras" />
+                <div id="modern-affiliate-list" class="suggest-box" role="listbox" aria-label="lista de afiliados"></div>
+              </div>
+              <div class="field">
+                <label for="modern-specialty">Especialidad (datalist)</label>
+                <input id="modern-specialty" name="modern_specialty" list="specialty-list" autocomplete="off" placeholder="Elegí una especialidad" />
+                <datalist id="specialty-list">
+                  <option value="Cardiología"></option>
+                  <option value="Dermatología"></option>
+                  <option value="Neurología"></option>
+                  <option value="Traumatología"></option>
+                  <option value="Pediatría"></option>
+                </datalist>
+              </div>
+            </div>
+            <p style="margin:10px 0 0;color:var(--muted);font-size:12px;">Pensado para probar captura de sugerencias, selección con mouse y comportamiento con teclado.</p>
+          </article>
+
+          <article class="card">
+            <h3>GeneXus / autocomplete oculto</h3>
+            <div class="fields">
+              <div class="field">
+                <label for="vDELEGACION">Delegación</label>
+                <input id="vDELEGACION" name="vDELEGACION" type="text" autocomplete="off" aria-label="Delegación" placeholder="IAPOS SANTA FE" />
+                <select id="vDELEGCOMBO" name="vDELEGCOMBO" aria-label="Delegación" tabindex="-1" style="display:none">
+                  <option value="0">Seleccionar</option>
+                  <option value="1">IAPOS SANTA FE</option>
+                  <option value="2">ROSARIO</option>
+                  <option value="3">RAFAELA</option>
+                  <option value="4">VENADO TUERTO</option>
+                  <option value="5">SANTA FE NORTE</option>
+                </select>
+                <div id="vDELEGACION_menu" class="suggest-box" role="listbox"></div>
+              </div>
+              <div class="field">
+                <label for="vAUCAESPEFC">Especialidad</label>
+                <input id="vAUCAESPEFC" name="vAUCAESPEFC" type="text" autocomplete="off" aria-label="Especialidad" placeholder="CARDIO" />
+                <select id="vAUCAESPECOMBO" name="vAUCAESPECOMBO" aria-label="Especialidad" tabindex="-1" style="display:none">
+                  <option value="0">Seleccionar</option>
+                  <option value="101">ALOJAMIENTO</option>
+                  <option value="102">CARDIOLOGÍA</option>
+                  <option value="103">DERMATOLOGÍA</option>
+                  <option value="104">CLÍNICA MÉDICA</option>
+                  <option value="105">PEDIATRÍA</option>
+                </select>
+                <div id="vAUCAESPEFC_menu" class="suggest-box" role="listbox"></div>
+              </div>
+            </div>
+            <div class="tag-row">
+              <span class="tag">input visible</span>
+              <span class="tag">select oculto</span>
+              <span class="tag">GeneXus-like</span>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Legacy / viejo estilo</h3>
+            <div class="legacy-box">
+              <table class="legacy-table">
+                <tr>
+                  <td>
+                    <b>Delegation legacy</b><br />
+                    <input id="legacy-deleg" name="legacy_deleg" type="text" onkeyup="legacySuggest('legacy-deleg','legacy-deleg-menu','legacy-deleg-code',LEGACY_DELEG)" onchange="void(0)" />
+                    <input id="legacy-deleg-code" name="legacy_deleg_code" type="text" />
+                    <div id="legacy-deleg-menu" class="suggest-box" role="listbox"></div>
+                  </td>
+                  <td>
+                    <b>Specialty legacy</b><br />
+                    <input id="legacy-spec" name="legacy_spec" type="text" onkeyup="legacySuggest('legacy-spec','legacy-spec-menu','legacy-spec-code',LEGACY_SPEC)" onchange="void(0)" />
+                    <input id="legacy-spec-code" name="legacy_spec_code" type="text" />
+                    <div id="legacy-spec-menu" class="suggest-box" role="listbox"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <b>Classic select</b><br />
+                    <select id="legacy-mode" name="legacy_mode">
+                      <option value="1">Ambulatory</option>
+                      <option value="2">Hospital</option>
+                      <option value="3">Urgency</option>
+                    </select>
+                  </td>
+                  <td>
+                    <b>Legacy buttons</b><br />
+                    <input id="legacy-search" type="button" value="Buscar" />
+                    <input id="legacy-navigate" type="button" value="Go Subpage" onclick="goLegacySubpage()" />
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Resultados, acciones y modales</h3>
+            <div class="results" id="tabla-resultados">
+              <table class="results-table">
+                <thead>
+                  <tr>
+                    <th>Afiliado</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Paciente demo</td>
+                    <td>Pendiente</td>
+                    <td>
+                      <button type="button" class="btn-muted">Ver</button>
+                      <button type="button" class="btn-primary">Editar</button>
+                      <button type="button" class="btn-danger">Eliminar</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>Paciente 2</td>
+                    <td>Autorizado</td>
+                    <td>
+                      <button type="button">Detalle</button>
+                      <button type="button">Reprocesar</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <h3>Shadow DOM / componente moderno</h3>
+            <wm-shadow-autocomplete></wm-shadow-autocomplete>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="panel-header">
+        <h2>Estado / resumen</h2>
+        <p>Zona útil para capturar paneles laterales, badges y textos dinámicos.</p>
+      </div>
+      <div class="panel-body">
+        <div class="legacy-inline" style="margin-bottom:12px;">
+          <strong>Resumen rápido</strong>
+          <p id="summary-text" style="margin:8px 0 0;color:#475569;font-size:13px;">Listo para capturar macros.</p>
+        </div>
+        <div class="tag-row">
+          <span class="tag">Estado visible</span>
+          <span class="tag">Badge</span>
+          <span class="tag">Texto dinámico</span>
+          <span class="tag">Contador</span>
+        </div>
+        <div class="legacy-inline" style="margin-top:14px;">
+          <label for="contador">Contador</label>
+          <input id="contador" type="text" value="0" />
+          <label for="obs" style="margin-top:10px;display:block;font-weight:700;">Observaciones</label>
+          <textarea id="obs">Campo de observaciones para probar textarea largo.</textarea>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <h2 id="modal-title" style="margin:0;font-size:18px;">Confirmación</h2>
+      </div>
+      <div class="modal-body">
+        <p style="margin-top:0;">Este modal sirve para probar clicks, cierre, foco y reproducción de macros con acciones visibles.</p>
+        <div class="fields">
+          <div class="field">
+            <label for="modal-motivo">Motivo</label>
+            <input id="modal-motivo" type="text" placeholder="Ingrese motivo" />
+          </div>
+          <div class="field">
+            <label for="modal-prioridad">Prioridad</label>
+            <select id="modal-prioridad">
+              <option>Normal</option>
+              <option>Alta</option>
+              <option>Urgente</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="modal-cancel">Cancelar</button>
+        <button type="button" id="modal-ok" class="btn-primary">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const LEGACY_DELEG = [
+      { c: "54", d: "ALVEAR" },
+      { c: "55", d: "BELGRANO" },
+      { c: "56", d: "CASTELLANOS" },
+      { c: "57", d: "ESPERANZA" },
+      { c: "58", d: "RECONQUISTA" }
+    ];
+
+    const LEGACY_SPEC = [
+      { c: "101", d: "CARDIOLOGIA" },
+      { c: "102", d: "CLINICA" },
+      { c: "103", d: "DERMATOLOGIA" },
+      { c: "104", d: "PEDIATRIA" },
+      { c: "105", d: "TRAUMATOLOGIA" }
+    ];
+
+    const MODERN_AFFILIATES = [
+      { value: "1001", text: "Wagner, Aldo" },
+      { value: "1002", text: "Rios, Paula" },
+      { value: "1003", text: "Perez, Marta" },
+      { value: "1004", text: "Garcia, Juan" },
+      { value: "1005", text: "Sosa, Elena" }
+    ];
+
+    function lower(s) { return String(s || "").toLowerCase(); }
+
+    function renderLegacy(list, q) {
+      var t = String(q || "").toUpperCase();
+      var out = [];
+      for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+        if (!t || item.d.indexOf(t) >= 0 || item.c.indexOf(t) >= 0) out.push(item);
+      }
+      return out;
+    }
+
+    function legacySuggest(inputId, menuId, hiddenId, data) {
+      var input = document.getElementById(inputId);
+      var menu = document.getElementById(menuId);
+      var hidden = document.getElementById(hiddenId);
+      var filtered = renderLegacy(data, input.value);
+      menu.replaceChildren();
+
+      if (filtered.length === 0) {
+        menu.style.display = "none";
+        return;
+      }
+
+      for (var i = 0; i < filtered.length; i++) {
+        (function (item) {
+          var row = document.createElement("div");
+          row.setAttribute("role", "option");
+          row.setAttribute("data-value", item.c);
+          row.textContent = item.d + " (" + item.c + ")";
+          row.onclick = function () {
+            input.value = item.d;
+            hidden.value = item.c;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            menu.style.display = "none";
+          };
+          menu.appendChild(row);
+        })(filtered[i]);
+      }
+
+      menu.style.display = "block";
+    }
+
+    function goLegacySubpage() {
+      location.href = "./legacy-autocomplete-subpage.html";
+    }
+
+    (function wireModernAutocomplete() {
+      const input = document.getElementById("modern-affiliate");
+      const list = document.getElementById("modern-affiliate-list");
+
+      function render(items) {
+        list.replaceChildren();
+        items.forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "suggest-item";
+          row.setAttribute("role", "option");
+          row.dataset.value = item.value;
+          row.textContent = item.text + " (" + item.value + ")";
+          row.addEventListener("click", () => {
+            input.value = item.text;
+            input.dataset.selectedValue = item.value;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            list.replaceChildren();
+          });
+          list.appendChild(row);
+        });
+      }
+
+      input.addEventListener("input", () => {
+        const q = input.value.trim();
+        if (q.length < 2) {
+          list.replaceChildren();
+          return;
+        }
+        render(MODERN_AFFILIATES.filter((i) => lower(i.text).includes(lower(q)) || String(i.value).includes(q)));
+      });
+    }());
+
+    class WmShadowAutocomplete extends HTMLElement {
+      connectedCallback() {
+        if (this.shadowRoot) return;
+        const root = this.attachShadow({ mode: "open" });
+        const wrap = document.createElement("div");
+        wrap.innerHTML = `
+          <style>
+            :host { display:block; }
+            label { display:block; font-weight:700; margin-bottom:4px; color:#334155; }
+            input { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid #94a3b8; border-radius:12px; }
+            ul { margin:6px 0 0; padding:0; list-style:none; border:1px solid #cbd5e1; border-radius:12px; max-height:140px; overflow:auto; background:#fff; }
+            li { padding:8px 10px; cursor:pointer; }
+            li:hover { background:#fef3c7; }
+          </style>
+          <label for="shadow-city">Shadow city</label>
+          <input id="shadow-city" autocomplete="off" placeholder="Escriba ciudad" />
+          <ul id="shadow-list" role="listbox"></ul>
+        `;
+        root.appendChild(wrap);
+
+        const input = root.querySelector("#shadow-city");
+        const list = root.querySelector("#shadow-list");
+        const cities = ["Santa Fe", "Rosario", "Cordoba", "Mendoza", "Neuquen", "Parana"];
+
+        input.addEventListener("input", () => {
+          const q = lower(input.value.trim());
+          list.replaceChildren();
+          if (!q) return;
+          cities.filter((c) => lower(c).includes(q)).forEach((city) => {
+            const li = document.createElement("li");
+            li.setAttribute("role", "option");
+            li.textContent = city;
+            li.addEventListener("click", () => {
+              input.value = city;
+              input.dispatchEvent(new Event("change", { bubbles: true }));
+              list.replaceChildren();
+            });
+            list.appendChild(li);
+          });
+        });
+      }
+    }
+
+    customElements.define("wm-shadow-autocomplete", WmShadowAutocomplete);
+
+    document.getElementById("btn-open-modal").addEventListener("click", () => {
+      const backdrop = document.getElementById("modal-backdrop");
+      backdrop.style.display = "grid";
+      backdrop.setAttribute("aria-hidden", "false");
+      document.getElementById("modal-motivo").focus();
+    });
+
+    document.getElementById("modal-cancel").addEventListener("click", () => {
+      const backdrop = document.getElementById("modal-backdrop");
+      backdrop.style.display = "none";
+      backdrop.setAttribute("aria-hidden", "true");
+    });
+
+    document.getElementById("modal-ok").addEventListener("click", () => {
+      const backdrop = document.getElementById("modal-backdrop");
+      document.getElementById("summary-text").textContent = "Modal confirmado: " + document.getElementById("modal-motivo").value;
+      backdrop.style.display = "none";
+      backdrop.setAttribute("aria-hidden", "true");
+    });
+
+    document.getElementById("btn-search").addEventListener("click", () => {
+      document.getElementById("summary-text").textContent = "Buscar ejecutado";
+    });
+
+    document.getElementById("btn-filter").addEventListener("click", () => {
+      document.getElementById("summary-text").textContent = "Filtrar ejecutado";
+    });
+
+    document.getElementById("btn-save").addEventListener("click", () => {
+      document.getElementById("summary-text").textContent = "Guardado simulado";
+    });
+
+    document.getElementById("legacy-search").addEventListener("click", () => {
+      document.getElementById("summary-text").textContent = "Legacy buscar ejecutado";
+    });
+
+    document.getElementById("btn-danger").addEventListener("click", () => {
+      document.getElementById("summary-text").textContent = "Acción crítica presionada";
+    });
+  </script>
+</body>
+</html>

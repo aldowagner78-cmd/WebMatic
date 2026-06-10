@@ -382,3 +382,47 @@ test("exportToIim: sanea currentValue sensible dentro de meta.pageInventories", 
   assert.equal(controls[1].currentValue, undefined);
   assert.equal(controls[2].currentValue, "Juan");
 });
+
+test("exportToIim: conserva meta.preRunReset en WM_JSON", () => {
+  const macro = {
+    steps: [{ type: "click", selector: "#go" }],
+    meta: {
+      preRunReset: {
+        version: 1,
+        controls: [
+          { selector: "#deleg", tag: "input", type: "text", value: "CAPITAL" },
+          { selector: "#chk", tag: "input", type: "checkbox", checked: true }
+        ]
+      }
+    }
+  };
+  const script = adapter.exportToIim(macro);
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  assert.ok(parsed.meta && parsed.meta.preRunReset);
+  assert.equal(parsed.meta.preRunReset.controls.length, 2);
+  assert.equal(parsed.meta.preRunReset.controls[0].selector, "#deleg");
+});
+
+test("exportToIim: sanea value sensible dentro de meta.preRunReset.controls", () => {
+  const macro = {
+    steps: [{ type: "click", selector: "#go" }],
+    meta: {
+      preRunReset: {
+        version: 1,
+        controls: [
+          { selector: "#pwd", type: "password", name: "password", value: "secret123" },
+          { selector: "#tok", name: "csrf_token", value: "abc" },
+          { selector: "#ok", name: "nombre", value: "Juan" }
+        ]
+      }
+    }
+  };
+  const script = adapter.exportToIim(macro);
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  const controls = parsed.meta.preRunReset.controls;
+  assert.equal(controls[0].value, undefined);
+  assert.equal(controls[1].value, undefined);
+  assert.equal(controls[2].value, "Juan");
+});

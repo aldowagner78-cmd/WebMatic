@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>New Tab + Subpage Fixture</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 20px; }
+    .row { display: grid; grid-template-columns: 220px 1fr; gap: 10px; margin-bottom: 10px; max-width: 760px; }
+    input, select, button, a { padding: 8px; }
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Fixture apertura de pestaña y subpágina</h1>
+  <p>Permite validar que la macro no se traba al abrir una pestaña nueva y seguir con el flujo.</p>
+
+  <div class="row">
+    <label for="nt-username">Usuario</label>
+    <input id="nt-username" name="nt_username" autocomplete="off" />
+  </div>
+  <div class="row">
+    <label for="nt-mode">Modo</label>
+    <select id="nt-mode" name="nt_mode">
+      <option value="normal">Normal</option>
+      <option value="safe">Safe</option>
+    </select>
+  </div>
+
+  <div class="actions">
+    <button id="nt-open-window" type="button">Abrir nueva pestaña</button>
+    <a id="nt-open-blank-link" href="./modern-autocomplete-subpage.html?from=blank-link" target="_blank" rel="noopener">Abrir subpágina _blank</a>
+    <button id="nt-open-subpage" type="button">Abrir subpágina misma pestaña</button>
+  </div>
+
+  <script>
+    document.getElementById("nt-open-window").addEventListener("click", () => {
+      window.open("./iapos-subpage-detail.html?from=window-open", "_blank", "noopener");
+    });
+
+    document.getElementById("nt-open-subpage").addEventListener("click", () => {
+      location.href = "./genexus-subpage-detail.html?from=same-tab";
+    });
+  </script>
+</body>
+</html>

@@ -8,9 +8,14 @@
     "test:watch": "node --test --watch accesorios/pruebas/tests/unit/*.test.js",
     "test:e2e": "node accesorios/pruebas/tests/e2e/iapos-safe/run.js",
     "test:e2e:legacy": "node accesorios/pruebas/tests/e2e/run.js",
+    "test:e2e:fixtures": "node accesorios/pruebas/tests/e2e/fixtures-flow/run.js",
     "test:e2e:extension": "node accesorios/pruebas/tests/e2e/webmatic-extension-safe/run.js",
     "test:e2e:firefox-extension": "node accesorios/pruebas/tests/e2e/firefox-extension-safe/run.js",
-    "extract:iapos": "node accesorios/herramientas/tools/extract-iapos-genexus-catalogs.cjs"
+    "test:phase1:export-routes": "npm test",
+    "verify:v2:firefox:fast": "node accesorios/herramientas/tools/verify-v2-firefox.cjs fast",
+    "verify:v2:firefox:full": "node accesorios/herramientas/tools/verify-v2-firefox.cjs full",
+    "extract:iapos": "node accesorios/herramientas/tools/extract-iapos-genexus-catalogs.cjs",
+    "build:chromium": "node accesorios/herramientas/tools/build-chromium-unpacked.cjs"
   },
   "devDependencies": {
     "happy-dom": "^20.9.0",

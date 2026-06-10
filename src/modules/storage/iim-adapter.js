@@ -10,7 +10,7 @@
     if (!ctrl || typeof ctrl !== "object") return false;
     const id = String(ctrl.id || "");
     const name = String(ctrl.name || "");
-    const type = String(ctrl.type || "").toLowerCase();
+    const type = String(ctrl.type || ctrl.inputType || "").toLowerCase();
     const label = String(ctrl.label || "");
     const role = String(ctrl.role || "");
     return type === "password" ||
@@ -37,6 +37,19 @@
         }
         return next;
       });
+    }
+    if (meta.preRunReset && typeof meta.preRunReset === "object") {
+      const pr = Object.assign({}, meta.preRunReset);
+      if (Array.isArray(meta.preRunReset.controls)) {
+        pr.controls = meta.preRunReset.controls.map((ctrl) => {
+          const c = Object.assign({}, ctrl);
+          if (_isSensitiveControl(c)) {
+            delete c.value;
+          }
+          return c;
+        });
+      }
+      out.preRunReset = pr;
     }
     return out;
   }

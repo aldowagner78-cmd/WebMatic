@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebMatic - Pruebas imprimibles avanzadas</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #4b5563;
+      --line: #d1d5db;
+      --soft: #f9fafb;
+      --accent: #1d4ed8;
+      --accent-2: #0f766e;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px;
+      color: var(--ink);
+      background: #fff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    h1, h2, h3, p, ul { margin-top: 0; }
+    h1 { font-size: 26px; margin-bottom: 8px; }
+    h2 { font-size: 18px; margin: 26px 0 10px; }
+    h3 { font-size: 15px; margin: 16px 0 8px; }
+    p, li { font-size: 14px; line-height: 1.55; }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+      margin-bottom: 18px;
+    }
+
+    .hero p { color: var(--muted); margin-bottom: 0; }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--soft);
+    }
+
+    .label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .value {
+      min-height: 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .prueba {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      margin: 0 0 18px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .prueba-head {
+      padding: 12px 14px;
+      background: linear-gradient(90deg, #eff6ff 0%, #f8fafc 100%);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .prueba-head h2 {
+      margin: 0;
+      font-size: 17px;
+      color: #0f172a;
+    }
+
+    .prueba-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .prueba-body { padding: 14px; }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      margin-bottom: 10px;
+    }
+
+    .step-title {
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 6px;
+    }
+
+    .step-meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .step-list {
+      margin: 0 0 0 18px;
+      padding: 0;
+    }
+
+    .step-list li { margin-bottom: 4px; }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      border: 1px solid #c7d2fe;
+      color: #3730a3;
+      font-size: 12px;
+    }
+
+    .note {
+      border-left: 4px solid var(--accent-2);
+      background: #f0fdfa;
+      color: #134e4a;
+      padding: 10px 12px;
+      border-radius: 10px;
+      margin: 12px 0 0;
+      font-size: 13px;
+    }
+
+    .check-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .check-item {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: #fff;
+      font-size: 13px;
+    }
+
+    .footer-box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--soft);
+      margin-top: 18px;
+    }
+
+    .page-break { page-break-after: always; break-after: page; }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 4px;
+    }
+
+    @media print {
+      body { padding: 16px; }
+      .prueba, .box, .check-item, .note, .footer-box { break-inside: avoid; }
+      a { color: inherit; text-decoration: none; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>WebMatic - Pruebas imprimibles avanzadas</h1>
+    <div class="hero">
+      <p>Hoja de trabajo para validar interacciones complejas en casi cualquier página web. Está pensada para que grabes una macro, la exportes y luego evalúes cómo la reproduce WebMatic.</p>
+    </div>
+
+    <div class="meta">
+      <div class="box">
+        <span class="label">Fecha</span>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div class="box">
+        <span class="label">Probador</span>
+        <div class="value">&nbsp;</div>
+      </div>
+      <div class="box">
+        <span class="label">Fixture / URL</span>
+        <div class="value">universal-macro-fixture.html</div>
+      </div>
+    </div>
+
+    <h2>Objetivo de esta hoja</h2>
+    <p>Estas pruebas cubren la mayoría de interacciones que un usuario puede encontrar en una web moderna, una web antigua y una web híbrida: navegación, formularios, autocompletes, modales, grillas, tabs, listas, componentes especiales y acciones de página.</p>
+
+    <div class="prueba">
+      <div class="prueba-head">
+        <h2>Prueba 1: Formulario base y captura de estado inicial</h2>
+        <p>Sirve para validar inputs simples, selects, date/time, textarea, checkboxes y radios.</p>
+      </div>
+      <div class="prueba-body">
+        <div class="step">
+          <div class="step-title">Paso 1</div>
+          <div class="step-meta">Abrir la página y comenzar la grabación.</div>
+          <ul class="step-list">
+            <li>Entrar a la fixture universal.</li>
+            <li>Iniciar la grabación de WebMatic.</li>
+            <li>Confirmar que el panel flotante de grabación aparece correcto.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 2</div>
+          <div class="step-meta">Completar campos de texto, fecha y hora.</div>
+          <ul class="step-list">
+            <li>Escribir nombre y apellido.</li>
+            <li>Completar DNI y edad.</li>
+            <li>Elegir fecha y hora.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 3</div>
+          <div class="step-meta">Guardar selects y controles booleanos.</div>
+          <ul class="step-list">
+            <li>Elegir País.</li>
+            <li>Elegir Modalidad.</li>
+            <li>Marcar y desmarcar checkboxes.</li>
+            <li>Seleccionar un radio button.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 4</div>
+          <div class="step-meta">Completar texto libre y edición rica.</div>
+          <ul class="step-list">
+            <li>Escribir observaciones en textarea.</li>
+            <li>Editar el bloque contenteditable con texto propio.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="prueba">
+      <div class="prueba-head">
+        <h2>Prueba 2: Autocompletes modernos, legacy y GeneXus-like</h2>
+        <p>Valida listas dinámicas, sugerencias, inputs con menús y valores ocultos asociados.</p>
+      </div>
+      <div class="prueba-body">
+        <div class="step">
+          <div class="step-title">Paso 1</div>
+          <div class="step-meta">Autocomplete moderno por lista dinámica.</div>
+          <ul class="step-list">
+            <li>Escribir 2 o más letras en el campo de afiliado moderno.</li>
+            <li>Elegir una sugerencia de la lista.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 2</div>
+          <div class="step-meta">Datalist nativo.</div>
+          <ul class="step-list">
+            <li>Elegir una especialidad moderna del datalist.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 3</div>
+          <div class="step-meta">Autocomplete GeneXus-like con input visible y valor oculto.</div>
+          <ul class="step-list">
+            <li>Escribir una parte de la delegación.</li>
+            <li>Elegir una sugerencia.</li>
+            <li>Repetir con especialidad.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 4</div>
+          <div class="step-meta">Autocomplete legacy estilo antiguo.</div>
+          <ul class="step-list">
+            <li>Escribir en el campo legacy de afiliado.</li>
+            <li>Seleccionar una opción del menú desplegable.</li>
+            <li>Repetir con la delegación legacy.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="prueba">
+      <div class="prueba-head">
+        <h2>Prueba 3: Acciones de página, grilla y navegación interna</h2>
+        <p>Diseñada para capturar clics, acciones repetidas, links internos y botones de fila.</p>
+      </div>
+      <div class="prueba-body">
+        <div class="step">
+          <div class="step-title">Paso 1</div>
+          <div class="step-meta">Acciones principales de la barra superior.</div>
+          <ul class="step-list">
+            <li>Clic en Buscar.</li>
+            <li>Clic en Filtrar.</li>
+            <li>Clic en Guardar.</li>
+            <li>Clic en Acción crítica.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 2</div>
+          <div class="step-meta">Interacción con grilla de resultados.</div>
+          <ul class="step-list">
+            <li>Clic en Ver.</li>
+            <li>Clic en Editar.</li>
+            <li>Clic en Autorizar.</li>
+            <li>Clic en Eliminar si existe en la fila.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 3</div>
+          <div class="step-meta">Navegación interna y links.</div>
+          <ul class="step-list">
+            <li>Usar el enlace Ir a resultados.</li>
+            <li>Probar el sidebar con navegación por secciones.</li>
+            <li>Volver al formulario principal.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <div class="prueba">
+      <div class="prueba-head">
+        <h2>Prueba 4: Modal, foco, confirmación y cierre</h2>
+        <p>Sirve para validar overlays, interacción dentro del modal y cierre por botón o Escape.</p>
+      </div>
+      <div class="prueba-body">
+        <div class="step">
+          <div class="step-title">Paso 1</div>
+          <div class="step-meta">Abrir el modal.</div>
+          <ul class="step-list">
+            <li>Clic en Abrir modal.</li>
+            <li>Verificar que el foco quede dentro del diálogo.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 2</div>
+          <div class="step-meta">Completar elementos internos del modal.</div>
+          <ul class="step-list">
+            <li>Completar el campo Motivo.</li>
+            <li>Elegir una Prioridad.</li>
+            <li>Probar checkbox si existe.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 3</div>
+          <div class="step-meta">Aceptar y cerrar.</div>
+          <ul class="step-list">
+            <li>Clic en Aceptar.</li>
+            <li>Reabrir el modal si hace falta.</li>
+            <li>Probar cierre con Cancelar o Escape.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="prueba">
+      <div class="prueba-head">
+        <h2>Prueba 5: Componentes especiales y estructura compleja</h2>
+        <p>Valida shadow DOM, details, tabs, elementos editables y áreas múltiples de una misma página.</p>
+      </div>
+      <div class="prueba-body">
+        <div class="step">
+          <div class="step-title">Paso 1</div>
+          <div class="step-meta">Tabs y paneles dinámicos.</div>
+          <ul class="step-list">
+            <li>Cambiar entre las pestañas del panel avanzado.</li>
+            <li>Verificar que el contenido activo cambie.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 2</div>
+          <div class="step-meta">Shadow DOM.</div>
+          <ul class="step-list">
+            <li>Escribir una ciudad en el componente shadow.</li>
+            <li>Seleccionar una sugerencia.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 3</div>
+          <div class="step-meta">Details / collapsible.</div>
+          <ul class="step-list">
+            <li>Abrir y cerrar detalles.</li>
+            <li>Completar el textarea interno.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 4</div>
+          <div class="step-meta">Contenteditable, navegación y guardado final.</div>
+          <ul class="step-list">
+            <li>Volver a editar el bloque contenteditable.</li>
+            <li>Confirmar que el botón Guardar funciona.</li>
+            <li>Finalizar la grabación.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="prueba">
+      <div class="prueba-head">
+        <h2>Prueba 6: Flujo mixto largo de regresión</h2>
+        <p>Usa esta prueba para detectar fallos cuando la macro mezcla varias clases de interacción seguidas.</p>
+      </div>
+      <div class="prueba-body">
+        <div class="step">
+          <div class="step-title">Paso 1</div>
+          <div class="step-meta">Repetir tres clases de controles en secuencia.</div>
+          <ul class="step-list">
+            <li>Texto simple.</li>
+            <li>Autocomplete.</li>
+            <li>Botón / acción.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 2</div>
+          <div class="step-meta">Incluir cambio de contexto.</div>
+          <ul class="step-list">
+            <li>Abrir modal.</li>
+            <li>Completar un campo interno.</li>
+            <li>Cerrar modal.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 3</div>
+          <div class="step-meta">Saltos entre secciones.</div>
+          <ul class="step-list">
+            <li>Ir al sidebar.</li>
+            <li>Volver a resultados.</li>
+            <li>Usar un botón de fila.</li>
+          </ul>
+        </div>
+        <div class="step">
+          <div class="step-title">Paso 4</div>
+          <div class="step-meta">Finalizar con limpieza.</div>
+          <ul class="step-list">
+            <li>Guardar.</li>
+            <li>Refrescar si hace falta.</li>
+            <li>Observar si la macro guarda el orden real de eventos.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h2>Checklist de evaluación</h2>
+    <div class="check-grid">
+      <div class="check-item">La grabación capturó inputs, selects y botones sin mezclar tipos.</div>
+      <div class="check-item">Los autocompletes modernos y legacy quedaron diferenciados.</div>
+      <div class="check-item">El modal se registró como interacción real y no como ruido.</div>
+      <div class="check-item">La macro resultante es legible en el editor de script.</div>
+      <div class="check-item">La reproducción funciona de principio a fin en Firefox.</div>
+      <div class="check-item">La página de prueba cubre tanto estilo moderno como legacy.</div>
+    </div>
+
+    <div class="footer-box">
+      <strong>Nota de uso:</strong>
+      <p style="margin:8px 0 0;">Si quieres, después te genero una tercera hoja imprimible todavía más agresiva, centrada solo en IAPOS / GeneXus / autocompletes largos / modales para validar el clasificador universal con carga alta.</p>
+    </div>
+  </div>
+</body>
+</html>

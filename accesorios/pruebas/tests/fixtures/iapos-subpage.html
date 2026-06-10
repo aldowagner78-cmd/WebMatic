@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IAPOS Fixture - Main</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 20px; }
+    .grid { display: grid; grid-template-columns: 240px 1fr; gap: 10px; max-width: 760px; }
+    label { font-weight: 600; }
+    input, select, button { padding: 8px; }
+    .menu { border: 1px solid #cbd5e1; border-radius: 8px; max-height: 120px; overflow: auto; display: none; }
+    .menu button { width: 100%; text-align: left; border: 0; background: #fff; }
+    .menu button:hover { background: #e0f2fe; }
+  </style>
+</head>
+<body>
+  <h1>IAPOS-like Main</h1>
+  <p>Fixture segura para validar autocomplete esencial y navegacion subpagina.</p>
+
+  <div class="grid">
+    <label for="iapos-deleg">Delegacion</label>
+    <div>
+      <input id="iapos-deleg" autocomplete="off" />
+      <div id="iapos-deleg-menu" class="menu" role="listbox"></div>
+    </div>
+
+    <label for="iapos-spec">Especialidad</label>
+    <div>
+      <input id="iapos-spec" autocomplete="off" />
+      <div id="iapos-spec-menu" class="menu" role="listbox"></div>
+    </div>
+
+    <label for="iapos-afiliado">Afiliado</label>
+    <input id="iapos-afiliado" />
+
+    <label for="iapos-modalidad">Modalidad</label>
+    <select id="iapos-modalidad">
+      <option value="amb">Ambulatorio</option>
+      <option value="int">Internacion</option>
+    </select>
+  </div>
+
+  <div style="margin-top:14px; display:flex; gap:8px;">
+    <button id="iapos-buscar" type="button">Buscar</button>
+    <button id="iapos-sub" type="button">Ir subpagina</button>
+  </div>
+
+  <script>
+    const delegaciones = [
+      { c: "54", d: "ALVEAR" },
+      { c: "55", d: "BELGRANO" },
+      { c: "56", d: "CASTELLANOS" }
+    ];
+    const especialidades = [
+      { c: "101", d: "CARDIOLOGY" },
+      { c: "102", d: "CLINIC" },
+      { c: "103", d: "DERMATOLOGY" }
+    ];
+
+    function attachAutocomplete(inputId, menuId, list) {
+      const input = document.getElementById(inputId);
+      const menu = document.getElementById(menuId);
+
+      input.addEventListener("input", () => {
+        const q = String(input.value || "").trim().toUpperCase();
+        const filtered = list.filter((x) => !q || x.d.includes(q) || x.c.includes(q));
+
+        menu.replaceChildren();
+        if (!filtered.length) {
+          menu.style.display = "none";
+          return;
+        }
+
+        filtered.forEach((x) => {
+          const row = document.createElement("button");
+          row.type = "button";
+          row.setAttribute("role", "option");
+          row.dataset.value = x.c;
+          row.textContent = x.d + " (" + x.c + ")";
+          row.addEventListener("click", () => {
+            input.value = x.d;
+            input.dataset.selectedValue = x.c;
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+            menu.style.display = "none";
+          });
+          menu.appendChild(row);
+        });
+
+        menu.style.display = "block";
+      });
+    }
+
+    attachAutocomplete("iapos-deleg", "iapos-deleg-menu", delegaciones);
+    attachAutocomplete("iapos-spec", "iapos-spec-menu", especialidades);
+
+    document.getElementById("iapos-sub").addEventListener("click", () => {
+      location.href = "./iapos-subpage-detail.html";
+    });
+  </script>
+</body>
+</html>

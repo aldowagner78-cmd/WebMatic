@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Modern Fixture - Subpage</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 24px; }
+    .card { max-width: 640px; border: 1px solid #d1d5db; border-radius: 10px; padding: 12px; }
+    label { display: block; margin-top: 10px; font-weight: 600; }
+    input, button { width: 100%; padding: 8px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Modern Fixture - Subpage</h1>
+  <div class="card">
+    <p>Pagina secundaria para validar continuidad de extension tras navegacion.</p>
+
+    <label for="modern-sub-notes">Sub notes</label>
+    <input id="modern-sub-notes" type="text" autocomplete="off" />
+
+    <label for="modern-sub-filter">Sub filter</label>
+    <input id="modern-sub-filter" list="sub-filter-list" autocomplete="off" />
+    <datalist id="sub-filter-list">
+      <option value="Audit"></option>
+      <option value="Billing"></option>
+      <option value="Coverage"></option>
+    </datalist>
+
+    <button id="btn-modern-back" type="button">Back to main</button>
+  </div>
+
+  <script>
+    document.getElementById("btn-modern-back").addEventListener("click", () => {
+      location.href = "./modern-autocomplete.html";
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fixture - Rutas de Exportacion</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 20px; max-width: 760px; }
+    .card { border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+    label { display: block; font-weight: 700; margin-top: 8px; }
+    input { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+    button { margin-top: 10px; padding: 8px 12px; }
+    pre { background: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 10px; overflow: auto; }
+    .hint { color: #334155; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Fixture de prueba - rutas de guardado/exportacion</h1>
+  <p class="hint">Esta página ayuda a validar visualmente reglas de sanitización de subcarpeta y filename antes de exportar.</p>
+
+  <section class="card">
+    <label for="folder">Subcarpeta configurada</label>
+    <input id="folder" value="mis/exports\\2026" />
+
+    <label for="filename">Filename solicitado por módulo</label>
+    <input id="filename" value="macros/../macro?:demo.json" />
+
+    <button id="compute" type="button">Calcular ruta final</button>
+    <pre id="out">(sin calcular)</pre>
+  </section>
+
+  <section class="card">
+    <h2>Casos sugeridos</h2>
+    <ul>
+      <li>Folder con barras y caracteres invalidos.</li>
+      <li>Filename con ../ y segmentos vacíos.</li>
+      <li>Folder vacío con filename válido.</li>
+      <li>Filename vacío para validar fallback.</li>
+    </ul>
+  </section>
+
+  <script>
+    function sanitizeFolderName(name) {
+      const raw = String(name || "").trim();
+      if (!raw) return "";
+      return raw
+        .replace(/[\\/]+/g, "-")
+        .replace(/[\x00-\x1F<>:\"|?*]+/g, "")
+        .replace(/\s+/g, " ")
+        .replace(/^\.+/, "")
+        .trim()
+        .slice(0, 80);
+    }
+
+    function sanitizeRelativeFilename(filename) {
+      const raw = String(filename || "").trim().replace(/\\/g, "/");
+      if (!raw) return "webmatic-export.txt";
+      const safe = raw
+        .split("/")
+        .map((x) => String(x || "").trim())
+        .filter((x) => x && x !== "." && x !== "..")
+        .map((x) => x.replace(/[\x00-\x1F<>:\"|?*]+/g, "").replace(/^\.+/, "").trim())
+        .filter(Boolean);
+      return safe.length ? safe.join("/") : "webmatic-export.txt";
+    }
+
+    function buildExportFilename(folderName, filename) {
+      const folder = sanitizeFolderName(folderName);
+      const file = sanitizeRelativeFilename(filename);
+      return folder ? folder + "/" + file : file;
+    }
+
+    document.getElementById("compute").addEventListener("click", () => {
+      const folder = document.getElementById("folder").value;
+      const filename = document.getElementById("filename").value;
+      const out = {
+        folderInput: folder,
+        filenameInput: filename,
+        safeFolder: sanitizeFolderName(folder),
+        safeFilename: sanitizeRelativeFilename(filename),
+        finalPath: buildExportFilename(folder, filename)
+      };
+      document.getElementById("out").textContent = JSON.stringify(out, null, 2);
+    });
+  </script>
+</body>
+</html>

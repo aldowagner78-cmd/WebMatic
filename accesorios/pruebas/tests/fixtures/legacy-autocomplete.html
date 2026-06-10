@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Legacy Fixture - Autocomplete</title>
+  <style>
+    body { font-family: Tahoma, Arial, sans-serif; margin: 14px; }
+    table { border-collapse: collapse; width: 900px; }
+    td { border: 1px solid #999; padding: 6px; vertical-align: top; }
+    .menu { border: 1px solid #999; max-height: 120px; overflow: auto; display: none; background: #fff; }
+    .menu div { padding: 4px 6px; cursor: pointer; }
+    .menu div:hover { background: #dbeafe; }
+  </style>
+  <script>
+    var LEGACY_DELEG = [
+      { c: "54", d: "ALVEAR" },
+      { c: "55", d: "BELGRANO" },
+      { c: "56", d: "CASTELLANOS" }
+    ];
+
+    var LEGACY_SPEC = [
+      { c: "101", d: "CARDIOLOGY" },
+      { c: "102", d: "CLINIC" },
+      { c: "103", d: "DERMATOLOGY" }
+    ];
+
+    function oldFilter(list, q) {
+      var t = String(q || "").toUpperCase();
+      var out = [];
+      for (var i = 0; i < list.length; i++) {
+        var item = list[i];
+        if (!t || item.d.indexOf(t) >= 0 || item.c.indexOf(t) >= 0) out.push(item);
+      }
+      return out;
+    }
+
+    function legacySuggest(inputId, menuId, hiddenId, data) {
+      var input = document.getElementById(inputId);
+      var menu = document.getElementById(menuId);
+      var hidden = document.getElementById(hiddenId);
+      var filtered = oldFilter(data, input.value);
+
+      menu.innerHTML = "";
+      if (filtered.length === 0) {
+        menu.style.display = "none";
+        return;
+      }
+
+      for (var i = 0; i < filtered.length; i++) {
+        (function (item) {
+          var row = document.createElement("div");
+          row.setAttribute("role", "option");
+          row.setAttribute("data-value", item.c);
+          row.innerHTML = item.d + " (" + item.c + ")";
+          row.onclick = function () {
+            input.value = item.d;
+            hidden.value = item.c;
+            if (typeof input.onchange === "function") input.onchange();
+            menu.style.display = "none";
+          };
+          menu.appendChild(row);
+        })(filtered[i]);
+      }
+      menu.style.display = "block";
+    }
+
+    function goLegacySubpage() {
+      window.location.href = "./legacy-autocomplete-subpage.html";
+    }
+  </script>
+</head>
+<body>
+  <h1>Legacy Fixture - Old style form</h1>
+  <table>
+    <tr>
+      <td width="50%">
+        <b>Delegation</b><br />
+        <input id="legacy-deleg" name="legacy_deleg" type="text" onkeyup="legacySuggest('legacy-deleg','legacy-deleg-menu','legacy-deleg-code',LEGACY_DELEG)" onchange="void(0)" />
+        <input id="legacy-deleg-code" name="legacy_deleg_code" type="text" />
+        <div id="legacy-deleg-menu" class="menu" role="listbox"></div>
+      </td>
+      <td width="50%">
+        <b>Specialty</b><br />
+        <input id="legacy-spec" name="legacy_spec" type="text" onkeyup="legacySuggest('legacy-spec','legacy-spec-menu','legacy-spec-code',LEGACY_SPEC)" onchange="void(0)" />
+        <input id="legacy-spec-code" name="legacy_spec_code" type="text" />
+        <div id="legacy-spec-menu" class="menu" role="listbox"></div>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <b>Classic select</b><br />
+        <select id="legacy-mode" name="legacy_mode">
+          <option value="1">Ambulatory</option>
+          <option value="2">Hospital</option>
+        </select>
+      </td>
+      <td>
+        <b>Actions</b><br />
+        <input id="legacy-search" type="button" value="Buscar" />
+        <input id="legacy-navigate" type="button" value="Go Subpage" onclick="goLegacySubpage()" />
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

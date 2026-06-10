@@ -1,5 +1,7 @@
+importScripts("../src/modules/storage/fs-handle.js");
+
 chrome.runtime.onInstalled.addListener(() => {
-  console.log("[WebMatic] Extension instalada.");
+  console.log("[WebMatic Chromium] Extension instalada.");
 });
 
 const CONTENT_SCRIPT_FILES = [
@@ -10,61 +12,80 @@ const CONTENT_SCRIPT_FILES = [
   "src/modules/ui/ui-shell.js",
   "src/modules/editor/step-editor.js",
   "src/modules/recorder/recorder.js",
+  "src/modules/inventory/page-inventory.js",
   "src/modules/player/player.js",
   "src/modules/storage/iim-adapter.js",
+  "src/modules/storage/macro-json.js",
+  "src/modules/storage/full-backup.js",
   "src/modules/settings/settings-manager.js",
+  "src/modules/controls/genexus-autocomplete.js",
   "src/content/content.js"
 ];
 
-function sendToggleMessage(tabId, callback) {
-  chrome.tabs.sendMessage(tabId, { type: "TOGGLE_PANEL" }, () => {
-    const error = chrome.runtime.lastError;
-    callback(error);
-  });
+function isRestrictedUrl(url) {
+  return !url || /^(chrome|about|edge|devtools|chrome-extension):/i.test(url);
 }
 
-function injectContentScripts(tabId, done) {
-  let index = 0;
-
-  function next() {
-    if (index >= CONTENT_SCRIPT_FILES.length) {
-      done(null);
-      return;
-    }
-
-    chrome.tabs.executeScript(tabId, { file: CONTENT_SCRIPT_FILES[index] }, () => {
+function executeFiles(tabId, frameIds, index, done) {
+  if (index >= CONTENT_SCRIPT_FILES.length) {
+    done(null);
+    return;
+  }
+  chrome.scripting.executeScript(
+    {
+      target: frameIds && frameIds.length ? { tabId, frameIds } : { tabId, allFrames: true },
+      files: [CONTENT_SCRIPT_FILES[index]]
+    },
+    () => {
       const error = chrome.runtime.lastError;
       if (error) {
         done(error);
         return;
       }
-      index += 1;
-      next();
-    });
-  }
-
-  next();
+      executeFiles(tabId, frameIds, index + 1, done);
+    }
+  );
 }
 
-chrome.browserAction.onClicked.addListener((tab) => {
-  if (!tab || !tab.id) {
-    return;
-  }
-
-  sendToggleMessage(tab.id, (firstError) => {
-    if (!firstError) {
+function injectContentScripts(tabId, done) {
+  chrome.webNavigation.getAllFrames({ tabId }, (frames) => {
+    const error = chrome.runtime.lastError;
+    if (error) {
+      done(error);
       return;
     }
+    const frameIds = Array.isArray(frames)
+      ? frames.filter((frame) => !isRestrictedUrl(frame.url)).map((frame) => frame.frameId)
+      : [];
+    executeFiles(tabId, frameIds, 0, done);
+  });
+}
 
+function sendToggleMessage(tabId, callback) {
+  chrome.tabs.sendMessage(tabId, { type: "TOGGLE_PANEL" }, () => {
+    callback(chrome.runtime.lastError);
+  });
+}
+
+function sendMessageToTab(tabId, msg) {
+  chrome.tabs.sendMessage(tabId, msg, () => {
+    void chrome.runtime.lastError;
+  });
+}
+
+chrome.action.onClicked.addListener((tab) => {
+  if (!tab || !tab.id) return;
+
+  sendToggleMessage(tab.id, (firstError) => {
+    if (!firstError) return;
     injectContentScripts(tab.id, (injectError) => {
       if (injectError) {
-        console.warn("[WebMatic] No se pudo inyectar en esta pagina:", injectError.message);
+        console.warn("[WebMatic Chromium] No se pudo inyectar en esta pagina:", injectError.message);
         return;
       }
-
       sendToggleMessage(tab.id, (secondError) => {
         if (secondError) {
-          console.warn("[WebMatic] No se pudo abrir panel tras inyeccion:", secondError.message);
+          console.warn("[WebMatic Chromium] No se pudo abrir panel tras inyeccion:", secondError.message);
         }
       });
     });
@@ -73,21 +94,17 @@ chrome.browserAction.onClicked.addListener((tab) => {
 
 let isRecording = false;
 let recordedSteps = [];
-let inlineRecordingTabId = null; // tab donde hay grabación inline activa
-let inlineBuffer = [];           // pasos acumulados entre navegaciones
-let inlineEditorContext = null;  // { macroId, draftSteps } del editor al iniciar grabación
-
-// Tracks which tabs have the panel open, so it can be restored after page navigation
+let inlineRecordingTabId = null;
+let inlineBuffer = [];
+let inlineEditorContext = null;
 const panelOpenTabs = new Set();
-
-// Stores pending playback state so it can be resumed after page navigation
-// { tabId, steps, index, vars, speed }
 let pendingPlayback = null;
 
-function sendMessageToTab(tabId, msg) {
-  chrome.tabs.sendMessage(tabId, msg, () => {
-    void chrome.runtime.lastError;
-  });
+function setBadge(text, color) {
+  chrome.action.setBadgeText({ text });
+  if (color) {
+    chrome.action.setBadgeBackgroundColor({ color });
+  }
 }
 
 function showFloatingBtnInTab(tabId) {
@@ -97,9 +114,7 @@ function showFloatingBtnInTab(tabId) {
 }
 
 function ensureFloatingBtnInTab(tab) {
-  if (!tab || !tab.id) return;
-  if (!tab.url || /^(chrome|about|moz-extension|chrome-extension):/.test(tab.url)) return;
-  // Always send recordedSteps so the new page can restore accumulated steps
+  if (!tab || !tab.id || isRestrictedUrl(tab.url)) return;
   chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING_BTN", steps: recordedSteps }, () => {
     if (chrome.runtime.lastError) {
       injectContentScripts(tab.id, (err) => {
@@ -114,36 +129,32 @@ function ensureFloatingBtnInTab(tab) {
 }
 
 function ensurePanelOpenInTab(tab) {
-  if (!tab || !tab.id) return;
-  if (!tab.url || /^(chrome|about|moz-extension|chrome-extension):/.test(tab.url)) return;
+  if (!tab || !tab.id || isRestrictedUrl(tab.url)) return;
   chrome.tabs.sendMessage(tab.id, { type: "OPEN_PANEL" }, () => {
     if (chrome.runtime.lastError) {
       injectContentScripts(tab.id, (err) => {
         if (!err) {
-          chrome.tabs.sendMessage(tab.id, { type: "OPEN_PANEL" }, () => { void chrome.runtime.lastError; });
+          chrome.tabs.sendMessage(tab.id, { type: "OPEN_PANEL" }, () => {
+            void chrome.runtime.lastError;
+          });
         }
       });
     }
   });
 }
 
-function _ensureInlineMirrorOrGoBack(tabId) {
-  if (inlineRecordingTabId === null) return;
-  // Si es la misma pestaña de grabación, no hacer nada
-  if (tabId === inlineRecordingTabId) return;
+function ensureInlineMirrorOrGoBack(tabId) {
+  if (inlineRecordingTabId === null || tabId === inlineRecordingTabId) return;
   chrome.tabs.get(tabId, (tab) => {
     if (chrome.runtime.lastError) return;
     const url = tab.url || tab.pendingUrl || "";
-    // PDFs y páginas restringidas no aceptan content scripts — volver a la pestaña de grabación
-    const isRestricted = /^(about:|chrome:|moz-extension:|chrome-extension:|blob:|data:)/i.test(url) ||
-      /\.pdf(\?|#|$)/i.test(url);
-    if (isRestricted) {
+    const restricted = /^(about:|chrome:|edge:|chrome-extension:|blob:|data:)/i.test(url) || /\.pdf(\?|#|$)/i.test(url);
+    if (restricted) {
       setTimeout(() => {
         chrome.tabs.update(inlineRecordingTabId, { active: true }, () => { void chrome.runtime.lastError; });
       }, 300);
       return;
     }
-    // Página normal: intentar mostrar el espejo; si falla (sin content script), volver
     chrome.tabs.sendMessage(tabId, { type: "SHOW_INLINE_REC_MIRROR" }, (resp) => {
       if (chrome.runtime.lastError || !resp) {
         setTimeout(() => {
@@ -161,9 +172,7 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
     if (chrome.runtime.lastError) return;
     if (isRecording) ensureFloatingBtnInTab(tab);
     if (panelOpenTabs.has(activeInfo.tabId)) ensurePanelOpenInTab(tab);
-    if (inlineRecordingTabId !== null) {
-      _ensureInlineMirrorOrGoBack(activeInfo.tabId);
-    }
+    if (inlineRecordingTabId !== null) ensureInlineMirrorOrGoBack(activeInfo.tabId);
   });
 });
 
@@ -171,15 +180,13 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status !== "complete") return;
   if (isRecording) ensureFloatingBtnInTab(tab);
   if (panelOpenTabs.has(tabId)) ensurePanelOpenInTab(tab);
-  // Si la pestaña de grabación inline navegó a una subpágina, re-inyectar el panel flotante
   if (inlineRecordingTabId !== null && tabId === inlineRecordingTabId) {
     const count = inlineBuffer.length;
     setTimeout(() => {
       if (inlineRecordingTabId === tabId) {
-        chrome.tabs.sendMessage(tabId, {
-          type: "SHOW_INLINE_REC_PANEL",
-          priorStepCount: count
-        }, () => { void chrome.runtime.lastError; });
+        chrome.tabs.sendMessage(tabId, { type: "SHOW_INLINE_REC_PANEL", priorStepCount: count }, () => {
+          void chrome.runtime.lastError;
+        });
       }
     }, 600);
   }
@@ -197,7 +204,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "SAVE_PLAYBACK_STATE") {
-    // Called by player just before a navigating click
     if (sender && sender.tab && sender.tab.id) {
       pendingPlayback = {
         tabId: sender.tab.id,
@@ -214,9 +220,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "QUERY_PENDING_PLAYBACK") {
     if (sender && sender.tab && sender.tab.id && pendingPlayback && pendingPlayback.tabId === sender.tab.id) {
-      const p = pendingPlayback;
+      const pending = pendingPlayback;
       pendingPlayback = null;
-      sendResponse({ pending: p });
+      sendResponse({ pending });
     } else {
       sendResponse({ pending: null });
     }
@@ -236,74 +242,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "GET_FOLDER_NAME") {
-    chrome.storage.local.get("webmaticExportFolder", (r) => {
-      sendResponse({ name: (r && r.webmaticExportFolder) || null });
+    chrome.storage.local.get("webmaticExportFolder", (result) => {
+      sendResponse({ name: (result && result.webmaticExportFolder) || null });
     });
     return true;
   }
 
   if (message?.type === "EXPORT_FILE") {
-    chrome.storage.local.get("webmaticExportFolder", (r) => {
-      const fsHandle = (typeof globalThis !== "undefined" && globalThis.WebMaticFsHandle)
-        ? globalThis.WebMaticFsHandle
-        : null;
-
-      const folderNameRaw = (r && r.webmaticExportFolder) || "";
-      const folderName = fsHandle && typeof fsHandle.sanitizeFolderName === "function"
-        ? fsHandle.sanitizeFolderName(folderNameRaw)
-        : String(folderNameRaw || "").trim();
-
-      const filename = fsHandle && typeof fsHandle.buildExportFilename === "function"
-        ? fsHandle.buildExportFilename(folderName, message.filename)
-        : (folderName ? folderName + "/" + String(message.filename || "") : String(message.filename || "webmatic-export.txt"));
-      // saveAs=false: guardar silencioso. saveAs=true: forzar diálogo.
-      // undefined: comportamiento previo (diálogo solo si no hay carpeta configurada).
-      const useSaveAs = message.saveAs === true
-        ? true
-        : (message.saveAs === false ? false : !folderName);
-      const bytes = new TextEncoder().encode(message.content);
-      const blob = new Blob([bytes], { type: "text/plain;charset=utf-8" });
-      const blobUrl = URL.createObjectURL(blob);
-      chrome.downloads.download(
-        { url: blobUrl, filename, saveAs: useSaveAs, conflictAction: "overwrite" },
-        () => { void chrome.runtime.lastError; setTimeout(() => URL.revokeObjectURL(blobUrl), 60000); }
-      );
+    chrome.storage.local.get("webmaticExportFolder", (result) => {
+      const folderName = (result && result.webmaticExportFolder) || null;
+      const filename = folderName ? `${folderName}/${message.filename}` : message.filename;
+      const useSaveAs = message.saveAs === true ? true : (message.saveAs === false ? false : !folderName);
+      const url = `data:text/plain;charset=utf-8,${encodeURIComponent(String(message.content || ""))}`;
+      chrome.downloads.download({ url, filename, saveAs: useSaveAs, conflictAction: "overwrite" }, () => {
+        void chrome.runtime.lastError;
+      });
       sendResponse({ ok: true, folder: folderName });
     });
     return true;
   }
 
   if (message?.type === "DOWNLOAD_FILE") {
-    try {
-      // Decode the base64 data URL to a Blob so Firefox saveAs dialog works reliably
-      const dataUrl = String(message.url || "");
-      const base64 = dataUrl.indexOf(",") !== -1 ? dataUrl.split(",")[1] : dataUrl;
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const blob = new Blob([bytes], { type: "text/plain;charset=utf-8" });
-      const blobUrl = URL.createObjectURL(blob);
-      chrome.downloads.download(
-        { url: blobUrl, filename: message.filename || "macro.iim", saveAs: true },
-        () => {
-          void chrome.runtime.lastError;
-          setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-        }
-      );
-    } catch (e) {
-      console.error("[WebMatic] DOWNLOAD_FILE error:", e);
-    }
+    chrome.downloads.download({
+      url: String(message.url || ""),
+      filename: message.filename || "macro.iim",
+      saveAs: true
+    }, () => {
+      void chrome.runtime.lastError;
+    });
     sendResponse({ ok: true });
     return true;
   }
 
   if (message?.type === "PANEL_STATE_CHANGED") {
     if (sender && sender.tab && sender.tab.id) {
-      if (message.visible) {
-        panelOpenTabs.add(sender.tab.id);
-      } else {
-        panelOpenTabs.delete(sender.tab.id);
-      }
+      if (message.visible) panelOpenTabs.add(sender.tab.id);
+      else panelOpenTabs.delete(sender.tab.id);
     }
     sendResponse({ ok: true });
     return true;
@@ -318,22 +292,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     isRecording = message.active === true;
     if (isRecording) {
       recordedSteps = [];
-      chrome.browserAction.setBadgeText({ text: "REC" });
-      chrome.browserAction.setBadgeBackgroundColor({ color: "#dc2626" });
+      setBadge("REC", "#dc2626");
     } else {
       recordedSteps = [];
-      chrome.browserAction.setBadgeText({ text: "" });
+      setBadge("");
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => sendMessageToTab(tab.id, { type: "HIDE_FLOATING_BTN" }));
       });
     }
-    // Notificar a todos los sub-frames del tab actual
     if (sender && sender.tab && sender.tab.id) {
-      chrome.tabs.sendMessage(
-        sender.tab.id,
-        { type: "RECORDING_STATE", active: isRecording },
-        () => { void chrome.runtime.lastError; }
-      );
+      chrome.tabs.sendMessage(sender.tab.id, { type: "RECORDING_STATE", active: isRecording }, () => {
+        void chrome.runtime.lastError;
+      });
     }
     sendResponse({ ok: true });
     return true;
@@ -355,12 +325,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message?.type === "FRAME_STEP_CAPTURED") {
     if (isRecording && sender && sender.tab && sender.tab.id) {
-      chrome.tabs.sendMessage(
-        sender.tab.id,
-        { type: "FRAME_STEP_CAPTURED", step: message.step },
-        { frameId: 0 },
-        () => { void chrome.runtime.lastError; }
-      );
+      chrome.tabs.sendMessage(sender.tab.id, { type: "FRAME_STEP_CAPTURED", step: message.step }, { frameId: 0 }, () => {
+        void chrome.runtime.lastError;
+      });
     }
     return false;
   }
@@ -376,20 +343,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // ── Grabación inline ──
   if (message?.type === "INLINE_RECORDING_STARTED") {
     if (sender && sender.tab && sender.tab.id) {
       inlineRecordingTabId = sender.tab.id;
-      inlineBuffer = []; // buffer fresco para esta sesión
+      inlineBuffer = [];
       inlineEditorContext = message.editorContext || null;
-      chrome.browserAction.setBadgeText({ text: "●REC" });
-      chrome.browserAction.setBadgeBackgroundColor({ color: "#ef4444" });
+      setBadge("●REC", "#ef4444");
     }
     sendResponse({ ok: true });
     return true;
   }
 
-  // Cada paso capturado en content.js se envía aquí para persistir entre navegaciones
   if (message?.type === "INLINE_RECORD_STEP") {
     if (inlineRecordingTabId !== null && message.step) {
       const step = message.step;
@@ -404,16 +368,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  // Solicitud de detención desde content.js: devolver todos los pasos acumulados y el contexto del editor
   if (message?.type === "INLINE_RECORDING_STOP_REQUEST") {
     const steps = inlineBuffer.slice();
     const editorContext = inlineEditorContext;
     inlineBuffer = [];
     inlineEditorContext = null;
     inlineRecordingTabId = null;
-    if (!isRecording) {
-      chrome.browserAction.setBadgeText({ text: "" });
-    }
+    if (!isRecording) setBadge("");
     sendResponse({ ok: true, steps, editorContext });
     return true;
   }
@@ -422,9 +383,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     inlineRecordingTabId = null;
     inlineBuffer = [];
     inlineEditorContext = null;
-    if (!isRecording) {
-      chrome.browserAction.setBadgeText({ text: "" });
-    }
+    if (!isRecording) setBadge("");
     sendResponse({ ok: true });
     return true;
   }

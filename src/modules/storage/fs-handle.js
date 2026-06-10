@@ -2,6 +2,45 @@
   const extensionApi = typeof browser !== "undefined" ? browser : (typeof chrome !== "undefined" ? chrome : null);
   const STORAGE_KEY = "webmaticExportFolder";
 
+  function sanitizeFolderName(name) {
+    const raw = String(name || "").trim();
+    if (!raw) return "";
+
+    const cleaned = raw
+      .replace(/[\\/]+/g, "-")
+      .replace(/[\x00-\x1F<>:"|?*]+/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/^\.+/, "")
+      .trim();
+
+    return cleaned.slice(0, 80);
+  }
+
+  function sanitizeRelativeFilename(filename) {
+    const raw = String(filename || "").trim().replace(/\\/g, "/");
+    if (!raw) return "webmatic-export.txt";
+
+    const safeSegments = raw
+      .split("/")
+      .map((segment) => String(segment || "").trim())
+      .filter((segment) => segment && segment !== "." && segment !== "..")
+      .map((segment) => segment
+        .replace(/[\x00-\x1F<>:"|?*]+/g, "")
+        .replace(/^\.+/, "")
+        .trim()
+      )
+      .filter(Boolean);
+
+    if (!safeSegments.length) return "webmatic-export.txt";
+    return safeSegments.join("/");
+  }
+
+  function buildExportFilename(folderName, filename) {
+    const safeFolder = sanitizeFolderName(folderName);
+    const safeFilename = sanitizeRelativeFilename(filename);
+    return safeFolder ? `${safeFolder}/${safeFilename}` : safeFilename;
+  }
+
   function storageSet(value) {
     return new Promise((resolve) => {
       extensionApi.storage.local.set({ [STORAGE_KEY]: value }, resolve);
@@ -27,9 +66,9 @@
    * @param {string} name  Subfolder name within Downloads (e.g. "mis-macros")
    */
   async function setFolderName(name) {
-    const trimmed = String(name || "").trim();
-    if (trimmed) {
-      await storageSet(trimmed);
+    const safeName = sanitizeFolderName(name);
+    if (safeName) {
+      await storageSet(safeName);
     } else {
       await storageRemove();
     }
@@ -59,7 +98,16 @@
   // writeFile is handled by background via chrome.downloads — kept as no-op for API compatibility
   async function writeFile() {}
 
-  globalScope.WebMaticFsHandle = { pickFolder, setFolderName, getHandle, writeFile, clearHandle };
+  globalScope.WebMaticFsHandle = {
+    pickFolder,
+    setFolderName,
+    getHandle,
+    writeFile,
+    clearHandle,
+    sanitizeFolderName,
+    sanitizeRelativeFilename,
+    buildExportFilename
+  };
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = globalScope.WebMaticFsHandle;

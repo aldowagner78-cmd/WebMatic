@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WebMatic - Prueba 1 imprimible del grabador</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #cbd5e1;
+      --soft: #f8fafc;
+      --accent: #0369a1;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 24px 0 10px; font-size: 20px; }
+    p, li, td, th { font-size: 14px; line-height: 1.5; }
+
+    .intro {
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--accent);
+      background: #f0f9ff;
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+    }
+
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--soft);
+      padding: 10px;
+    }
+
+    .label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-bottom: 4px;
+    }
+
+    .value {
+      min-height: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 8px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th { background: #f1f5f9; }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px 12px;
+      margin: 0 0 10px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    .step-title {
+      font-weight: 700;
+      margin-bottom: 5px;
+    }
+
+    .expected {
+      color: #0c4a6e;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      border-radius: 8px;
+      padding: 6px 8px;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    .checklist td:last-child {
+      width: 140px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .notes {
+      min-height: 120px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      margin-top: 8px;
+      padding: 10px;
+    }
+
+    .small { font-size: 12px; color: var(--muted); }
+
+    @media print {
+      body { padding: 14px; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Prueba 1 - Grabador (imprimible)</h1>
+    <p class="small">Objetivo: generar una macro base limpia y evaluable del grabador.</p>
+
+    <div class="intro">
+      Ejecuta esta prueba exactamente en el orden indicado. Cuando termines, me compartes la macro resultante y te la evalúo paso por paso.
+    </div>
+
+    <div class="meta">
+      <div class="box"><span class="label">Fecha</span><div class="value"></div></div>
+      <div class="box"><span class="label">Probador</span><div class="value"></div></div>
+      <div class="box"><span class="label">Extensión</span><div class="value">WebMatic - Grabador</div></div>
+    </div>
+
+    <h2>Página a usar (existente)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Tipo</th>
+          <th>Ruta</th>
+          <th>Uso</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Fixture local</td>
+          <td>accesorios/pruebas/tests/fixtures/universal-macro-fixture.html</td>
+          <td>Cubre controles modernos, legacy, GeneXus-like, modal y shadow.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Secuencia precisa de pasos</h2>
+
+    <div class="step">
+      <div class="step-title">Paso 1 - Ir a la página</div>
+      <ol>
+        <li>Abre Firefox.</li>
+        <li>Carga la página de prueba: accesorios/pruebas/tests/fixtures/universal-macro-fixture.html.</li>
+        <li>Espera a que se vea el header "Fixture universal para macros".</li>
+      </ol>
+      <div class="expected">Esperado: la página queda totalmente cargada antes de iniciar grabación.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 2 - Iniciar grabación</div>
+      <ol>
+        <li>Abre WebMatic en esa pestaña.</li>
+        <li>Presiona el botón de grabar.</li>
+        <li>Confirma visualmente que la grabación está activa.</li>
+      </ol>
+      <div class="expected">Esperado: WebMatic entra en modo grabación y comienza a registrar acciones.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 3 - Interacción de formulario clásico</div>
+      <ol>
+        <li>En "N° de Afiliado / DNI" escribe: 30111222.</li>
+        <li>En "Nombre y Apellido" escribe: ANA TORRES.</li>
+        <li>En "N° de Autorización" escribe: AUT-2026-0001.</li>
+        <li>En "Ord. Int." escribe: 77.</li>
+        <li>En "Buscar" escribe: auditoria.</li>
+        <li>En "Nota" escribe: Prueba 1 de grabador.</li>
+      </ol>
+      <div class="expected">Esperado: se registran pasos de input/text en todos esos campos.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 4 - Selects y checks</div>
+      <ol>
+        <li>En "Ver" selecciona: Requiere Auditoría Médica.</li>
+        <li>En "Tipo Autorización" selecciona: Urgente.</li>
+        <li>En "Estado" selecciona: Pendiente.</li>
+        <li>En "Cobertura" selecciona: Obra social.</li>
+        <li>En "Tiene archivo adjunto" selecciona: Sí.</li>
+        <li>En "Modalidad" selecciona: Internación.</li>
+        <li>Desmarca "Ver bajas".</li>
+        <li>Marca "Tiene adjunto".</li>
+        <li>Marca radio "Externo".</li>
+      </ol>
+      <div class="expected">Esperado: pasos choose_option y check correctamente tipados.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 5 - Autocomplete moderno</div>
+      <ol>
+        <li>En "Afiliado (fetch-like)" escribe: wag.</li>
+        <li>Cuando aparezca la lista, haz clic en "Wagner, Aldo (1001)".</li>
+        <li>En "Especialidad (datalist)" escribe y deja: Cardiología.</li>
+      </ol>
+      <div class="expected">Esperado: registro de input y selección efectiva del valor sugerido.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 6 - GeneXus-like y legacy</div>
+      <ol>
+        <li>En "Delegación" (vDELEGACION) escribe: ROS y elige ROSARIO.</li>
+        <li>En "Especialidad" (vAUCAESPEFC) escribe: CAR y elige CARDIOLOGÍA.</li>
+        <li>En "Delegation legacy" escribe: BEL y elige BELGRANO.</li>
+        <li>En "Specialty legacy" escribe: DER y elige DERMATOLOGIA.</li>
+      </ol>
+      <div class="expected">Esperado: quedan capturados eventos de autocomplete híbrido.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 7 - Botones y acciones de tabla</div>
+      <ol>
+        <li>Presiona botón superior "Buscar".</li>
+        <li>Presiona "Filtrar".</li>
+        <li>Presiona "Guardar".</li>
+        <li>En la primera fila de "Resultados", haz clic en "Ver".</li>
+        <li>En la misma fila, haz clic en "Editar".</li>
+      </ol>
+      <div class="expected">Esperado: pasos click claros y en el orden exacto.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 8 - Modal</div>
+      <ol>
+        <li>Presiona "Abrir modal".</li>
+        <li>En "Motivo" escribe: Validacion grabador.</li>
+        <li>En "Prioridad" selecciona: Alta.</li>
+        <li>Presiona "Aceptar".</li>
+      </ol>
+      <div class="expected">Esperado: se registran click, input y choose_option dentro del modal.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 9 - Shadow DOM</div>
+      <ol>
+        <li>En "Shadow city" escribe: ros.</li>
+        <li>Selecciona "Rosario" en la lista del componente shadow.</li>
+      </ol>
+      <div class="expected">Esperado: el grabador captura correctamente la interacción del componente.</div>
+    </div>
+
+    <div class="step">
+      <div class="step-title">Paso 10 - Cierre de prueba</div>
+      <ol>
+        <li>Detén la grabación.</li>
+        <li>Guarda la macro con nombre: PRUEBA_1_GRABADOR_COMPLETA.</li>
+        <li>Exporta la macro en JSON o IIM.</li>
+      </ol>
+      <div class="expected">Esperado: macro final utilizable para revisión técnica.</div>
+    </div>
+
+    <h2>Checklist de control antes de enviarme la macro</h2>
+    <table class="checklist">
+      <thead>
+        <tr>
+          <th>Validación</th>
+          <th>OK / FAIL</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Se grabaron campos de texto básicos.</td><td></td></tr>
+        <tr><td>Se grabaron selects y checks correctamente.</td><td></td></tr>
+        <tr><td>Se grabaron autocompletes modernos y legacy.</td><td></td></tr>
+        <tr><td>Se grabó interacción en modal.</td><td></td></tr>
+        <tr><td>Se grabó interacción en shadow DOM.</td><td></td></tr>
+        <tr><td>La macro quedó guardada y exportada.</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Notas de ejecución</h2>
+    <div class="notes"></div>
+  </div>
+</body>
+</html>

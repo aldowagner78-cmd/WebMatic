@@ -8,7 +8,10 @@ test("full-backup: export incluye macros y settings", () => {
     macros: [{ id: "m1", name: "Macro 1", steps: [{ type: "click", selector: "#a" }], script: "CLICK" }],
     settings: { themeMode: "dark", themeVariant: 3, panelSide: "right" },
     ui: { panelSide: "right", panelWidth: 260 },
-    metadata: { storage: { webmaticExportFolder: "X" } }
+    metadata: {
+      storage: { webmaticExportFolder: "X" },
+      profiles: [{ id: "pm1", page: { url: "https://example.test" }, inventories: [] }]
+    }
   });
 
   assert.equal(payload.version, 1);
@@ -17,6 +20,8 @@ test("full-backup: export incluye macros y settings", () => {
   assert.equal(payload.macros.length, 1);
   assert.equal(payload.settings.themeMode, "dark");
   assert.equal(payload.ui.panelSide, "right");
+  assert.equal(Array.isArray(payload.metadata.profiles), true);
+  assert.equal(payload.metadata.profiles.length, 1);
 });
 
 test("full-backup: parse full backup restaura macros y settings", () => {
@@ -27,13 +32,18 @@ test("full-backup: parse full backup restaura macros y settings", () => {
     macros: [{ id: "m1", name: "Macro 1", meta: { pageInventories: [{ controls: [] }] } }],
     settings: { themeMode: "light", themeVariant: 2, runtimeDataTemplates: [{ id: "t1", name: "T" }] },
     ui: { panelSide: "left" },
-    metadata: { storage: { webmaticHelpTheme: { themeMode: "light", themeVariant: 2 } } }
+    metadata: {
+      storage: { webmaticHelpTheme: { themeMode: "light", themeVariant: 2 } },
+      profiles: [{ id: "pm1", page: { url: "https://example.test" }, inventories: [{ controls: [] }] }]
+    }
   });
 
   assert.equal(parsed.kind, "full");
   assert.equal(parsed.data.macros.length, 1);
   assert.equal(parsed.data.settings.themeVariant, 2);
   assert.equal(parsed.data.macros[0].meta.pageInventories.length, 1);
+  assert.equal(Array.isArray(parsed.data.metadata.profiles), true);
+  assert.equal(parsed.data.metadata.profiles.length, 1);
 });
 
 test("full-backup: parse backup legacy de macros mantiene compatibilidad", () => {

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IAPOS Fixture - Subpage</title>
+</head>
+<body style="font-family:Segoe UI,sans-serif;margin:20px;">
+  <h1>IAPOS-like Subpage</h1>
+  <p>Valida continuidad de UI de extensión al navegar.</p>
+
+  <label for="iapos-sub-notes">Notas</label>
+  <input id="iapos-sub-notes" type="text" autocomplete="off" />
+
+  <div style="margin-top:12px;">
+    <button id="iapos-back" type="button">Volver</button>
+  </div>
+
+  <script>
+    document.getElementById("iapos-back").addEventListener("click", () => {
+      location.href = "./iapos-subpage.html";
+    });
+  </script>
+</body>
+</html>
