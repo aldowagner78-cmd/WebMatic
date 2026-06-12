@@ -44,6 +44,23 @@ test("Store: RECORD_STOPPED restaura panel docked y cambia a reproducir", () => 
   assert.equal(store.getState().draft.stepsCount, 1);
 });
 
+test("Store: DRAFT_RESTORED reemplaza pasos y contador en bloque", () => {
+  const store = storeApi.createStore();
+  store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
+  store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: { type: "click", selector: "#a" } });
+
+  const restored = [
+    { type: "navigate", url: "https://example.com" },
+    { type: "click", selector: "#b" }
+  ];
+  store.dispatch({ type: contracts.ActionTypes.DRAFT_RESTORED, payload: restored });
+
+  assert.equal(store.getState().draft.stepsCount, 2);
+  assert.equal(store.getState().draft.steps.length, 2);
+  assert.equal(store.getState().draft.steps[0].type, "navigate");
+  assert.equal(store.getState().draft.steps[1].selector, "#b");
+});
+
 test("Store: PLAY_STARTED y PLAY_STOPPED actualizan playback", () => {
   const store = storeApi.createStore();
 

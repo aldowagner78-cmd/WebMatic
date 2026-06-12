@@ -1,6 +1,14 @@
 (function initStepEditor(globalScope) {
   const STEP_TYPES = [
     { value: "navigate",     label: "\u{1F310} Navegar",        fields: [{ name: "url",        ph: "https://ejemplo.com" }] },
+    { value: "browser_back",    label: "\u2B05 Atrás", fields: [] },
+    { value: "browser_forward", label: "\u27A1 Adelante", fields: [] },
+    { value: "browser_history", label: "\u21C4 Historial", fields: [] },
+    { value: "browser_reload",  label: "\u21BB Recargar", fields: [] },
+    { value: "open_bookmark",   label: "\u{1F516} Abrir favorito", fields: [{ name: "url", ph: "https://ejemplo.com" }] },
+    { value: "open_tab",     label: "\u{1F5D7} Abrir pesta\u00f1a", fields: [{ name: "url", ph: "https://ejemplo.com" }, { name: "activate", ph: "true", select: [["true", "Activar nueva pesta\u00f1a"], ["false", "Abrir en segundo plano"]] }] },
+    { value: "switch_tab",   label: "\u21C4 Cambiar pesta\u00f1a",  fields: [{ name: "url", ph: "https://ejemplo.com" }, { name: "openIfMissing", ph: "true", select: [["true", "Abrir si no existe"], ["false", "Fallar si no existe"]] }] },
+    { value: "close_tab",    label: "\u2716 Cerrar pesta\u00f1a",   fields: [{ name: "target", ph: "current", select: [["current", "Cerrar pesta\u00f1a actual"], ["match_url", "Cerrar por URL"]] }, { name: "url", ph: "https://ejemplo.com (si target=match_url)" }] },
     { value: "click",        label: "\u{1F5B1} Clic",           fields: [{ name: "selector",   ph: "#mi-boton" }] },
     { value: "dblclick",     label: "\u{1F5B1}\u{1F5B1} Doble clic", fields: [{ name: "selector", ph: "#mi-boton" }] },
     { value: "input",        label: "\u2328 Escribir",          fields: [{ name: "selector",   ph: "#mi-input" }, { name: "value", ph: "texto a escribir" }, { name: "useCurrentValue", type: "toggle", label: "\u21BA Usar valor actual del campo" }] },
@@ -24,7 +32,7 @@
   ];
 
   const TYPE_ICONS = {
-    navigate: "\u{1F310}", click: "\u{1F5B1}", dblclick: "\u{1F5B1}\u{1F5B1}", input: "\u2328", text: "\u2328",
+    navigate: "\u{1F310}", browser_back: "\u2B05", browser_forward: "\u27A1", browser_history: "\u21C4", browser_reload: "\u21BB", open_bookmark: "\u{1F516}", open_tab: "\u{1F5D7}", switch_tab: "\u21C4", close_tab: "\u2716", click: "\u{1F5B1}", dblclick: "\u{1F5B1}\u{1F5B1}", input: "\u2328", text: "\u2328",
     wait: "\u23F1", key: "\u2328", check: "\u2611", choose_option: "\u{1F4CB}", extract: "\u270F",
     wait_for: "\u23F3", scroll_to: "\u21D3", hover: "\u25B7", drag_drop: "\u2194",
     set_variable: "=", prompt: "?", if_exists: "\u2299", loop_until: "\u21BA",
@@ -35,6 +43,14 @@
   function _shortLabel(s) {
     if (!s) return "";
     if (s.type === "navigate")     return s.url || "";
+    if (s.type === "browser_back") return "atrás";
+    if (s.type === "browser_forward") return "adelante";
+    if (s.type === "browser_history") return "historial";
+    if (s.type === "browser_reload") return "recargar";
+    if (s.type === "open_bookmark") return s.url || "favorito";
+    if (s.type === "open_tab")     return `${s.url || ""} (${String(s.activate || "true") === "false" ? "segundo plano" : "activa"})`;
+    if (s.type === "switch_tab")   return `${s.url || ""} (${String(s.openIfMissing || "true") === "false" ? "sin abrir" : "abrir si falta"})`;
+    if (s.type === "close_tab")    return s.target === "match_url" ? `por URL: ${s.url || ""}` : "pesta\u00f1a actual";
     if (s.type === "click")        return s.selector || "";
     if (s.type === "dblclick")     return s.selector || "";
     if (s.type === "input" || s.type === "text")
@@ -84,6 +100,13 @@
       this._onPickRequest = null;   // callback(fieldName, onPicked) para picker visual
       this._inventory = [];         // inventario de controles capturado al grabar
       this._autocompleteCatalogs = {}; // meta.autocompleteCatalogs
+      this._movedStepMeta = new Map(); // stepRef -> {source, at}
+      this._dragFromIdx = null;
+      this._dragMode = "step"; // "step" | "block"
+      this._collapsedBlocks = new Set(); // keys "start:end" de bloques colapsados
+      this._addFormTargetIndex = null;
+      this._addFormAsNewBlock = false;
+      this._pendingRecordIntoBlock = null; // blockKey mientras graba inline en un bloque
     }
 
     /** Registra el inventario de controles (macro.meta.pageInventories). */
@@ -376,10 +399,44 @@
 
     setSteps(steps) {
       this.steps = Array.isArray(steps) ? JSON.parse(JSON.stringify(steps)) : [];
+      this._movedStepMeta.clear();
+      this._collapsedBlocks.clear();
+      this._addFormOpen = false;
+      this._addFormTargetIndex = null;
+      this._addFormAsNewBlock = false;
+      this._pendingRecordIntoBlock = null;
+      this._collapseAllBlocksByDefault();
+      this._initCollapsedBlocksFromSteps();
+    }
+
+    _openAddForm(insertAt, asNewBlock = false) {
+      this._addFormOpen = true;
+      this._addFormTargetIndex = Number.isInteger(insertAt) ? insertAt : this.steps.length;
+      if (this._addFormTargetIndex < 0) this._addFormTargetIndex = 0;
+      if (this._addFormTargetIndex > this.steps.length) this._addFormTargetIndex = this.steps.length;
+      this._addFormAsNewBlock = !!asNewBlock;
+      this._editIdx = null;
+      this._render();
+    }
+
+    _closeAddForm() {
+      this._addFormOpen = false;
+      this._addFormTargetIndex = null;
+      this._addFormAsNewBlock = false;
     }
 
     getSteps() {
       return JSON.parse(JSON.stringify(this.steps));
+    }
+
+    hasPendingReorderChanges() {
+      return this._movedStepMeta.size > 0;
+    }
+
+    clearReorderHighlights() {
+      if (this._movedStepMeta.size === 0) return;
+      this._movedStepMeta.clear();
+      this._render();
     }
 
     mount(container, onChange) {
@@ -387,6 +444,7 @@
       this._onChange = onChange;
       this._addFormOpen = false;
       this._editIdx = null;
+      this._pendingRecordIntoBlock = null;
       this._render();
     }
 
@@ -412,55 +470,309 @@
       } else if (this.steps.length > 0) {
         const list = document.createElement("div");
         list.className = "wm-sved-list";
-        this.steps.forEach((step, idx) => {
-          const row = document.createElement("div");
-          row.className = "wm-sved-row";
+        const dragEnabled = this._editIdx === null;
 
-          const num = document.createElement("span");
-          num.className = "wm-sved-num";
-          num.textContent = String(idx + 1);
+        if (this.hasPendingReorderChanges()) {
+          const pending = document.createElement("div");
+          pending.className = "wm-sved-reorder-pending";
+          const n = this._movedStepMeta.size;
+          pending.textContent = `Reordenado pendiente: ${n} paso${n !== 1 ? "s" : ""}. Guarda para aplicar o cierra para descartar.`;
+          list.appendChild(pending);
+        }
 
-          const icon = document.createElement("span");
-          icon.className = "wm-sved-icon";
-          icon.textContent = TYPE_ICONS[step.type] || "\u25B8";
-
-          const typeTag = document.createElement("span");
-          typeTag.className = "wm-sved-type";
-          typeTag.textContent = step.type;
-
-          const desc = document.createElement("span");
-          desc.className = "wm-sved-desc";
-          const lbl = _shortLabel(step);
-          desc.textContent = lbl;
-          desc.title = lbl;
-
-          const ctrl = document.createElement("div");
-          ctrl.className = "wm-sved-ctrl";
-          ctrl.appendChild(_mkBtn("\u2191", "Subir", idx === 0, () => this._move(idx, -1)));
-          ctrl.appendChild(_mkBtn("\u2193", "Bajar", idx === this.steps.length - 1, () => this._move(idx, 1)));
-          const editBtn = _mkBtn("✏", "Editar paso", false, () => {
-            this._editIdx = this._editIdx === idx ? null : idx;
-            this._addFormOpen = false;
-            this._render();
+        const clearDropIndicators = () => {
+          list.querySelectorAll(".wm-sved-row-drop-before, .wm-sved-row-drop-after").forEach((el) => {
+            el.classList.remove("wm-sved-row-drop-before", "wm-sved-row-drop-after");
           });
-          editBtn.classList.add("wm-sved-btn-edit");
-          ctrl.appendChild(editBtn);
-          const delBtn = _mkBtn("✕", "Eliminar", false, () => this._delete(idx));
-          delBtn.classList.add("wm-sved-btn-del");
-          ctrl.appendChild(delBtn);
+        };
 
-          row.appendChild(num);
-          row.appendChild(icon);
-          row.appendChild(typeTag);
-          row.appendChild(desc);
-          row.appendChild(ctrl);
-          list.appendChild(row);
+        const clearDraggingState = () => {
+          this._dragFromIdx = null;
+          this._dragMode = "step";
+          clearDropIndicators();
+          list.querySelectorAll(".wm-sved-row-dragging").forEach((el) => {
+            el.classList.remove("wm-sved-row-dragging");
+          });
+        };
 
-          // Show edit form inline, below the row
-          if (this._editIdx === idx) {
-            list.appendChild(this._buildEditForm(idx));
+        const computeDropPos = (evt, row) => {
+          const rect = row.getBoundingClientRect();
+          const relY = evt.clientY - rect.top;
+          return relY >= rect.height / 2 ? "after" : "before";
+        };
+
+        const applyDropIndicator = (row, pos) => {
+          clearDropIndicators();
+          row.classList.add(pos === "after" ? "wm-sved-row-drop-after" : "wm-sved-row-drop-before");
+        };
+
+        const persistedCollapsed = new Set();
+        let idx = 0;
+        while (idx < this.steps.length) {
+          const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
+          const start = block.start;
+          const end = block.end;
+          if (start !== idx) {
+            idx += 1;
+            continue;
           }
-        });
+
+          const blockSize = end - start + 1;
+          const blockOrdinal = this._getExecutionBlockOrdinal(start);
+          const blockKey = `${start}:${end}`;
+          const canCollapse = blockSize > 1;
+          const hasOpenEditInBlock = this._editIdx !== null && this._editIdx >= start && this._editIdx <= end;
+          const collapsed = canCollapse && this._collapsedBlocks.has(blockKey) && !hasOpenEditInBlock;
+          if (canCollapse && this._collapsedBlocks.has(blockKey)) persistedCollapsed.add(blockKey);
+
+          const blockWrap = document.createElement("section");
+          blockWrap.className = `wm-sved-block wm-sved-block-theme-${((blockOrdinal - 1) % 4) + 1}`;
+          blockWrap.dataset.blockStart = String(start);
+          blockWrap.dataset.blockEnd = String(end);
+          if (collapsed) blockWrap.classList.add("wm-sved-block-collapsed");
+
+          const blockHeader = document.createElement("div");
+          blockHeader.className = "wm-sved-block-header";
+
+          const blockTag = document.createElement("span");
+          blockTag.className = "wm-sved-block-tag";
+          blockTag.textContent = `bloque ${blockOrdinal}`;
+          blockTag.title = `Bloque encadenado de ${blockSize} pasos`;
+          blockHeader.appendChild(blockTag);
+
+          const blockMeta = document.createElement("span");
+          blockMeta.className = "wm-sved-block-meta";
+          blockMeta.textContent = `${blockSize} paso${blockSize !== 1 ? "s" : ""}`;
+          blockHeader.appendChild(blockMeta);
+
+          const blockStateBadge = document.createElement("span");
+          blockStateBadge.className = "wm-sved-block-state-badge";
+          if (canCollapse) {
+            blockStateBadge.textContent = collapsed ? "⊞ colapsado" : "⊟ expandido";
+            blockStateBadge.classList.add(collapsed ? "wm-sved-block-state-collapsed" : "wm-sved-block-state-expanded");
+          }
+          blockHeader.appendChild(blockStateBadge);
+
+          if (canCollapse) {
+            const toggleBtn = document.createElement("button");
+            toggleBtn.className = "wm-sved-block-toggle";
+            toggleBtn.type = "button";
+            toggleBtn.innerHTML = collapsed ? "&#9654;" : "&#9660;";
+            toggleBtn.title = collapsed ? "Desplegar bloque para editar pasos" : "Colapsar bloque";
+            toggleBtn.addEventListener("click", () => {
+              if (this._collapsedBlocks.has(blockKey)) this._collapsedBlocks.delete(blockKey);
+              else this._collapsedBlocks.add(blockKey);
+              this._render();
+            });
+            blockHeader.appendChild(toggleBtn);
+          }
+
+          blockWrap.appendChild(blockHeader);
+
+          const blockBody = document.createElement("div");
+          blockBody.className = "wm-sved-block-body";
+
+          for (let rowIdx = start; rowIdx <= end; rowIdx++) {
+            if (collapsed && rowIdx > start) continue;
+
+            const step = this.steps[rowIdx];
+            const row = document.createElement("div");
+            row.className = "wm-sved-row";
+            row.dataset.stepIdx = String(rowIdx);
+            const rowBlock = this._findExecutionBlockBounds(rowIdx);
+            const blockLead = !!rowBlock && rowBlock.start === rowIdx;
+
+            const movedMeta = this._movedStepMeta.get(step);
+            if (movedMeta) {
+              row.classList.add("wm-sved-row-moved");
+              row.classList.add(movedMeta.source === "drag" ? "wm-sved-row-moved-drag" : "wm-sved-row-moved-button");
+            }
+
+            row.classList.add("wm-sved-row-block");
+            row.classList.add(blockOrdinal % 2 === 0 ? "wm-sved-row-block-even" : "wm-sved-row-block-odd");
+
+            if (dragEnabled) {
+              row.setAttribute("draggable", "true");
+              row.classList.add("wm-sved-row-draggable");
+              row.addEventListener("dragstart", (evt) => {
+                this._dragFromIdx = rowIdx;
+                this._dragMode = (blockSize > 1 && blockLead) ? "block" : "step";
+                row.classList.add("wm-sved-row-dragging");
+                if (evt.dataTransfer) {
+                  evt.dataTransfer.effectAllowed = "move";
+                  evt.dataTransfer.setData("text/plain", String(rowIdx));
+                }
+              });
+
+              row.addEventListener("dragover", (evt) => {
+                if (this._dragFromIdx === null) return;
+                evt.preventDefault();
+                const pos = computeDropPos(evt, row);
+                applyDropIndicator(row, pos);
+              });
+
+              row.addEventListener("drop", (evt) => {
+                if (this._dragFromIdx === null) return;
+                evt.preventDefault();
+                const from = this._dragFromIdx;
+                const pos = computeDropPos(evt, row);
+                const rawTarget = pos === "after" ? rowIdx + 1 : rowIdx;
+                let to = rawTarget;
+                if (rawTarget > from) to -= 1;
+                const mode = this._dragMode;
+                clearDraggingState();
+                if (to === from || to < 0 || to >= this.steps.length) return;
+                this._moveToIndex(from, to, "drag", mode);
+              });
+
+              row.addEventListener("dragend", () => {
+                clearDraggingState();
+              });
+            }
+
+            const num = document.createElement("span");
+            num.className = "wm-sved-num";
+            num.textContent = String(rowIdx + 1);
+
+            const icon = document.createElement("span");
+            icon.className = "wm-sved-icon";
+            icon.textContent = TYPE_ICONS[step.type] || "\u25B8";
+
+            const typeTag = document.createElement("span");
+            typeTag.className = "wm-sved-type";
+            typeTag.textContent = step.type;
+
+            const desc = document.createElement("span");
+            desc.className = "wm-sved-desc";
+            const lbl = _shortLabel(step);
+            desc.textContent = lbl;
+            desc.title = lbl;
+            if (collapsed && rowIdx === start && blockSize > 1) {
+              desc.textContent = `${lbl} (+${blockSize - 1} ocultos)`;
+            }
+
+            const ctrl = document.createElement("div");
+            ctrl.className = "wm-sved-ctrl";
+            if (dragEnabled) {
+              const dragHandle = document.createElement("span");
+              dragHandle.className = "wm-sved-drag-handle";
+              dragHandle.textContent = "\u22EE\u22EE";
+              dragHandle.title = (blockSize > 1 && blockLead)
+                ? `Arrastra para reordenar bloque (${blockSize} pasos)`
+                : "Arrastra para reordenar paso";
+              ctrl.appendChild(dragHandle);
+            }
+            const canMoveBlock = blockSize > 1 && blockLead;
+            const upDisabled = canMoveBlock ? rowBlock.start === 0 : (rowBlock ? rowIdx <= rowBlock.start : rowIdx === 0);
+            const downDisabled = canMoveBlock ? rowBlock.end === this.steps.length - 1 : (rowBlock ? rowIdx >= rowBlock.end : rowIdx === this.steps.length - 1);
+            ctrl.appendChild(_mkBtn("\u2191", canMoveBlock ? "Subir bloque" : "Subir dentro del bloque", upDisabled, () => this._move(rowIdx, -1, "button")));
+            ctrl.appendChild(_mkBtn("\u2193", canMoveBlock ? "Bajar bloque" : "Bajar dentro del bloque", downDisabled, () => this._move(rowIdx, 1, "button")));
+            const editBtn = _mkBtn("✏", "Editar paso", false, () => {
+              this._editIdx = this._editIdx === rowIdx ? null : rowIdx;
+              this._addFormOpen = false;
+              this._render();
+            });
+            editBtn.classList.add("wm-sved-btn-edit");
+            ctrl.appendChild(editBtn);
+            const delBtn = _mkBtn("✕", "Eliminar", false, () => this._delete(rowIdx));
+            delBtn.classList.add("wm-sved-btn-del");
+            ctrl.appendChild(delBtn);
+
+            if (movedMeta) {
+              const movedTag = document.createElement("span");
+              movedTag.className = "wm-sved-moved-tag";
+              movedTag.textContent = "movido";
+              movedTag.title = movedMeta.source === "drag"
+                ? "Paso reordenado por arrastre"
+                : "Paso reordenado con botones";
+              ctrl.appendChild(movedTag);
+            }
+
+            row.appendChild(num);
+            row.appendChild(icon);
+            row.appendChild(typeTag);
+            row.appendChild(desc);
+            row.appendChild(ctrl);
+            blockBody.appendChild(row);
+
+            if (this._editIdx === rowIdx) {
+              blockBody.appendChild(this._buildEditForm(rowIdx));
+            }
+          }
+
+          if (this._editIdx === null) {
+            const blockActions = document.createElement("div");
+            blockActions.className = "wm-sved-block-actions";
+            blockActions.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 2px 2px";
+
+            const addBtn = document.createElement("button");
+            if (collapsed) {
+              addBtn.className = "wm-sved-add-btn wm-sved-add-btn-block";
+              addBtn.innerHTML = "&#9636; Agregar bloque";
+              addBtn.title = "Inserta un bloque nuevo después de este";
+              addBtn.addEventListener("click", () => this._openAddForm(end + 1, true));
+            } else {
+              addBtn.className = "wm-sved-add-btn wm-sved-add-btn-step";
+              addBtn.innerHTML = "+ Agregar paso al bloque";
+              addBtn.title = "Inserta un paso al final de este bloque";
+              addBtn.addEventListener("click", () => this._openAddForm(end + 1, false));
+            }
+            blockActions.appendChild(addBtn);
+
+            if (!collapsed && typeof this._onRecordRequest === "function") {
+              if (this._pendingRecordIntoBlock === blockKey) {
+                const recBar = document.createElement("div");
+                recBar.className = "wm-sved-rec-bar";
+                recBar.style.cssText = "display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:6px;font-size:12px;color:#dc2626;font-family:system-ui,sans-serif";
+                const dot = document.createElement("span");
+                dot.style.cssText = "display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;animation:webmatic-pulse 1s infinite;flex-shrink:0";
+                const lbl = document.createElement("span");
+                lbl.textContent = "Grabando en este bloque — interactúa con la página…";
+                recBar.appendChild(dot);
+                recBar.appendChild(lbl);
+                blockActions.appendChild(recBar);
+              } else {
+                const recBtn = document.createElement("button");
+                recBtn.className = "wm-sved-add-btn wm-sved-rec-btn";
+                recBtn.style.cssText = "background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.35);color:#dc2626";
+                recBtn.innerHTML = "&#9210; Grabar en este bloque";
+                recBtn.title = "Graba pasos y los inserta al final de este bloque";
+                recBtn.addEventListener("click", () => {
+                  this._pendingRecordIntoBlock = blockKey;
+                  this._render();
+                  this._onRecordRequest((capturedSteps) => {
+                    this._pendingRecordIntoBlock = null;
+                    const toInsert = Array.isArray(capturedSteps) ? capturedSteps : [];
+                    // Insertamos al final del bloque (posición end+1 en el momento actual)
+                    const insertAt = this._findExecutionBlockBounds(start)
+                      ? this._findExecutionBlockBounds(start).end + 1
+                      : end + 1;
+                    for (let i = toInsert.length - 1; i >= 0; i--) {
+                      this.steps.splice(insertAt, 0, toInsert[i]);
+                    }
+                    this._collapseAllBlocksByDefault();
+                    this._render();
+                    this._fire();
+                  });
+                });
+                blockActions.appendChild(recBtn);
+              }
+            }
+
+            if (this._addFormOpen && this._addFormTargetIndex === end + 1) {
+              blockBody.appendChild(blockActions);
+              blockBody.appendChild(this._buildAddForm());
+            } else {
+              blockBody.appendChild(blockActions);
+            }
+          }
+
+          blockWrap.appendChild(blockBody);
+          list.appendChild(blockWrap);
+          idx = end + 1;
+        }
+
+        this._collapsedBlocks = persistedCollapsed;
         c.appendChild(list);
       }
 
@@ -478,33 +790,40 @@
           recBar.appendChild(dot);
           recBar.appendChild(lbl);
           c.appendChild(recBar);
-        } else if (this._addFormOpen) {
+        } else if (this._addFormOpen && this.steps.length === 0) {
           c.appendChild(this._buildAddForm());
         } else {
           const btnRow = document.createElement("div");
           btnRow.style.cssText = "display:flex;gap:6px;align-items:center;flex-wrap:wrap";
-          const addBtn = document.createElement("button");
-          addBtn.className = "wm-sved-add-btn";
-          addBtn.textContent = "+ Agregar paso";
-          addBtn.addEventListener("click", () => {
-            this._addFormOpen = true;
-            this._render();
-          });
-          btnRow.appendChild(addBtn);
+          if (this.steps.length === 0) {
+            const addBtn = document.createElement("button");
+            addBtn.className = "wm-sved-add-btn wm-sved-add-btn-block";
+            addBtn.innerHTML = "&#9636; Agregar primer bloque";
+            addBtn.addEventListener("click", () => {
+              this._openAddForm(0, true);
+            });
+            btnRow.appendChild(addBtn);
+          }
           if (typeof this._onRecordRequest === "function") {
             const recBtn = document.createElement("button");
             recBtn.className = "wm-sved-add-btn wm-sved-rec-btn";
             recBtn.style.cssText = "background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.4);color:#dc2626";
-            recBtn.textContent = "\u23FA Grabar interacci\u00f3n";
-            recBtn.title = "Interact\u00faa con la p\u00e1gina y los pasos se capturan autom\u00e1ticamente";
+            recBtn.textContent = "\u23FA Grabar interacci\u00f3n (nuevo bloque)";
+            recBtn.title = "Graba pasos y los agrega como bloque nuevo al final";
             recBtn.addEventListener("click", () => {
               this._pendingRecord = true;
               this._render();
               this._onRecordRequest((capturedSteps) => {
                 this._pendingRecord = false;
-                for (const s of capturedSteps) {
+                const next = Array.isArray(capturedSteps) ? capturedSteps : [];
+                if (next.length > 0 && next[0] && typeof next[0] === "object") {
+                  next[0]._wmBlockStart = true;
+                  next[0]._wmCollapsed = true;
+                }
+                for (const s of next) {
                   this.steps.push(s);
                 }
+                this._collapseAllBlocksByDefault();
                 this._render();
                 this._fire();
               });
@@ -882,8 +1201,15 @@
           step.dataset = [];
           step.steps = [];
         }
-        this.steps.push(step);
-        this._addFormOpen = false;
+        if (this._addFormAsNewBlock) {
+          step._wmBlockStart = true;
+          step._wmCollapsed = true;
+        }
+        const insertAt = Number.isInteger(this._addFormTargetIndex) ? this._addFormTargetIndex : this.steps.length;
+        if (insertAt < 0 || insertAt >= this.steps.length) this.steps.push(step);
+        else this.steps.splice(insertAt, 0, step);
+        this._closeAddForm();
+        this._collapseAllBlocksByDefault();
         this._render();
         this._fire();
       });
@@ -892,7 +1218,7 @@
       cancelBtn.className = "wm-sved-cancel-btn";
       cancelBtn.textContent = "Cancelar";
       cancelBtn.addEventListener("click", () => {
-        this._addFormOpen = false;
+        this._closeAddForm();
         this._render();
       });
 
@@ -902,16 +1228,181 @@
       return form;
     }
 
-    _move(idx, dir) {
-      const ni = idx + dir;
-      if (ni < 0 || ni >= this.steps.length) return;
-      [this.steps[idx], this.steps[ni]] = [this.steps[ni], this.steps[idx]];
+    _markStepMoved(stepRef, source) {
+      if (!stepRef || typeof stepRef !== "object") return;
+      this._movedStepMeta.set(stepRef, { source, at: Date.now() });
+    }
+
+    _isExecutionBlockBoundaryType(stepType) {
+      return stepType === "open_tab" || stepType === "switch_tab";
+    }
+
+    _isExecutionBlockBoundaryStep(step, idx) {
+      if (!step || typeof step !== "object") return false;
+      if (idx === 0) return true;
+      if (step._wmBlockStart === true || String(step._wmBlockStart).toLowerCase() === "true") return true;
+      return this._isExecutionBlockBoundaryType(step.type);
+    }
+
+    _wantsCollapsedByDefault(step) {
+      if (!step || typeof step !== "object") return false;
+      return step._wmCollapsed === true || String(step._wmCollapsed).toLowerCase() === "true";
+    }
+
+    _collapseAllBlocksByDefault() {
+      if (!Array.isArray(this.steps) || this.steps.length === 0) return;
+      let idx = 0;
+      while (idx < this.steps.length) {
+        const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
+        const start = block.start;
+        const end = block.end;
+        if (start !== idx) {
+          idx += 1;
+          continue;
+        }
+        const blockSize = end - start + 1;
+        if (blockSize > 1) this._collapsedBlocks.add(`${start}:${end}`);
+        idx = end + 1;
+      }
+    }
+
+    _initCollapsedBlocksFromSteps() {
+      if (!Array.isArray(this.steps) || this.steps.length === 0) return;
+      let idx = 0;
+      while (idx < this.steps.length) {
+        const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
+        const start = block.start;
+        const end = block.end;
+        if (start !== idx) {
+          idx += 1;
+          continue;
+        }
+        const blockSize = end - start + 1;
+        if (blockSize > 1 && this._wantsCollapsedByDefault(this.steps[start])) {
+          this._collapsedBlocks.add(`${start}:${end}`);
+        }
+        idx = end + 1;
+      }
+    }
+
+    _findExecutionBlockBounds(idx) {
+      if (idx < 0 || idx >= this.steps.length) return null;
+      let start = 0;
+      for (let i = idx; i > 0; i--) {
+        const s = this.steps[i];
+        if (this._isExecutionBlockBoundaryStep(s, i)) {
+          start = i;
+          break;
+        }
+      }
+
+      let end = this.steps.length - 1;
+      for (let j = Math.max(start + 1, idx + 1); j < this.steps.length; j++) {
+        const s = this.steps[j];
+        if (this._isExecutionBlockBoundaryStep(s, j)) {
+          end = j - 1;
+          break;
+        }
+      }
+      if (end < start) end = start;
+      return { start, end };
+    }
+
+    _getExecutionBlockOrdinal(idx) {
+      if (idx < 0 || idx >= this.steps.length) return 1;
+      let ord = 1;
+      for (let i = 1; i <= idx; i++) {
+        const s = this.steps[i];
+        if (this._isExecutionBlockBoundaryStep(s, i)) ord += 1;
+      }
+      return ord;
+    }
+
+    _moveRangeToIndex(start, end, toIndex, source) {
+      const len = end - start + 1;
+      if (len <= 0) return;
+      const segment = this.steps.splice(start, len);
+      let insertAt = toIndex;
+      if (insertAt > start) insertAt -= len;
+      if (insertAt < 0) insertAt = 0;
+      if (insertAt > this.steps.length) insertAt = this.steps.length;
+      this.steps.splice(insertAt, 0, ...segment);
+
+      if (this._editIdx !== null) {
+        if (this._editIdx >= start && this._editIdx <= end) {
+          this._editIdx = insertAt + (this._editIdx - start);
+        } else if (this._editIdx < start && this._editIdx >= insertAt) {
+          this._editIdx += len;
+        } else if (this._editIdx > end && this._editIdx < insertAt + len) {
+          this._editIdx -= len;
+        }
+      }
+
+      segment.forEach((s) => this._markStepMoved(s, source));
       this._render();
       this._fire();
     }
 
+    _moveToIndex(from, to, source, mode = "auto") {
+      if (from === to) return;
+      if (from < 0 || to < 0 || from >= this.steps.length || to >= this.steps.length) return;
+
+      const block = this._findExecutionBlockBounds(from);
+      if (block && block.start !== block.end) {
+        const isBlockLead = from === block.start;
+        const wantsBlockMove = mode === "block" || (mode === "auto" && isBlockLead);
+
+        if (wantsBlockMove) {
+          if (to >= block.start && to <= block.end) return;
+          this._moveRangeToIndex(block.start, block.end, to, source);
+          return;
+        }
+
+        // Movimiento individual seguro: no salir del bloque actual.
+        if (to < block.start || to > block.end) return;
+      }
+
+      const moved = this.steps.splice(from, 1)[0];
+      this.steps.splice(to, 0, moved);
+
+      if (this._editIdx === from) {
+        this._editIdx = to;
+      } else if (this._editIdx !== null) {
+        if (from < to && this._editIdx > from && this._editIdx <= to) {
+          this._editIdx -= 1;
+        } else if (from > to && this._editIdx >= to && this._editIdx < from) {
+          this._editIdx += 1;
+        }
+      }
+
+      this._markStepMoved(moved, source);
+      this._render();
+      this._fire();
+    }
+
+    _move(idx, dir, source = "button") {
+      const block = this._findExecutionBlockBounds(idx);
+      const isBlockLead = !!block && idx === block.start && block.start !== block.end;
+      if (isBlockLead) {
+        if (dir < 0) {
+          if (block.start <= 0) return;
+          this._moveRangeToIndex(block.start, block.end, block.start - 1, source);
+          return;
+        }
+        if (dir > 0) {
+          if (block.end >= this.steps.length - 1) return;
+          this._moveRangeToIndex(block.start, block.end, block.end + 2, source);
+          return;
+        }
+      }
+      const ni = idx + dir;
+      if (ni < 0 || ni >= this.steps.length) return;
+      this._moveToIndex(idx, ni, source, "step");
+    }
+
     _delete(idx) {
-      this.steps.splice(idx, 1);
+      const removed = this.steps.splice(idx, 1)[0];
+      this._movedStepMeta.delete(removed);
       if (this._editIdx === idx) this._editIdx = null;
       else if (this._editIdx !== null && this._editIdx > idx) this._editIdx--;
       this._render();

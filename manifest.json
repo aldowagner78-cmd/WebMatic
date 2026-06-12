@@ -28,6 +28,7 @@
     "downloads",
     "activeTab",
     "tabs",
+    "webNavigation",
     "<all_urls>"
   ],
   "content_scripts": [

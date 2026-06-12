@@ -182,3 +182,116 @@ test("_syncOptionPicker: combo con muchas opciones agrega filtro local", () => {
   const filter = block.querySelector("input");
   assert.ok(filter, "selects grandes deben mostrar un filtro de texto");
 });
+
+test("reordenado: el paso movido queda resaltado hasta limpiar", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "click", selector: "#a" },
+    { type: "open_tab", url: "https://example.com", activate: "true" },
+    { type: "click", selector: "#b" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  ed._move(0, 1, "button");
+  assert.equal(ed.hasPendingReorderChanges(), true);
+  assert.ok(container.querySelector(".wm-sved-reorder-pending"));
+  assert.ok(container.querySelector(".wm-sved-row-moved"));
+  assert.ok(container.querySelector(".wm-sved-row-moved-button"));
+
+  // El resaltado persiste en renders posteriores hasta limpiar explícitamente.
+  ed._render();
+  assert.ok(container.querySelector(".wm-sved-row-moved"));
+
+  ed.clearReorderHighlights();
+  assert.equal(ed.hasPendingReorderChanges(), false);
+  assert.equal(container.querySelector(".wm-sved-row-moved"), null);
+  assert.equal(container.querySelector(".wm-sved-reorder-pending"), null);
+});
+
+test("reordenado por arrastre: aplica estilo visual especifico", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "click", selector: "#base" },
+    { type: "open_tab", url: "https://example.com", activate: "true" },
+    { type: "click", selector: "#b" },
+    { type: "switch_tab", url: "https://origin.example", openIfMissing: "true" },
+    { type: "click", selector: "#c" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  // Arrastrar el lider del bloque (idx=1) mueve el bloque completo.
+  ed._moveToIndex(1, 0, "drag");
+  assert.equal(ed.hasPendingReorderChanges(), true);
+  assert.ok(container.querySelector(".wm-sved-row-moved-drag"));
+});
+
+test("bloques por macro concatenada: separa por marca y colapsa por defecto", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "click", selector: "#m1-a", _wmBlockStart: true, _wmCollapsed: true },
+    { type: "click", selector: "#m1-b" },
+    { type: "click", selector: "#m2-a", _wmBlockStart: true, _wmCollapsed: true },
+    { type: "click", selector: "#m2-b" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const blocks = container.querySelectorAll(".wm-sved-block");
+  assert.equal(blocks.length, 2);
+
+  const collapsedBlocks = container.querySelectorAll(".wm-sved-block-collapsed");
+  assert.equal(collapsedBlocks.length, 2);
+
+  blocks.forEach((block) => {
+    assert.equal(block.querySelectorAll(".wm-sved-row").length, 1);
+  });
+});
+
+test("editor visual: abre con bloques colapsados por defecto", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "open_tab", url: "https://a.example" },
+    { type: "click", selector: "#a" },
+    { type: "switch_tab", url: "https://b.example" },
+    { type: "click", selector: "#b" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const collapsedBlocks = container.querySelectorAll(".wm-sved-block-collapsed");
+  assert.equal(collapsedBlocks.length, 2);
+  collapsedBlocks.forEach((block) => {
+    assert.equal(block.querySelectorAll(".wm-sved-row").length, 1);
+  });
+});
+
+test("bloques colapsados muestran accion contextual de agregar bloque", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "open_tab", url: "https://a.example" },
+    { type: "click", selector: "#a" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const actionButtons = Array.from(container.querySelectorAll(".wm-sved-block-actions .wm-sved-add-btn"));
+  assert.equal(actionButtons.length, 1);
+  assert.ok(actionButtons[0].textContent.includes("Agregar bloque"), `Esperado "Agregar bloque" en "${actionButtons[0].textContent}"`);
+});

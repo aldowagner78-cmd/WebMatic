@@ -4317,8 +4317,30 @@
   const playerRuntime = {
     activePlayer: null,
     runtimeAutoFillLocks: new Map(),
-    lastFallbacks: []
+    lastFallbacks: [],
+    lastDurationMs: null,
+    playStartedAtMs: null
   };
+  const PLAY_START_VAR = "__WEBMATIC_PLAY_START_MS__";
+
+  function _isPlaybackHandoffSummary(summary) {
+    return !!(summary && summary.handoff === true);
+  }
+
+  function _resolvePlayStartFromVars(baseVars) {
+    const v = baseVars && Number(baseVars[PLAY_START_VAR]);
+    return Number.isFinite(v) && v > 0 ? v : Date.now();
+  }
+
+  function _formatPlaybackDuration(ms) {
+    const n = Number(ms);
+    if (!Number.isFinite(n) || n < 100) return "";
+    const totalSec = n / 1000;
+    if (totalSec < 60) return `${totalSec.toFixed(1)}s`;
+    const mins = Math.floor(totalSec / 60);
+    const secs = Math.round(totalSec % 60);
+    return `${mins}m ${String(secs).padStart(2, "0")}s`;
+  }
 
   // ── Visual step editor state ─────────────────────────────────────────
   let seEditor = null;           // WebMaticStepEditor instance
@@ -5200,10 +5222,12 @@
       if (dot) { dot.style.background = "#16a34a"; dot.style.animation = "none"; }
       const _fbList = (playerRuntime && Array.isArray(playerRuntime.lastFallbacks)) ? playerRuntime.lastFallbacks : [];
       const _fbCount = _fbList.length;
+      const _dur = _formatPlaybackDuration(playerRuntime && playerRuntime.lastDurationMs);
+      const _durSuffix = _dur ? ` · ${_dur}` : "";
       if (infoEl) {
         if (_fbCount > 0) {
           const _label = _fbCount === 1 ? "fallback aplicado" : "fallbacks aplicados";
-          infoEl.textContent = "\u2713 Completado con " + _fbCount + " " + _label + " \u2014 " + total + "/" + total + " pasos";
+          infoEl.textContent = "\u2713 Completado con " + _fbCount + " " + _label + " \u2014 " + total + "/" + total + " pasos" + _durSuffix;
           infoEl.style.color = "#b45309";
           infoEl.style.fontWeight = "700";
           try {
@@ -5211,7 +5235,7 @@
             infoEl.title = _detail;
           } catch (_e) { infoEl.title = ""; }
         } else {
-          infoEl.textContent = "\u2713 Completado sin errores \u2014 " + total + "/" + total + " pasos";
+          infoEl.textContent = "\u2713 Completado sin errores \u2014 " + total + "/" + total + " pasos" + _durSuffix;
           infoEl.style.color = "#16a34a";
           infoEl.style.fontWeight = "700";
           infoEl.title = "";
@@ -7124,9 +7148,19 @@
           return;
         }
 
+        const _tagConcatenatedMacroSegment = (steps) => {
+          const out = Array.isArray(steps) ? JSON.parse(JSON.stringify(steps)) : [];
+          if (out.length > 0 && out[0] && typeof out[0] === "object") {
+            // Marca interna para que el editor visual delimite por macro concatenada.
+            out[0]._wmBlockStart = true;
+            out[0]._wmCollapsed = true;
+          }
+          return out;
+        };
+
         const mergedSteps = [
-          ...(macro.steps || []),
-          ...toMerge.flatMap((m) => JSON.parse(JSON.stringify(m.steps || [])))
+          ..._tagConcatenatedMacroSegment(macro.steps || []),
+          ...toMerge.flatMap((m) => _tagConcatenatedMacroSegment(m.steps || []))
         ];
         const mergedName = [macro.name, ...toMerge.map((m) => m.name)].join(" + ");
         const mergedScript = iimAdapter ? iimAdapter.exportToIim({ steps: mergedSteps }) : "";
@@ -7165,6 +7199,8 @@
           const _player = new _PlayerClass();
           playerRuntime.activePlayer = _player;
           playerRuntime.lastFallbacks = [];
+          playerRuntime.lastDurationMs = null;
+          playerRuntime.playStartedAtMs = Date.now();
           resetRuntimeAutoFillSession();
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _resolvedSteps = _resolveCallMacros(_macro.steps, _state.library.macros);
@@ -7172,9 +7208,11 @@
           // Restaurar campos a defaults del perfil capturado, silenciosamente
           _restoreProfileDefaultsForCurrentPage();
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _preparedSteps } });
+          const _playVars = buildRuntimeVars(null, _state.settings);
+          _playVars[PLAY_START_VAR] = playerRuntime.playStartedAtMs;
           _player.play(_preparedSteps, {
             speed: _state.settings.speed ?? 1,
-            vars: buildRuntimeVars(null, _state.settings),
+            vars: _playVars,
             macroId: _macro.id,
             preRunReset: (_macro.meta && _macro.meta.preRunReset) || null,
             autoCaptureDefaults: true,
@@ -7183,9 +7221,19 @@
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _preparedSteps } });
             },
             onDone: (summary) => {
+              if (_isPlaybackHandoffSummary(summary)) {
+                playerRuntime.activePlayer = null;
+                store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+                store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Continuando en otra pestaña..." });
+                removePlaybackFloating();
+                return;
+              }
               playerRuntime.activePlayer = null;
               const _fb = (summary && Array.isArray(summary.fallbacks)) ? summary.fallbacks : [];
               playerRuntime.lastFallbacks = _fb;
+              const _summaryDuration = (summary && Number.isFinite(Number(summary.durationMs))) ? Number(summary.durationMs) : null;
+              const _fallbackDuration = playerRuntime.playStartedAtMs ? Math.max(0, Date.now() - playerRuntime.playStartedAtMs) : null;
+              playerRuntime.lastDurationMs = (_summaryDuration && _summaryDuration >= 100) ? _summaryDuration : _fallbackDuration;
               // Mark all steps done, then stop
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _preparedSteps.length, steps: _preparedSteps } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
@@ -8323,167 +8371,200 @@
     macrosPersistenceReady = true;
   })();
 
-  // Check if there's a pending playback that was interrupted by page navigation
-  chrome.runtime.sendMessage({ type: "QUERY_PENDING_PLAYBACK" }, (resp) => {
-    if (chrome.runtime.lastError || !resp || !resp.pending) return;
-    const p = resp.pending;
-    const PlayerClass = globalScope.WebMaticPlayer;
-    if (!PlayerClass || !Array.isArray(p.steps)) return;
+  function _resumePendingPlaybackIfAny() {
+    chrome.runtime.sendMessage({ type: "QUERY_PENDING_PLAYBACK" }, (resp) => {
+      if (chrome.runtime.lastError || !resp || !resp.pending) return;
+      const p = resp.pending;
+      const PlayerClass = globalScope.WebMaticPlayer;
+      if (!PlayerClass || !Array.isArray(p.steps)) return;
 
-    // If all steps already ran (last step navigated here), show the completed panel
-    if (p.index >= p.steps.length) {
+      if (p.index >= p.steps.length) {
+        setTimeout(() => {
+          const _resumeVars = buildRuntimeVars(p.vars, store.getState().settings);
+          playerRuntime.playStartedAtMs = _resolvePlayStartFromVars(_resumeVars);
+          const _durNow = playerRuntime.playStartedAtMs
+            ? Math.max(0, Date.now() - playerRuntime.playStartedAtMs)
+            : null;
+          playerRuntime.lastDurationMs = (_durNow && _durNow >= 100) ? _durNow : null;
+          if (p.macroId) store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: p.macroId });
+          createPlaybackFloating(
+            () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
+            null,
+            null,
+            () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
+            null
+          );
+          store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
+          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: p.steps.length, steps: p.steps } });
+          store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+        }, 800);
+        return;
+      }
+
       setTimeout(() => {
-        if (p.macroId) store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: p.macroId });
-        createPlaybackFloating(
-          () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
-          null, null,
-          () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
-          null
-        );
         store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
-        store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: p.steps.length, steps: p.steps } });
-        store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
-      }, 800);
-      return;
-    }
+        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reanudando reproduccion..." });
+        if (p.macroId) store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: p.macroId });
 
-    // Brief delay to let the page finish rendering
-    setTimeout(() => {
-      store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
-      store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reanudando reproduccion..." });
-      // Restore selected macro so addWaitHere works
-      if (p.macroId) store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: p.macroId });
-      // Re-create the playback floating panel
-      createPlaybackFloating(
-        () => {
-          if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-          store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-          removePlaybackFloating();
-        },
-        () => addWaitHere(),
-        () => {
-          // Replay from start using the pending macro (ignore navigation resume offset)
-          if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-          const _rstate = store.getState();
-          const _rmacro = _rstate.library.macros.find((m) => m.id === p.macroId);
-          if (!_rmacro) return;
-          store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Reproduciendo "${_rmacro.name}"` });
-          const _RPlayerClass = globalScope.WebMaticPlayer;
-          if (!_RPlayerClass) return;
-          const _rPlayer = new _RPlayerClass();
-          playerRuntime.activePlayer = _rPlayer;
-          resetRuntimeAutoFillSession();
-          const _rResolvedSteps = _resolveCallMacros(_rmacro.steps, _rstate.library.macros);
-          const _rPreparedSteps = applyRuntimeDataToSteps(_rResolvedSteps, _rstate.settings);
-          _rPlayer.play(_rPreparedSteps, {
-            speed: p.speed,
-            vars: buildRuntimeVars(p.vars, _rstate.settings),
-            macroId: p.macroId,
-            preRunReset: (_rmacro.meta && _rmacro.meta.preRunReset) || null,
-            autoCaptureDefaults: true,
-            onStep: (step, index) => {
-              tryAutoFillRuntimeDataOnPage(_rstate.settings);
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rPreparedSteps } });
-            },
-            onDone: () => {
-              playerRuntime.activePlayer = null;
-              store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-              store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
-            },
-            onError: (err) => {
-              playerRuntime.activePlayer = null;
-              const errIdx = store.getState().playback.currentStepIndex;
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
-              store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
-            }
-          });
-        },
-        () => {
-          if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-          store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-          removePlaybackFloating();
-        },
-        (n) => {
-          if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-          const _rnstate = store.getState();
-          const _rnmacro = _rnstate.library.macros.find((m) => m.id === p.macroId);
-          if (!_rnmacro) return;
-          store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Bucle x${n}: "${_rnmacro.name}"` });
-          const _rnPlayer = new (globalScope.WebMaticPlayer)();
-          playerRuntime.activePlayer = _rnPlayer;
-          resetRuntimeAutoFillSession();
-          let _rnIter = 0;
-          const _rnResolved = _resolveCallMacros(_rnmacro.steps, _rnstate.library.macros);
-          const _rnPrepared = applyRuntimeDataToSteps(_rnResolved, _rnstate.settings);
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _rnPrepared } });
-          function _rnNext() {
-            if (_rnIter >= n || _rnPlayer._abort) {
-              playerRuntime.activePlayer = null;
-              store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _rnPrepared.length, steps: _rnPrepared } });
-              store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-              return;
-            }
-            _rnIter++;
-            _rnPlayer._abort = false;
-            _rnPlayer.play(_rnPrepared, {
+        createPlaybackFloating(
+          () => {
+            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
+            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+            removePlaybackFloating();
+          },
+          () => addWaitHere(),
+          () => {
+            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
+            const _rstate = store.getState();
+            const _rmacro = _rstate.library.macros.find((m) => m.id === p.macroId);
+            if (!_rmacro) return;
+            store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
+            store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Reproduciendo "${_rmacro.name}"` });
+            const _RPlayerClass = globalScope.WebMaticPlayer;
+            if (!_RPlayerClass) return;
+            const _rPlayer = new _RPlayerClass();
+            playerRuntime.activePlayer = _rPlayer;
+            const _resumeVars = buildRuntimeVars(p.vars, _rstate.settings);
+            playerRuntime.playStartedAtMs = _resolvePlayStartFromVars(_resumeVars);
+            _resumeVars[PLAY_START_VAR] = playerRuntime.playStartedAtMs;
+            resetRuntimeAutoFillSession();
+            const _rResolvedSteps = _resolveCallMacros(_rmacro.steps, _rstate.library.macros);
+            const _rPreparedSteps = applyRuntimeDataToSteps(_rResolvedSteps, _rstate.settings);
+            _rPlayer.play(_rPreparedSteps, {
               speed: p.speed,
-              vars: buildRuntimeVars(p.vars, _rnstate.settings),
+              vars: _resumeVars,
               macroId: p.macroId,
-              preRunReset: (_rnmacro.meta && _rnmacro.meta.preRunReset) || null,
+              preRunReset: (_rmacro.meta && _rmacro.meta.preRunReset) || null,
               autoCaptureDefaults: true,
               onStep: (step, index) => {
-                tryAutoFillRuntimeDataOnPage(_rnstate.settings);
-                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rnPrepared } });
+                tryAutoFillRuntimeDataOnPage(_rstate.settings);
+                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rPreparedSteps } });
               },
-              onDone: _rnNext,
+              onDone: (summary) => {
+                if (_isPlaybackHandoffSummary(summary)) {
+                  playerRuntime.activePlayer = null;
+                  store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+                  store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Continuando en otra pestaña..." });
+                  removePlaybackFloating();
+                  return;
+                }
+                playerRuntime.activePlayer = null;
+                const _summaryDuration = (summary && Number.isFinite(Number(summary.durationMs))) ? Number(summary.durationMs) : null;
+                const _fallbackDuration = playerRuntime.playStartedAtMs ? Math.max(0, Date.now() - playerRuntime.playStartedAtMs) : null;
+                playerRuntime.lastDurationMs = (_summaryDuration && _summaryDuration >= 100) ? _summaryDuration : _fallbackDuration;
+                store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+                store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+              },
               onError: (err) => {
                 playerRuntime.activePlayer = null;
                 const errIdx = store.getState().playback.currentStepIndex;
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+                store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
               }
             });
+          },
+          () => {
+            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
+            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+            removePlaybackFloating();
+          },
+          (n) => {
+            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
+            const _rnstate = store.getState();
+            const _rnmacro = _rnstate.library.macros.find((m) => m.id === p.macroId);
+            if (!_rnmacro) return;
+            store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
+            store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Bucle x${n}: "${_rnmacro.name}"` });
+            const _rnPlayer = new (globalScope.WebMaticPlayer)();
+            playerRuntime.activePlayer = _rnPlayer;
+            resetRuntimeAutoFillSession();
+            let _rnIter = 0;
+            const _rnResolved = _resolveCallMacros(_rnmacro.steps, _rnstate.library.macros);
+            const _rnPrepared = applyRuntimeDataToSteps(_rnResolved, _rnstate.settings);
+            store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _rnPrepared } });
+            function _rnNext() {
+              if (_rnIter >= n || _rnPlayer._abort) {
+                playerRuntime.activePlayer = null;
+                store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _rnPrepared.length, steps: _rnPrepared } });
+                store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+                return;
+              }
+              _rnIter++;
+              _rnPlayer._abort = false;
+              _rnPlayer.play(_rnPrepared, {
+                speed: p.speed,
+                vars: buildRuntimeVars(p.vars, _rnstate.settings),
+                macroId: p.macroId,
+                preRunReset: (_rnmacro.meta && _rnmacro.meta.preRunReset) || null,
+                autoCaptureDefaults: true,
+                onStep: (step, index) => {
+                  tryAutoFillRuntimeDataOnPage(_rnstate.settings);
+                  store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rnPrepared } });
+                },
+                onDone: _rnNext,
+                onError: (err) => {
+                  playerRuntime.activePlayer = null;
+                  const errIdx = store.getState().playback.currentStepIndex;
+                  store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+                }
+              });
+            }
+            _rnNext();
           }
-          _rnNext();
+        );
+
+        if (p.macroId) {
+          const foundMacro = store.getState().library.macros.find((m) => m.id === p.macroId);
+          const nameEl = document.getElementById("wm-play-name");
+          if (nameEl && foundMacro) nameEl.textContent = foundMacro.name;
         }
-      );
-      // Show macro name if found
-      if (p.macroId) {
-        const foundMacro = store.getState().library.macros.find((m) => m.id === p.macroId);
-        const nameEl = document.getElementById("wm-play-name");
-        if (nameEl && foundMacro) nameEl.textContent = foundMacro.name;
-      }
-      const player = new PlayerClass();
-      playerRuntime.activePlayer = player;
-      resetRuntimeAutoFillSession();
-      player.play(p.steps, {
-        speed: p.speed,
-        startIndex: p.index,
-        vars: buildRuntimeVars(p.vars, store.getState().settings),
-        macroId: p.macroId,
-        preRunReset: ((store.getState().library.macros.find((m) => m.id === p.macroId) || {}).meta || {}).preRunReset || null,
-        autoCaptureDefaults: true,
-        onStep: (step, index) => {
-          tryAutoFillRuntimeDataOnPage(store.getState().settings);
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: p.steps } });
-        },
-        onDone: () => {
-          playerRuntime.activePlayer = null;
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: p.steps.length, steps: p.steps } });
-          store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
-        },
-        onError: (err) => {
-          playerRuntime.activePlayer = null;
-          const errIdx = store.getState().playback.currentStepIndex;
-          store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
-          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
-        }
-      });
-    }, 800);
-  });
+
+        const player = new PlayerClass();
+        playerRuntime.activePlayer = player;
+        const _resumeVars = buildRuntimeVars(p.vars, store.getState().settings);
+        playerRuntime.playStartedAtMs = _resolvePlayStartFromVars(_resumeVars);
+        _resumeVars[PLAY_START_VAR] = playerRuntime.playStartedAtMs;
+        resetRuntimeAutoFillSession();
+        player.play(p.steps, {
+          speed: p.speed,
+          startIndex: p.index,
+          vars: _resumeVars,
+          macroId: p.macroId,
+          preRunReset: ((store.getState().library.macros.find((m) => m.id === p.macroId) || {}).meta || {}).preRunReset || null,
+          autoCaptureDefaults: true,
+          onStep: (step, index) => {
+            tryAutoFillRuntimeDataOnPage(store.getState().settings);
+            store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: p.steps } });
+          },
+          onDone: (summary) => {
+            if (_isPlaybackHandoffSummary(summary)) {
+              playerRuntime.activePlayer = null;
+              store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+              store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Continuando en otra pestaña..." });
+              removePlaybackFloating();
+              return;
+            }
+            playerRuntime.activePlayer = null;
+            const _summaryDuration = (summary && Number.isFinite(Number(summary.durationMs))) ? Number(summary.durationMs) : null;
+            const _fallbackDuration = playerRuntime.playStartedAtMs ? Math.max(0, Date.now() - playerRuntime.playStartedAtMs) : null;
+            playerRuntime.lastDurationMs = (_summaryDuration && _summaryDuration >= 100) ? _summaryDuration : _fallbackDuration;
+            store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: p.steps.length, steps: p.steps } });
+            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+            store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+          },
+          onError: (err) => {
+            playerRuntime.activePlayer = null;
+            const errIdx = store.getState().playback.currentStepIndex;
+            store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+            store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
+          }
+        });
+      }, 800);
+    });
+  }
+
+  _resumePendingPlaybackIfAny();
 
   const onStorageChanged = (changes, areaName) => {
     if (areaName !== "local" || !changes.webmaticSettings) {
@@ -8632,6 +8713,12 @@
       return true;
     }
 
+    if (message?.type === "RESUME_PENDING_PLAYBACK") {
+      _resumePendingPlaybackIfAny();
+      sendResponse({ ok: true });
+      return true;
+    }
+
     if (message?.type === "SET_PANEL_SIDE") {
       store.dispatch({ type: contracts.ActionTypes.PANEL_SIDE_SET, payload: message.payload });
       sendResponse({ ok: true });
@@ -8649,11 +8736,12 @@
       }
       // Restore steps accumulated on previous pages in this recording session
       if (message.steps && message.steps.length > 0) {
-        message.steps.forEach((step) => {
+        const restored = message.steps.map((step) => {
           const clean = Object.assign({}, step);
           delete clean._merge;
-          store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: clean });
+          return clean;
         });
+        store.dispatch({ type: contracts.ActionTypes.DRAFT_RESTORED, payload: restored });
       }
       startRecorderSession();
       createFloatingBtn(() => {

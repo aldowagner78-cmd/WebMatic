@@ -1,5 +1,6 @@
 (function initPlayer(globalScope) {
   const utils = globalScope.WebMaticUtils;
+  const PLAY_START_VAR = "__WEBMATIC_PLAY_START_MS__";
 
   // Acumulador de fallbacks aplicados durante una ejecución de play().
   // Se reinicia al inicio de play() y se entrega como summary.fallbacks en onDone().
@@ -789,6 +790,53 @@
           return;
         }
 
+        if (step.type === "browser_back") {
+          try {
+            if (window.history && window.history.length > 1) {
+              window.history.back();
+              return;
+            }
+          } catch (_e) { /* ignore */ }
+          resolve();
+          return;
+        }
+
+        if (step.type === "browser_forward") {
+          try {
+            if (window.history && window.history.length > 0) {
+              window.history.forward();
+              return;
+            }
+          } catch (_e) { /* ignore */ }
+          resolve();
+          return;
+        }
+
+        if (step.type === "browser_history") {
+          // Evento de historial sin dirección inferida con certeza: no-op seguro.
+          resolve();
+          return;
+        }
+
+        if (step.type === "browser_reload") {
+          try {
+            window.location.reload();
+            return;
+          } catch (_e) { /* ignore */ }
+          resolve();
+          return;
+        }
+
+        if (step.type === "open_bookmark") {
+          const url = expandVariables(step.url || "", vars);
+          if (!url || window.location.href === url) {
+            resolve();
+            return;
+          }
+          window.location.href = url;
+          return;
+        }
+
         if (step.type === "wait") {
           const rawMs = step.seconds != null
             ? Math.round(Number(step.seconds) * 1000)
@@ -815,8 +863,13 @@
           const wfPoll = () => {
             const found = findElement(wfSelector);
             if (found) { resolve(); }
+            else if (_shouldBypassMissingLoginStep("wait_for", wfSelector)) { resolve(); }
             else if (Date.now() - start < wfTimeout) { setTimeout(wfPoll, retryMs); }
             else {
+              if (_shouldBypassMissingLoginStep("wait_for", wfSelector)) {
+                resolve();
+                return;
+              }
               _logSelectorFailure("wait_for", wfSelector);
               reject(new Error(`wait_for: tiempo agotado esperando "${wfSelector}". Ver consola: [WebMatic][selector-diagnostic]`));
             }
@@ -933,9 +986,17 @@
         const el = step.type === "check" ? findBestCheckTarget(selector) : findElement(selector);
 
         if (!el) {
+          if (_shouldBypassMissingLoginStep(step.type, selector)) {
+            resolve();
+            return;
+          }
           if (Date.now() - start < timeoutMs) {
             setTimeout(attempt, retryMs);
           } else {
+            if (_shouldBypassMissingLoginStep(step.type, selector)) {
+              resolve();
+              return;
+            }
             if (step.type === "click" && _trySyntheticGalleryClick(selector)) {
               resolve();
               return;
@@ -1712,9 +1773,41 @@
     return false;
   }
 
+  function _isLikelyLoginSelector(raw) {
+    const s = String(raw || "").toLowerCase();
+    if (!s) return false;
+    return /(login|log in|signin|sign in|auth|autent|usuario|user|mail|email|clave|contras|password|passwd|pwd|ingresar|iniciar sesion|acceder|codusu|usuacod|idusu|\busu\b)/i.test(s);
+  }
+
+  function _hasVisiblePasswordField() {
+    try {
+      const list = document.querySelectorAll('input[type="password"]');
+      return Array.from(list).some((el) => _isInteractable(el));
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _isAuthenticatedLikeContext() {
+    const href = String((window && window.location && window.location.href) || "");
+    const looksLikeLoginUrl = /(login|signin|auth|oauth|sesion|session|acceso|ingresar)/i.test(href);
+    if (looksLikeLoginUrl) return false;
+    return !_hasVisiblePasswordField();
+  }
+
+  function _shouldBypassMissingLoginStep(stepType, selector) {
+    if (!_isLikelyLoginSelector(selector)) return false;
+    if (!_isAuthenticatedLikeContext()) return false;
+    return ["wait_for", "click", "input", "text", "check", "choose_option", "loop_until"].includes(String(stepType || ""));
+  }
+
   function _isRecoverableTransientFailure(err, step, steps, stepIndex) {
-    if (!step || (step.type !== "click" && step.type !== "wait_for" && step.type !== "hover")) return false;
+    if (!step || (step.type !== "click" && step.type !== "wait_for" && step.type !== "hover" && step.type !== "input" && step.type !== "text" && step.type !== "check" && step.type !== "choose_option")) return false;
     const msg = String((err && err.message) || err || "");
+
+    if (_shouldBypassMissingLoginStep(step.type, step.selector || "")) {
+      return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
+    }
 
     // Hover should be best-effort during playback. Missing targets are common
     // on volatile UIs and should not abort the whole macro.
@@ -1748,6 +1841,9 @@
       // Base delay between steps: 300ms at speed 1, scaled inversely
       const baseDelayMs = Math.round(300 / speed);
       const vars = options.vars || {};
+      const _seedStart = Number(vars[PLAY_START_VAR]);
+      const _playStartMs = Number.isFinite(_seedStart) && _seedStart > 0 ? _seedStart : Date.now();
+      vars[PLAY_START_VAR] = _playStartMs;
       const startIndex = options.startIndex || 0;
       const macroId = options.macroId || null;
       const hasExplicitCaptureDefaults = runtimeSteps.some((s) => s && s.type === "capture_defaults");
@@ -1823,7 +1919,8 @@
           // resume from index i+1. We only clear pending state on full completion.
             if (!runnableStep._fast && step.type !== "if_exists" && step.type !== "loop_until" &&
               step.type !== "try_fallback" && step.type !== "call_macro" &&
-              step.type !== "for_each_row") {
+                step.type !== "for_each_row" && step.type !== "open_tab" &&
+                step.type !== "switch_tab" && step.type !== "close_tab") {
             await new Promise((res) => {
               chrome.runtime.sendMessage({
                 type: "SAVE_PLAYBACK_STATE",
@@ -1855,6 +1952,9 @@
             const _luMax = Number(step.max_iterations) || 50;
             const _luCond = step.condition || "not_exists";
             const _luSel = expandVariables(step.selector || "", vars);
+            if (_shouldBypassMissingLoginStep("loop_until", _luSel)) {
+              continue;
+            }
             for (let _luIter = 0; _luIter < _luMax; _luIter++) {
               if (this._abort) break;
               const _luEl = findElement(_luSel);
@@ -1947,6 +2047,51 @@
             continue;
           }
 
+          if (step.type === "open_tab" || step.type === "switch_tab" || step.type === "close_tab") {
+            const tabStep = {
+              ...step,
+              url: step.url ? expandVariables(step.url, vars) : ""
+            };
+            const handoff = await new Promise((res) => {
+              chrome.runtime.sendMessage({
+                type: "PLAYBACK_TAB_ACTION",
+                action: step.type,
+                step: tabStep,
+                steps: runtimeSteps,
+                index: i + 1,
+                vars,
+                speed,
+                macroId
+              }, (resp) => {
+                if (chrome.runtime.lastError) {
+                  res({ ok: false, error: chrome.runtime.lastError.message || "tab_action_failed" });
+                  return;
+                }
+                res(resp || { ok: false, error: "tab_action_no_response" });
+              });
+            });
+
+            if (!handoff || handoff.ok !== true) {
+              throw new Error(`tab action failed (${step.type}): ${(handoff && handoff.error) || "unknown"}`);
+            }
+
+            if (handoff.handoff) {
+              // La reproducción continuará en la pestaña de destino via pendingPlayback.
+              // Notificamos handoff para que la pestaña origen limpie su UI flotante.
+              if (typeof options.onDone === "function") {
+                options.onDone({
+                  handoff: true,
+                  fallbacks: Array.isArray(_fallbackBucket) ? _fallbackBucket.slice() : [],
+                  durationMs: Math.max(0, Date.now() - _playStartMs)
+                });
+              }
+              return true;
+            }
+
+            if (i < runtimeSteps.length - 1) await new Promise((r) => setTimeout(r, baseDelayMs));
+            continue;
+          }
+
           // Execute the step (state was already saved at the top of the loop)
           try {
             await executeStep(runnableStep, vars, this.retryMs, this.timeoutMs, this._speed);
@@ -2005,9 +2150,14 @@
         try {
           chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
         } catch (_) {}
-        const _summary = { fallbacks: Array.isArray(_fallbackBucket) ? _fallbackBucket.slice() : [] };
+        const _summary = {
+          fallbacks: Array.isArray(_fallbackBucket) ? _fallbackBucket.slice() : [],
+          durationMs: Math.max(0, Date.now() - _playStartMs)
+        };
+        try { delete vars[PLAY_START_VAR]; } catch (_e) { /* ignore */ }
         if (typeof options.onDone === "function") options.onDone(_summary);
       } catch (err) {
+        try { delete vars[PLAY_START_VAR]; } catch (_e) { /* ignore */ }
         try {
           chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
         } catch (_) {}
@@ -2041,6 +2191,9 @@
         const _luMax = Number(step.max_iterations) || 50;
         const _luCond = step.condition || "not_exists";
         const _luSel = expandVariables(step.selector || "", vars);
+        if (_shouldBypassMissingLoginStep("loop_until", _luSel)) {
+          return;
+        }
         for (let _luIter = 0; _luIter < _luMax; _luIter++) {
           if (this._abort) break;
           const _luEl = findElement(_luSel);

@@ -280,6 +280,59 @@ test("round-trip: choose_option con value + text + variable sin pérdida (IIM + 
   assert.equal(rt[0].variable, "PAIS");
 });
 
+test("exportToIim: open_tab genera OPEN_TAB", () => {
+  const script = adapter.exportToIim({ steps: [{ type: "open_tab", url: "https://example.com/new", activate: "true" }] });
+  assert.ok(script.includes('OPEN_TAB URL="https://example.com/new" ACTIVATE="true"'));
+});
+
+test("exportToIim: switch_tab genera SWITCH_TAB", () => {
+  const script = adapter.exportToIim({ steps: [{ type: "switch_tab", url: "https://example.com", openIfMissing: "false" }] });
+  assert.ok(script.includes('SWITCH_TAB URL="https://example.com" OPEN_IF_MISSING="false"'));
+});
+
+test("exportToIim: close_tab genera CLOSE_TAB", () => {
+  const script = adapter.exportToIim({ steps: [{ type: "close_tab", target: "match_url", url: "https://example.com/x" }] });
+  assert.ok(script.includes('CLOSE_TAB TARGET="match_url" URL="https://example.com/x"'));
+});
+
+test("importFromIim: OPEN_TAB legacy parsea", () => {
+  const legacy = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    'OPEN_TAB URL="https://example.com/new" ACTIVATE="false"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(legacy);
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0].type, "open_tab");
+  assert.equal(steps[0].url, "https://example.com/new");
+  assert.equal(steps[0].activate, "false");
+});
+
+test("importFromIim: SWITCH_TAB legacy parsea", () => {
+  const legacy = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    'SWITCH_TAB URL="https://example.com" OPEN_IF_MISSING="true"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(legacy);
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0].type, "switch_tab");
+  assert.equal(steps[0].url, "https://example.com");
+  assert.equal(steps[0].openIfMissing, "true");
+});
+
+test("importFromIim: CLOSE_TAB legacy parsea", () => {
+  const legacy = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    'CLOSE_TAB TARGET="current"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(legacy);
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0].type, "close_tab");
+  assert.equal(steps[0].target, "current");
+});
+
 // ── WM_JSON meta.pageInventories persistence ───────────────────────────────
 
 test("exportToIim: WM_JSON conserva meta.pageInventories", () => {

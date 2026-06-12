@@ -73,6 +73,10 @@ chrome.browserAction.onClicked.addListener((tab) => {
 
 let isRecording = false;
 let recordedSteps = [];
+let recordingActiveTabId = null;
+let justOpenedActiveTabId = null;
+const recordingTabUrlById = new Map();
+const floatingShownAtByTab = new Map();
 let inlineRecordingTabId = null; // tab donde hay grabación inline activa
 let inlineBuffer = [];           // pasos acumulados entre navegaciones
 let inlineEditorContext = null;  // { macroId, draftSteps } del editor al iniciar grabación
@@ -80,9 +84,86 @@ let inlineEditorContext = null;  // { macroId, draftSteps } del editor al inicia
 // Tracks which tabs have the panel open, so it can be restored after page navigation
 const panelOpenTabs = new Set();
 
+// Historial liviano por pestaña para inferir back/forward en eventos webNavigation.
+const tabNavStateById = new Map(); // tabId -> { stack: string[], index: number }
+const lastBrowserNavEventByTab = new Map(); // tabId -> { type, url, at }
+
 // Stores pending playback state so it can be resumed after page navigation
 // { tabId, steps, index, vars, speed }
 let pendingPlayback = null;
+
+function _isRestrictedUrl(url) {
+  const u = String(url || "").trim();
+  if (!u) return true;
+  return /^(about:|chrome:|moz-extension:|chrome-extension:|data:|blob:)/i.test(u);
+}
+
+function _rememberTabUrl(tab) {
+  if (!tab || !tab.id) return;
+  const url = String(tab.url || tab.pendingUrl || "").trim();
+  if (!url) return;
+  recordingTabUrlById.set(tab.id, url);
+}
+
+function _snapshotAllTabUrls() {
+  chrome.tabs.query({}, (tabs) => {
+    (tabs || []).forEach((tab) => {
+      _rememberTabUrl(tab);
+      const u = String((tab && (tab.url || tab.pendingUrl)) || "").trim();
+      if (!u || _isRestrictedUrl(u)) return;
+      tabNavStateById.set(tab.id, { stack: [u], index: 0 });
+    });
+  });
+}
+
+function _isTopFrameNavigation(details) {
+  return !!details && Number(details.frameId) === 0 && Number(details.tabId) > 0;
+}
+
+function _dedupeBrowserNavStep(tabId, type, url) {
+  const now = Date.now();
+  const prev = lastBrowserNavEventByTab.get(tabId);
+  if (prev && prev.type === type && String(prev.url || "") === String(url || "") && (now - prev.at) < 700) {
+    return true;
+  }
+  lastBrowserNavEventByTab.set(tabId, { type, url: String(url || ""), at: now });
+  return false;
+}
+
+function _updateTabNavigationState(tabId, url, transitionType, qualifiers) {
+  const cleanUrl = String(url || "").trim();
+  if (!cleanUrl || _isRestrictedUrl(cleanUrl)) return null;
+
+  const q = Array.isArray(qualifiers) ? qualifiers : [];
+  const state = tabNavStateById.get(tabId) || { stack: [], index: -1 };
+  const existingIdx = state.stack.lastIndexOf(cleanUrl);
+
+  let inferredHistoryDir = "";
+  if (q.includes("forward_back")) {
+    if (existingIdx >= 0) {
+      if (existingIdx < state.index) inferredHistoryDir = "back";
+      else if (existingIdx > state.index) inferredHistoryDir = "forward";
+      state.index = existingIdx;
+    } else {
+      if (state.index >= 0 && state.index < state.stack.length - 1) {
+        state.stack = state.stack.slice(0, state.index + 1);
+      }
+      state.stack.push(cleanUrl);
+      state.index = state.stack.length - 1;
+    }
+  } else if (transitionType !== "reload") {
+    if (state.index >= 0 && state.index < state.stack.length - 1) {
+      state.stack = state.stack.slice(0, state.index + 1);
+    }
+    if (state.stack[state.index] !== cleanUrl) {
+      state.stack.push(cleanUrl);
+      state.index = state.stack.length - 1;
+    }
+  }
+
+  tabNavStateById.set(tabId, state);
+  return inferredHistoryDir;
+}
 
 function sendMessageToTab(tabId, msg) {
   chrome.tabs.sendMessage(tabId, msg, () => {
@@ -96,14 +177,21 @@ function showFloatingBtnInTab(tabId) {
   });
 }
 
-function ensureFloatingBtnInTab(tab) {
+function ensureFloatingBtnInTab(tab, options = {}) {
   if (!tab || !tab.id) return;
   if (!tab.url || /^(chrome|about|moz-extension|chrome-extension):/.test(tab.url)) return;
+  const force = options.force === true;
+  const now = Date.now();
+  const last = floatingShownAtByTab.get(tab.id) || 0;
+  // Avoid duplicate SHOW_FLOATING_BTN bursts (onActivated + onUpdated complete)
+  if (!force && (now - last) < 250) return;
+  floatingShownAtByTab.set(tab.id, now);
   // Always send recordedSteps so the new page can restore accumulated steps
   chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING_BTN", steps: recordedSteps }, () => {
     if (chrome.runtime.lastError) {
       injectContentScripts(tab.id, (err) => {
         if (!err) {
+          floatingShownAtByTab.set(tab.id, Date.now());
           chrome.tabs.sendMessage(tab.id, { type: "SHOW_FLOATING_BTN", steps: recordedSteps }, () => {
             void chrome.runtime.lastError;
           });
@@ -159,7 +247,20 @@ function _ensureInlineMirrorOrGoBack(tabId) {
 chrome.tabs.onActivated.addListener((activeInfo) => {
   chrome.tabs.get(activeInfo.tabId, (tab) => {
     if (chrome.runtime.lastError) return;
-    if (isRecording) ensureFloatingBtnInTab(tab);
+    _rememberTabUrl(tab);
+    if (isRecording) {
+      if (justOpenedActiveTabId === activeInfo.tabId) {
+        justOpenedActiveTabId = null;
+      } else if (recordingActiveTabId !== null && recordingActiveTabId !== activeInfo.tabId) {
+        recordedSteps.push({
+          type: "switch_tab",
+          url: String(tab && (tab.url || tab.pendingUrl) || ""),
+          openIfMissing: "true"
+        });
+      }
+      recordingActiveTabId = activeInfo.tabId;
+    }
+    if (isRecording) ensureFloatingBtnInTab(tab, { force: true });
     if (panelOpenTabs.has(activeInfo.tabId)) ensurePanelOpenInTab(tab);
     if (inlineRecordingTabId !== null) {
       _ensureInlineMirrorOrGoBack(activeInfo.tabId);
@@ -167,7 +268,27 @@ chrome.tabs.onActivated.addListener((activeInfo) => {
   });
 });
 
+chrome.tabs.onCreated.addListener((tab) => {
+  _rememberTabUrl(tab);
+  if (!isRecording) return;
+
+  const rawUrl = String(tab && (tab.url || tab.pendingUrl) || "").trim();
+  const step = {
+    type: "open_tab",
+    activate: tab && tab.active ? "true" : "false"
+  };
+  if (rawUrl && !_isRestrictedUrl(rawUrl)) {
+    step.url = rawUrl;
+  }
+  recordedSteps.push(step);
+
+  if (tab && tab.active) {
+    justOpenedActiveTabId = tab.id;
+  }
+});
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  _rememberTabUrl(tab);
   if (changeInfo.status !== "complete") return;
   if (isRecording) ensureFloatingBtnInTab(tab);
   if (panelOpenTabs.has(tabId)) ensurePanelOpenInTab(tab);
@@ -185,9 +306,60 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
+if (chrome.webNavigation && chrome.webNavigation.onCommitted && typeof chrome.webNavigation.onCommitted.addListener === "function") {
+  chrome.webNavigation.onCommitted.addListener((details) => {
+    if (!_isTopFrameNavigation(details)) return;
+    const tabId = Number(details.tabId);
+    const url = String(details.url || "").trim();
+    if (!url || _isRestrictedUrl(url)) return;
+
+    _rememberTabUrl({ id: tabId, url });
+    const transitionType = String(details.transitionType || "");
+    const qualifiers = Array.isArray(details.transitionQualifiers) ? details.transitionQualifiers : [];
+    const historyDir = _updateTabNavigationState(tabId, url, transitionType, qualifiers);
+
+    if (!isRecording) return;
+
+    let step = null;
+    if (transitionType === "reload") {
+      step = { type: "browser_reload" };
+    } else if (qualifiers.includes("forward_back")) {
+      if (historyDir === "back") step = { type: "browser_back" };
+      else if (historyDir === "forward") step = { type: "browser_forward" };
+      else step = { type: "browser_history" };
+    } else if (transitionType === "auto_bookmark") {
+      step = { type: "open_bookmark", url };
+    }
+
+    if (!step) return;
+    const keyUrl = step.url || url;
+    if (_dedupeBrowserNavStep(tabId, step.type, keyUrl)) return;
+    recordedSteps.push(step);
+  });
+}
+
 chrome.tabs.onRemoved.addListener((tabId) => {
+  const closedUrl = String(recordingTabUrlById.get(tabId) || "").trim();
+  recordingTabUrlById.delete(tabId);
+  floatingShownAtByTab.delete(tabId);
+  tabNavStateById.delete(tabId);
+  lastBrowserNavEventByTab.delete(tabId);
+  if (justOpenedActiveTabId === tabId) justOpenedActiveTabId = null;
+
+  if (isRecording) {
+    const step = { type: "close_tab" };
+    if (closedUrl && !_isRestrictedUrl(closedUrl)) {
+      step.target = "match_url";
+      step.url = closedUrl;
+    } else {
+      step.target = "current";
+    }
+    recordedSteps.push(step);
+  }
+
   panelOpenTabs.delete(tabId);
   if (inlineRecordingTabId === tabId) inlineRecordingTabId = null;
+  if (recordingActiveTabId === tabId) recordingActiveTabId = null;
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -199,8 +371,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === "SAVE_PLAYBACK_STATE") {
     // Called by player just before a navigating click
     if (sender && sender.tab && sender.tab.id) {
+      const explicitTabId = Number(message.targetTabId);
       pendingPlayback = {
-        tabId: sender.tab.id,
+        tabId: Number.isFinite(explicitTabId) && explicitTabId > 0 ? explicitTabId : sender.tab.id,
         steps: message.steps,
         index: message.index,
         vars: message.vars || {},
@@ -314,14 +487,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "QUERY_RECORDED_STEPS") {
+    sendResponse({ steps: recordedSteps.slice() });
+    return true;
+  }
+
   if (message?.type === "RECORDING_STATE") {
     isRecording = message.active === true;
     if (isRecording) {
       recordedSteps = [];
+      recordingActiveTabId = sender && sender.tab ? sender.tab.id : null;
+      justOpenedActiveTabId = null;
+      recordingTabUrlById.clear();
+      floatingShownAtByTab.clear();
+      tabNavStateById.clear();
+      lastBrowserNavEventByTab.clear();
+      _snapshotAllTabUrls();
       chrome.browserAction.setBadgeText({ text: "REC" });
       chrome.browserAction.setBadgeBackgroundColor({ color: "#dc2626" });
     } else {
       recordedSteps = [];
+      recordingActiveTabId = null;
+      justOpenedActiveTabId = null;
+      recordingTabUrlById.clear();
+      floatingShownAtByTab.clear();
+      tabNavStateById.clear();
+      lastBrowserNavEventByTab.clear();
       chrome.browserAction.setBadgeText({ text: "" });
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => sendMessageToTab(tab.id, { type: "HIDE_FLOATING_BTN" }));
@@ -336,6 +527,148 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
     }
     sendResponse({ ok: true });
+    return true;
+  }
+
+  if (message?.type === "PLAYBACK_TAB_ACTION") {
+    const action = String(message.action || "");
+    const step = message.step || {};
+    const currentTabId = sender && sender.tab && sender.tab.id ? sender.tab.id : null;
+    if (!currentTabId) {
+      sendResponse({ ok: false, error: "missing_sender_tab" });
+      return true;
+    }
+
+    const resumeInTab = (tabId) => {
+      const targetId = Number(tabId);
+      if (!Number.isFinite(targetId) || targetId <= 0) {
+        sendResponse({ ok: false, error: "invalid_target_tab" });
+        return;
+      }
+      pendingPlayback = {
+        tabId: targetId,
+        steps: Array.isArray(message.steps) ? message.steps : [],
+        index: Number.isFinite(Number(message.index)) ? Number(message.index) : 0,
+        vars: message.vars || {},
+        speed: message.speed || 1,
+        macroId: message.macroId || null
+      };
+
+      chrome.tabs.update(targetId, { active: true }, () => {
+        void chrome.runtime.lastError;
+        chrome.tabs.sendMessage(targetId, { type: "RESUME_PENDING_PLAYBACK" }, (resp) => {
+          if (chrome.runtime.lastError || !resp || !resp.ok) {
+            injectContentScripts(targetId, (err) => {
+              if (err) {
+                sendResponse({ ok: false, error: "resume_inject_failed" });
+                return;
+              }
+              chrome.tabs.sendMessage(targetId, { type: "RESUME_PENDING_PLAYBACK" }, () => {
+                void chrome.runtime.lastError;
+                sendResponse({ ok: true, handoff: true, tabId: targetId });
+              });
+            });
+            return;
+          }
+          sendResponse({ ok: true, handoff: true, tabId: targetId });
+        });
+      });
+    };
+
+    const urlMatches = (tabUrl, desired) => {
+      const a = String(tabUrl || "").trim();
+      const b = String(desired || "").trim();
+      if (!a || !b) return false;
+      return a === b || a.startsWith(b);
+    };
+
+    if (action === "open_tab") {
+      const url = String(step.url || "").trim() || String(sender.tab.url || "").trim() || "about:blank";
+      const activate = String(step.activate || "true") !== "false";
+      chrome.tabs.create({ url, active: activate }, (tab) => {
+        if (!tab || !tab.id) {
+          sendResponse({ ok: false, error: "open_tab_failed" });
+          return;
+        }
+        if (!activate) {
+          sendResponse({ ok: true, handoff: false, tabId: tab.id });
+          return;
+        }
+        resumeInTab(tab.id);
+      });
+      return true;
+    }
+
+    if (action === "switch_tab") {
+      const desiredUrl = String(step.url || "").trim();
+      const openIfMissing = String(step.openIfMissing || "true") !== "false";
+      chrome.tabs.query({}, (tabs) => {
+        const found = tabs.find((t) => t && t.id && desiredUrl && urlMatches(t.url || t.pendingUrl || "", desiredUrl));
+        if (found && found.id) {
+          resumeInTab(found.id);
+          return;
+        }
+        if (!openIfMissing) {
+          sendResponse({ ok: false, error: "switch_tab_not_found" });
+          return;
+        }
+        const newUrl = desiredUrl || String(sender.tab.url || "").trim() || "about:blank";
+        chrome.tabs.create({ url: newUrl, active: true }, (tab) => {
+          if (!tab || !tab.id) {
+            sendResponse({ ok: false, error: "switch_tab_open_failed" });
+            return;
+          }
+          resumeInTab(tab.id);
+        });
+      });
+      return true;
+    }
+
+    if (action === "close_tab") {
+      const target = String(step.target || "current").trim();
+      if (target === "match_url") {
+        const desiredUrl = String(step.url || "").trim();
+        chrome.tabs.query({}, (tabs) => {
+          const found = tabs.find((t) => t && t.id && desiredUrl && urlMatches(t.url || t.pendingUrl || "", desiredUrl));
+          if (!found || !found.id) {
+            sendResponse({ ok: false, error: "close_tab_not_found" });
+            return;
+          }
+          const closingId = found.id;
+          const fallback = tabs.find((t) => t && t.id && t.id !== closingId) || null;
+          chrome.tabs.remove(closingId, () => {
+            if (chrome.runtime.lastError) {
+              sendResponse({ ok: false, error: "close_tab_failed" });
+              return;
+            }
+            if (!fallback || !fallback.id) {
+              sendResponse({ ok: true, handoff: false });
+              return;
+            }
+            resumeInTab(fallback.id);
+          });
+        });
+        return true;
+      }
+
+      chrome.tabs.query({}, (tabs) => {
+        const fallback = tabs.find((t) => t && t.id && t.id !== currentTabId) || null;
+        chrome.tabs.remove(currentTabId, () => {
+          if (chrome.runtime.lastError) {
+            sendResponse({ ok: false, error: "close_current_failed" });
+            return;
+          }
+          if (!fallback || !fallback.id) {
+            sendResponse({ ok: true, handoff: false });
+            return;
+          }
+          resumeInTab(fallback.id);
+        });
+      });
+      return true;
+    }
+
+    sendResponse({ ok: false, error: "unknown_tab_action" });
     return true;
   }
 

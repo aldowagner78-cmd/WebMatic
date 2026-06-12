@@ -10,6 +10,7 @@
     "test:e2e:legacy": "node accesorios/pruebas/tests/e2e/run.js",
     "test:e2e:fixtures": "node accesorios/pruebas/tests/e2e/fixtures-flow/run.js",
     "test:e2e:extension": "node accesorios/pruebas/tests/e2e/webmatic-extension-safe/run.js",
+    "test:e2e:tabs-floating": "node accesorios/pruebas/tests/e2e/webmatic-extension-safe/tabs-floating-run.js",
     "test:e2e:firefox-extension": "node accesorios/pruebas/tests/e2e/firefox-extension-safe/run.js",
     "test:phase1:export-routes": "npm test",
     "verify:v2:firefox:fast": "node accesorios/herramientas/tools/verify-v2-firefox.cjs fast",

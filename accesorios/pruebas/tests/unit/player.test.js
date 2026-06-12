@@ -113,6 +113,73 @@ test("wait_for: falla si el elemento nunca aparece (timeout propio)", async () =
   assert.ok(result.error.includes("wait_for"), `Error inesperado: ${result.error}`);
 });
 
+test("wait_for: omite login faltante cuando no hay formulario de password visible", async () => {
+  resetBody('<div id="app-auth">Sesion iniciada</div>');
+  const result = await runStep(
+    { type: "wait_for", selector: "#login-panel", timeout: 100 },
+    {},
+    { retryMs: 20, timeoutMs: 200 }
+  );
+  assert.equal(result.ok, true, result.error || "deberia omitir login si ya hay sesion");
+});
+
+test("click: omite login faltante cuando no hay formulario de password visible", async () => {
+  resetBody('<div id="app-auth">Sesion iniciada</div>');
+  const result = await runStep(
+    { type: "click", selector: "#btn-login" },
+    {},
+    { retryMs: 20, timeoutMs: 100 }
+  );
+  assert.equal(result.ok, true, result.error || "deberia omitir click de login inexistente");
+});
+
+test("input: omite selector login IAPOS faltante cuando ya hay sesion", async () => {
+  resetBody('<div id="app-auth">Sesion iniciada</div>');
+  const result = await runStep(
+    { type: "input", selector: "#MPW0024vUSUACODUSU", value: "AWAGNER" },
+    {},
+    { retryMs: 20, timeoutMs: 100 }
+  );
+  assert.equal(result.ok, true, result.error || "deberia omitir input de login IAPOS inexistente");
+});
+
+test("input login faltante: bypass inmediato sin esperar timeout completo", async () => {
+  resetBody('<div id="app-auth">Sesion iniciada</div>');
+  const startedAt = Date.now();
+  const result = await runStep(
+    { type: "input", selector: "#MPW0024vUSUACODUSU", value: "AWAGNER" },
+    {},
+    { retryMs: 20, timeoutMs: 1000 }
+  );
+  const elapsed = Date.now() - startedAt;
+  assert.equal(result.ok, true, result.error || "deberia omitir input de login IAPOS inexistente");
+  assert.ok(elapsed < 700, `bypass demasiado lento: ${elapsed}ms`);
+});
+
+test("play: onDone incluye durationMs en summary", async () => {
+  resetBody('<div id="app-auth">Sesion iniciada</div>');
+  const p = new Player({ retryMs: 20, timeoutMs: 500 });
+  let doneSummary = null;
+
+  await new Promise((resolve) => {
+    p.play([
+      { type: "wait", ms: 30 },
+      { type: "wait", ms: 30 }
+    ], {
+      vars: {},
+      speed: 1,
+      onDone: (summary) => {
+        doneSummary = summary || null;
+        resolve();
+      },
+      onError: resolve
+    });
+  });
+
+  assert.ok(doneSummary && Number.isFinite(Number(doneSummary.durationMs)), "summary.durationMs debe existir");
+  assert.ok(Number(doneSummary.durationMs) >= 0, "durationMs debe ser no negativo");
+});
+
 // ── Tests: scroll_to ──────────────────────────────────────────────────────────
 
 test("scroll_to: ejecuta sin error cuando el elemento existe", async () => {
@@ -385,6 +452,21 @@ test("loop_until: respeta max_iterations como limite de seguridad", async () => 
   }, vars);
   assert.equal(result.ok, true);
   assert.equal(vars.ITER, "0"); // nunca entró al bloque
+});
+
+test("loop_until: omite bloque de login cuando no hay password visible", async () => {
+  resetBody('<div id="home">home</div>');
+  const vars = { ITER: "0" };
+  const result = await runStep({
+    type: "loop_until",
+    selector: "#login-form",
+    condition: "not_exists",
+    max_iterations: 5,
+    steps: [{ type: "set_variable", variable: "ITER", value: "{{!ITER}} + 1" }]
+  }, vars, { retryMs: 20, timeoutMs: 200 });
+
+  assert.equal(result.ok, true);
+  assert.equal(vars.ITER, "0");
 });
 
 // ── Tests: try_fallback ───────────────────────────────────────────────────────
@@ -851,6 +933,63 @@ test("play: bootstrap navega a primera URL cuando macro inicia con selector loca
   if (requestedHref !== null) {
     assert.ok(requestedHref.includes("https://example.com/search?q=test"), "debe solicitar bootstrap a primera navigate URL");
   }
+});
+
+test("open_tab: delega handoff al background y finaliza en pestaña origen", async () => {
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const calls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    calls.push(msg);
+    if (msg && msg.type === "PLAYBACK_TAB_ACTION") {
+      if (typeof cb === "function") cb({ ok: true, handoff: true, tabId: 2 });
+      return;
+    }
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 200 });
+  await new Promise((resolve) => {
+    p.play([
+      { type: "open_tab", url: "https://example.com/new" },
+      { type: "set_variable", variable: "AFTER", value: "NO_DEBE_EJECUTAR_EN_TAB_ORIGEN" }
+    ], {
+      vars,
+      speed: 1,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  assert.ok(calls.some((c) => c.type === "PLAYBACK_TAB_ACTION" && c.action === "open_tab"));
+  assert.equal(vars.AFTER, undefined);
+});
+
+test("switch_tab: error en background dispara onError", async () => {
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    if (msg && msg.type === "PLAYBACK_TAB_ACTION") {
+      if (typeof cb === "function") cb({ ok: false, error: "switch_tab_not_found" });
+      return;
+    }
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  let gotError = "";
+  const p = new Player({ retryMs: 20, timeoutMs: 200 });
+  await new Promise((resolve) => {
+    p.play([{ type: "switch_tab", url: "https://no-existe.example" }], {
+      vars: {},
+      speed: 1,
+      onDone: resolve,
+      onError: (err) => { gotError = String(err && err.message || ""); resolve(); }
+    });
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  assert.ok(gotError.includes("tab action failed"), `Error inesperado: ${gotError}`);
 });
 
 // ── Tests: choose_option ────────────────────────────────────────────────────────

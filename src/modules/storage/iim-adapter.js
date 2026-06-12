@@ -116,6 +116,47 @@
         lines.push(`NAVIGATE URL=${_quote(step.url || "")}`);
         return;
       }
+      if (step.type === "browser_back") {
+        lines.push("BACK");
+        return;
+      }
+      if (step.type === "browser_forward") {
+        lines.push("FORWARD");
+        return;
+      }
+      if (step.type === "browser_history") {
+        lines.push("HISTORY");
+        return;
+      }
+      if (step.type === "browser_reload") {
+        lines.push("RELOAD");
+        return;
+      }
+      if (step.type === "open_bookmark") {
+        lines.push(`OPEN_BOOKMARK URL=${_quote(step.url || "")}`);
+        return;
+      }
+      if (step.type === "open_tab") {
+        let line = "OPEN_TAB";
+        if (step.url) line += ` URL=${_quote(step.url)}`;
+        if (typeof step.activate !== "undefined") line += ` ACTIVATE=${_quote(String(step.activate))}`;
+        lines.push(line);
+        return;
+      }
+      if (step.type === "switch_tab") {
+        let line = "SWITCH_TAB";
+        if (step.url) line += ` URL=${_quote(step.url)}`;
+        if (typeof step.openIfMissing !== "undefined") line += ` OPEN_IF_MISSING=${_quote(String(step.openIfMissing))}`;
+        lines.push(line);
+        return;
+      }
+      if (step.type === "close_tab") {
+        let line = "CLOSE_TAB";
+        if (step.target) line += ` TARGET=${_quote(String(step.target))}`;
+        if (step.url) line += ` URL=${_quote(step.url)}`;
+        lines.push(line);
+        return;
+      }
       if (step.type === "wait") {
         const secs = Number(step.seconds) || 1;
         lines.push(`WAIT SECONDS=${secs}`);
@@ -200,6 +241,38 @@
       if (l.startsWith("NAVIGATE")) {
         const url = _parseParam(l, "URL");
         steps.push({ type: "navigate", url });
+      } else if (l.startsWith("BACK")) {
+        steps.push({ type: "browser_back" });
+      } else if (l.startsWith("FORWARD")) {
+        steps.push({ type: "browser_forward" });
+      } else if (l.startsWith("HISTORY")) {
+        steps.push({ type: "browser_history" });
+      } else if (l.startsWith("RELOAD")) {
+        steps.push({ type: "browser_reload" });
+      } else if (l.startsWith("OPEN_BOOKMARK")) {
+        const url = _parseParam(l, "URL");
+        steps.push({ type: "open_bookmark", url: url || "" });
+      } else if (l.startsWith("OPEN_TAB")) {
+        const url = _parseParam(l, "URL");
+        const activateRaw = _parseParam(l, "ACTIVATE");
+        const step = { type: "open_tab" };
+        if (url) step.url = url;
+        if (activateRaw) step.activate = activateRaw;
+        steps.push(step);
+      } else if (l.startsWith("SWITCH_TAB")) {
+        const url = _parseParam(l, "URL");
+        const openRaw = _parseParam(l, "OPEN_IF_MISSING");
+        const step = { type: "switch_tab" };
+        if (url) step.url = url;
+        if (openRaw) step.openIfMissing = openRaw;
+        steps.push(step);
+      } else if (l.startsWith("CLOSE_TAB")) {
+        const target = _parseParam(l, "TARGET");
+        const url = _parseParam(l, "URL");
+        const step = { type: "close_tab" };
+        if (target) step.target = target;
+        if (url) step.url = url;
+        steps.push(step);
       } else if (l.startsWith("CLICK")) {
         const sel = _parseParam(l, "SELECTOR");
         steps.push({ type: "click", selector: sel });

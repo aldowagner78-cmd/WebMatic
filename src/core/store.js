@@ -12,6 +12,7 @@
       PLAY_STARTED: "PLAY_STARTED",
       PLAY_STOPPED: "PLAY_STOPPED",
       STEP_CAPTURED: "STEP_CAPTURED",
+      DRAFT_RESTORED: "DRAFT_RESTORED",
       STATUS_MESSAGE_SET: "STATUS_MESSAGE_SET",
       LIBRARY_LOADED: "LIBRARY_LOADED",
       MACRO_SAVED: "MACRO_SAVED",
@@ -283,6 +284,21 @@
             statusMessage: "Paso capturado"
           }
         };
+      case ActionTypes.DRAFT_RESTORED: {
+        const list = Array.isArray(action.payload) ? action.payload : [];
+        return {
+          ...state,
+          draft: {
+            ...state.draft,
+            stepsCount: list.length,
+            steps: list
+          },
+          runtime: {
+            ...state.runtime,
+            statusMessage: list.length > 0 ? "Pasos restaurados" : state.runtime.statusMessage
+          }
+        };
+      }
       case ActionTypes.STATUS_MESSAGE_SET:
         return {
           ...state,
