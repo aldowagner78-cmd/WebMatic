@@ -121,6 +121,20 @@
       || /gallery-close/i.test(sel);
   }
 
+  function _normalizeTextForCompare(value) {
+    const base = utils
+      ? utils.escapeTextContent(String(value == null ? "" : value))
+      : String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    return base;
+  }
+
+  function _foldTextForCompare(value) {
+    return _normalizeTextForCompare(value)
+      .toLocaleLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+  }
+
   function _findOpenLightboxNode() {
     const candidates = [
       "[role='dialog'][aria-modal='true']",
@@ -237,7 +251,8 @@
     const textMatch = /^(\w+)\[text="([^"]+)"\]$/.exec(selector);
     if (textMatch) {
       const [, tagName, text] = textMatch;
-      const escText = utils ? utils.escapeTextContent(text) : text.trim();
+      const expectedText = _normalizeTextForCompare(text);
+      const expectedFold = _foldTextForCompare(text);
       // Search in main doc + all accessible iframes
       const docsToSearch = [document];
       try {
@@ -250,14 +265,19 @@
         }
       } catch (e) { /* ignore */ }
       for (const d of docsToSearch) {
+        let foldedEqual = null;
+        let foldedContains = null;
         try {
           const candidates = d.querySelectorAll(tagName);
           for (const el of candidates) {
-            const elText = utils
-              ? utils.escapeTextContent(el.textContent)
-              : el.textContent.replace(/\s+/g, " ").trim();
-            if (elText === escText) return el;
+            const elText = _normalizeTextForCompare(el.textContent);
+            const elFold = _foldTextForCompare(el.textContent);
+            if (elText === expectedText) return el;
+            if (!foldedEqual && elFold === expectedFold) foldedEqual = el;
+            if (!foldedContains && expectedFold && elFold.includes(expectedFold)) foldedContains = el;
           }
+          if (foldedEqual) return foldedEqual;
+          if (foldedContains) return foldedContains;
         } catch (e) { /* ignore */ }
       }
       return null;
@@ -848,10 +868,55 @@
         }
 
         if (step.type === "key") {
-          const target = document.activeElement || document.body;
-          ["keydown", "keyup"].forEach((t) =>
-            target.dispatchEvent(new KeyboardEvent(t, { key: step.key, bubbles: true, cancelable: true }))
-          );
+          const keySelector = expandVariables(step.selector || "", vars);
+          let target = (keySelector && findElement(keySelector)) || document.activeElement || document.body;
+          if (String(step.key || "") === "Enter") {
+            const isBodyFocused = !target || target === document.body || target === document.documentElement;
+            if (isBodyFocused) {
+              const pwd = _getFirstVisiblePasswordField();
+              if (pwd) target = pwd;
+            }
+          }
+          // Foco real para que la lógica del navegador (submit por Enter, etc.)
+          // funcione como cuando un humano usa el teclado.
+          try { if (target && typeof target.focus === "function") target.focus(); } catch (_e) { /* ignore */ }
+
+          const _keyName = String(step.key || "");
+          const _keyCodeMap = { Enter: 13, Tab: 9, Escape: 27 };
+          const _kc = _keyCodeMap[_keyName] || 0;
+          const _keyInit = {
+            key: _keyName,
+            code: _keyName,
+            keyCode: _kc,
+            which: _kc,
+            bubbles: true,
+            cancelable: true
+          };
+          const _kd = new KeyboardEvent("keydown",  _keyInit);
+          const _kp = new KeyboardEvent("keypress", _keyInit);
+          const _ku = new KeyboardEvent("keyup",    _keyInit);
+          target.dispatchEvent(_kd);
+          target.dispatchEvent(_kp);
+          target.dispatchEvent(_ku);
+
+          // Comportamiento nativo del navegador: si Enter no fue preventDefault'd
+          // dentro de un input de un <form>, el form se envía. Replicar eso aquí
+          // hace que login (IAPOS / GeneXus / cualquier form clásico) funcione.
+          if (
+            _keyName === "Enter" &&
+            !_kd.defaultPrevented &&
+            !_kp.defaultPrevented &&
+            target &&
+            typeof target.closest === "function"
+          ) {
+            try {
+              const _form = target.closest("form");
+              if (_form) {
+                if (typeof _form.requestSubmit === "function") _form.requestSubmit();
+                else _form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+              }
+            } catch (_e) { /* ignore */ }
+          }
           resolve();
           return;
         }
@@ -1167,18 +1232,23 @@
           if (!_silentStep) _highlightElement(el);
           el.focus();
           setInputValue(el, value);
+          const _keepFocusForLogin = _isLikelyLoginInputTarget(el, selector);
           // Intentar seleccionar la opción del autocomplete (GeneXus, etc.)
           // Si no aparece ningún dropdown en ~400ms, sigue sin hacer nada
           _tryClickAutocomplete(value).then(clicked => {
             if (!clicked) {
-              // Sin autocomplete: cerrar con Escape + blur
-              try {
-                const esc = { key: "Escape", keyCode: 27, bubbles: true, cancelable: true };
-                el.dispatchEvent(new KeyboardEvent("keydown", esc));
-                document.dispatchEvent(new KeyboardEvent("keydown", esc));
-              } catch (_) {}
+              // Sin autocomplete: en login NO forzar Escape/blur para permitir Enter-submit.
+              if (!_keepFocusForLogin) {
+                try {
+                  const esc = { key: "Escape", keyCode: 27, bubbles: true, cancelable: true };
+                  el.dispatchEvent(new KeyboardEvent("keydown", esc));
+                  document.dispatchEvent(new KeyboardEvent("keydown", esc));
+                } catch (_) {}
+              }
             }
-            try { el.blur(); } catch (_) {}
+            if (!_keepFocusForLogin) {
+              try { el.blur(); } catch (_) {}
+            }
             resolve();
           });
           return; // resolve() se llama dentro del .then()
@@ -1788,6 +1858,32 @@
     }
   }
 
+  function _getFirstVisiblePasswordField() {
+    try {
+      const list = document.querySelectorAll('input[type="password"]');
+      return Array.from(list).find((el) => _isInteractable(el)) || null;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function _isLikelyLoginInputTarget(el, selector) {
+    if (_isLikelyLoginSelector(selector || "")) return true;
+    if (!el) return false;
+    try {
+      if (el instanceof HTMLInputElement) {
+        const type = String(el.type || "").toLowerCase();
+        if (type === "password") return true;
+      }
+      const id = String(el.id || "");
+      const name = String(el.getAttribute && el.getAttribute("name") || "");
+      const aria = String(el.getAttribute && el.getAttribute("aria-label") || "");
+      return /(password|passwd|pwd|clave|contras|usuario|user|mail|email|codusu|usuacod|idusu|login|signin|ingresar|acceder)/i.test(`${id} ${name} ${aria}`);
+    } catch (_e) {
+      return false;
+    }
+  }
+
   function _isAuthenticatedLikeContext() {
     const href = String((window && window.location && window.location.href) || "");
     const looksLikeLoginUrl = /(login|signin|auth|oauth|sesion|session|acceso|ingresar)/i.test(href);
@@ -1941,7 +2037,18 @@
             const _ifSel = expandVariables(step.selector || "", vars);
             const _ifFound = !!findElement(_ifSel);
             const _ifBranch = _ifFound ? (step.then || []) : (step.else || []);
-            if (_ifBranch.length > 0) await this._runSubSteps(_ifBranch, vars, baseDelayMs);
+            if (_ifBranch.length > 0) {
+              // Guardar estado de reanudación ANTES de ejecutar sub-pasos.
+              // Si dentro del bloque ocurre una navegación (ej: submit de login),
+              // la nueva página retoma desde el paso SIGUIENTE al if_exists.
+              await new Promise((res) => {
+                chrome.runtime.sendMessage({
+                  type: "SAVE_PLAYBACK_STATE",
+                  steps: runtimeSteps, index: i + 1, vars, speed, macroId
+                }, () => { void chrome.runtime.lastError; res(); });
+              });
+              await this._runSubSteps(_ifBranch, vars, baseDelayMs);
+            }
             continue;
           }
 
