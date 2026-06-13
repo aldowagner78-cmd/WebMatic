@@ -1927,6 +1927,34 @@
     return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
   }
 
+  function _cloneDatasetRows(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows.map((row) => {
+      if (Array.isArray(row)) return row.slice();
+      if (row && typeof row === "object") return { ...row };
+      return row;
+    });
+  }
+
+  function _buildForEachRowContinuationStep(step, remainingRows) {
+    const cloned = { ...(step || {}) };
+    cloned.columns = Array.isArray(step && step.columns) ? step.columns.slice() : [];
+    cloned.dataset = _cloneDatasetRows(remainingRows);
+    cloned.steps = Array.isArray(step && step.steps)
+      ? step.steps.map((s) => (s && typeof s === "object" ? { ...s } : s))
+      : [];
+    return cloned;
+  }
+
+  function _buildLoopUntilContinuationStep(step, remainingIterations) {
+    const cloned = { ...(step || {}) };
+    cloned.steps = Array.isArray(step && step.steps)
+      ? step.steps.map((s) => (s && typeof s === "object" ? { ...s } : s))
+      : [];
+    cloned.max_iterations = remainingIterations;
+    return cloned;
+  }
+
   class Player {
     constructor(options) {
       this.retryMs = options?.retryMs ?? 500;
@@ -2042,7 +2070,13 @@
                   steps: runtimeSteps, index: i + 1, vars, speed, macroId
                 }, () => { void chrome.runtime.lastError; res(); });
               });
-              await this._runSubSteps(_ifBranch, vars, baseDelayMs);
+              await this._runSubSteps(
+                _ifBranch,
+                vars,
+                baseDelayMs,
+                runtimeSteps.slice(i + 1),
+                { speed, macroId }
+              );
             }
             continue;
           }
@@ -2063,7 +2097,17 @@
               const _luKeep = _luCond === "exists" ? !!_luEl : !_luEl;
               if (!_luKeep) break;
               if (Array.isArray(step.steps) && step.steps.length > 0) {
-                await this._runSubSteps(step.steps, vars, baseDelayMs);
+                const _remainingLoopIterations = Math.max(0, _luMax - (_luIter + 1));
+                const _loopContinuation = _remainingLoopIterations > 0
+                  ? [_buildLoopUntilContinuationStep(step, _remainingLoopIterations), ...runtimeSteps.slice(i + 1)]
+                  : runtimeSteps.slice(i + 1);
+                await this._runSubSteps(
+                  step.steps,
+                  vars,
+                  baseDelayMs,
+                  _loopContinuation,
+                  { speed, macroId }
+                );
               }
             }
             continue;
@@ -2074,11 +2118,23 @@
           if (step.type === "try_fallback") {
             try {
               if (Array.isArray(step.steps) && step.steps.length > 0) {
-                await this._runSubSteps(step.steps, vars, baseDelayMs);
+                await this._runSubSteps(
+                  step.steps,
+                  vars,
+                  baseDelayMs,
+                  runtimeSteps.slice(i + 1),
+                  { speed, macroId }
+                );
               }
             } catch (_tfErr) {
               if (Array.isArray(step.fallback) && step.fallback.length > 0) {
-                await this._runSubSteps(step.fallback, vars, baseDelayMs);
+                await this._runSubSteps(
+                  step.fallback,
+                  vars,
+                  baseDelayMs,
+                  runtimeSteps.slice(i + 1),
+                  { speed, macroId }
+                );
               }
             }
             continue;
@@ -2089,7 +2145,13 @@
           // { type:"call_macro", macro_name:"NombreMacro", steps:[...] }
           if (step.type === "call_macro") {
             if (Array.isArray(step.steps) && step.steps.length > 0) {
-              await this._runSubSteps(step.steps, vars, baseDelayMs);
+              await this._runSubSteps(
+                step.steps,
+                vars,
+                baseDelayMs,
+                runtimeSteps.slice(i + 1),
+                { speed, macroId }
+              );
             }
             continue;
           }
@@ -2108,7 +2170,17 @@
                 vars[col] = _feRow[ci] !== undefined ? String(_feRow[ci]) : "";
               });
               if (Array.isArray(step.steps) && step.steps.length > 0) {
-                await this._runSubSteps(step.steps, vars, baseDelayMs);
+                const _remainingRows = _feRows.slice(_ri + 1);
+                const _rowContinuation = _remainingRows.length > 0
+                  ? [_buildForEachRowContinuationStep(step, _remainingRows), ...runtimeSteps.slice(i + 1)]
+                  : runtimeSteps.slice(i + 1);
+                await this._runSubSteps(
+                  step.steps,
+                  vars,
+                  baseDelayMs,
+                  _rowContinuation,
+                  { speed, macroId }
+                );
               }
             }
             continue;
@@ -2281,12 +2353,16 @@
 
     // Ejecuta un paso simple o complejo de forma recursiva.
     // Garantiza que if_exists, loop_until, etc. dentro de sub-pasos también funcionen.
-    async _execComplexStep(step, vars, baseDelayMs) {
+    async _execComplexStep(step, vars, baseDelayMs, options = {}) {
+      const continuationSteps = Array.isArray(options.continuationSteps) ? options.continuationSteps : [];
+      const runtimeMeta = options.runtimeMeta && typeof options.runtimeMeta === "object" ? options.runtimeMeta : null;
       if (step.type === "if_exists") {
         const _ifSel = expandVariables(step.selector || "", vars);
         const _ifFound = !!findElement(_ifSel);
         const _ifBranch = _ifFound ? (step.then || []) : (step.else || []);
-        if (_ifBranch.length > 0) await this._runSubSteps(_ifBranch, vars, baseDelayMs);
+        if (_ifBranch.length > 0) {
+          await this._runSubSteps(_ifBranch, vars, baseDelayMs, continuationSteps, runtimeMeta);
+        }
         return;
       }
       if (step.type === "loop_until") {
@@ -2302,7 +2378,11 @@
           const _luKeep = _luCond === "exists" ? !!_luEl : !_luEl;
           if (!_luKeep) break;
           if (Array.isArray(step.steps) && step.steps.length > 0) {
-            await this._runSubSteps(step.steps, vars, baseDelayMs);
+            const _remainingLoopIterations = Math.max(0, _luMax - (_luIter + 1));
+            const _loopContinuation = _remainingLoopIterations > 0
+              ? [_buildLoopUntilContinuationStep(step, _remainingLoopIterations), ...continuationSteps]
+              : continuationSteps;
+            await this._runSubSteps(step.steps, vars, baseDelayMs, _loopContinuation, runtimeMeta);
           }
         }
         return;
@@ -2310,18 +2390,18 @@
       if (step.type === "try_fallback") {
         try {
           if (Array.isArray(step.steps) && step.steps.length > 0) {
-            await this._runSubSteps(step.steps, vars, baseDelayMs);
+            await this._runSubSteps(step.steps, vars, baseDelayMs, continuationSteps, runtimeMeta);
           }
         } catch (_tfErr) {
           if (Array.isArray(step.fallback) && step.fallback.length > 0) {
-            await this._runSubSteps(step.fallback, vars, baseDelayMs);
+            await this._runSubSteps(step.fallback, vars, baseDelayMs, continuationSteps, runtimeMeta);
           }
         }
         return;
       }
       if (step.type === "call_macro") {
         if (Array.isArray(step.steps) && step.steps.length > 0) {
-          await this._runSubSteps(step.steps, vars, baseDelayMs);
+          await this._runSubSteps(step.steps, vars, baseDelayMs, continuationSteps, runtimeMeta);
         }
         return;
       }
@@ -2336,10 +2416,17 @@
             vars[col] = _feRow[ci] !== undefined ? String(_feRow[ci]) : "";
           });
           if (Array.isArray(step.steps) && step.steps.length > 0) {
-            await this._runSubSteps(step.steps, vars, baseDelayMs);
+            const _remainingRows = _feRows.slice(_ri + 1);
+            const _rowContinuation = _remainingRows.length > 0
+              ? [_buildForEachRowContinuationStep(step, _remainingRows), ...continuationSteps]
+              : continuationSteps;
+            await this._runSubSteps(step.steps, vars, baseDelayMs, _rowContinuation, runtimeMeta);
           }
         }
         return;
+      }
+      if (step.type === "open_tab" || step.type === "switch_tab" || step.type === "close_tab") {
+        throw new Error("tab actions inside complex sub-steps are not supported yet; move them to top-level playback steps");
       }
       // Simple step (navigate in sub-context treated as executeStep — no page-save needed)
       await executeStep(step, vars, this.retryMs, this.timeoutMs, this._speed);
@@ -2347,7 +2434,7 @@
 
     // Ejecuta un sub-array de pasos secuencialmente.
     // Soporta pasos simples y complejos (if_exists, loop_until, etc.) de forma recursiva.
-    async _runSubSteps(subSteps, vars, baseDelayMs) {
+    async _runSubSteps(subSteps, vars, baseDelayMs, continuationSteps = [], runtimeMeta = null) {
       for (let _j = 0; _j < subSteps.length; _j++) {
         if (this._abort) break;
         const subStep = subSteps[_j];
@@ -2355,7 +2442,27 @@
           ? Array.from(_collectModifiedSelectors(subSteps, _j + 1))
           : null;
         const runnableSubStep = capturePreserve ? { ...subStep, _preserveSelectors: capturePreserve } : subStep;
-        await this._execComplexStep(runnableSubStep, vars, baseDelayMs);
+        const _remaining = subSteps.slice(_j + 1);
+        const _continuation = _remaining.concat(Array.isArray(continuationSteps) ? continuationSteps : []);
+        const _silentSubStep = _isSilentInternalStep(runnableSubStep);
+
+        if (!_silentSubStep && runtimeMeta && _continuation.length > 0) {
+          await new Promise((res) => {
+            chrome.runtime.sendMessage({
+              type: "SAVE_PLAYBACK_STATE",
+              steps: _continuation,
+              index: 0,
+              vars,
+              speed: runtimeMeta.speed,
+              macroId: runtimeMeta.macroId || null
+            }, () => { void chrome.runtime.lastError; res(); });
+          });
+        }
+
+        await this._execComplexStep(runnableSubStep, vars, baseDelayMs, {
+          continuationSteps: _continuation,
+          runtimeMeta
+        });
         if (_j < subSteps.length - 1) {
           await new Promise((r) => setTimeout(r, baseDelayMs));
         }

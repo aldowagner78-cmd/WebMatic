@@ -12,11 +12,15 @@ Este documento consolida el estado actual del proyecto con tres reglas estrictas
 
 ### 2.1 Evidencia automatica ejecutada ahora
 
-- `npm test` -> 232 tests, 232 pass, 0 fail.
-- `npm run verify:v2:firefox:fast` -> OK (fast), incluyendo:
+
+- `npm test` -> 236 tests, 236 pass, 0 fail.
+- `npm run verify:v2:firefox:full` -> OK (full), incluyendo:
 	- unit tests,
 	- e2e fixtures-flow,
-	- e2e iapos-safe.
+	- e2e iapos-safe,
+	- e2e firefox-extension.
+
+- `npm run verify:v2:firefox:fast` tambien en verde, pero queda explicitamente como validacion rapida.
 
 Observacion importante:
 - La etapa IAPOS real depende de variable de entorno (`IAPOS_E2E_REAL`) y no se ejecuto en esta corrida.
@@ -42,7 +46,7 @@ Observacion importante:
 
 ### 3.1 Estado de build/test
 
-- Verde en validacion automatica principal de esta corrida.
+- Verde en validacion automatica principal de esta corrida (full).
 - Sin fallas abiertas en suite unitaria.
 
 ### 3.2 Estado de cambios en working tree (snapshot)
@@ -162,14 +166,18 @@ Archivos/carpetas no trackeados detectados:
 
 | Area | Estado | Evidencia |
 |---|---|---|
-| Unit tests | Validado | `npm test` (232/232) |
-| Verify Firefox fast | Validado | `npm run verify:v2:firefox:fast` OK |
-| IAPOS real end-to-end | Pendiente | No ejecutado sin `IAPOS_E2E_REAL` |
+| Unit tests | Validado | `npm test` (236/236) |
+| Verify Firefox fast | Validado | `npm run verify:v2:firefox:fast` OK (rapida, no release gate) |
+| Verify Firefox full | Validado | `npm run verify:v2:firefox:full` OK |
+| CI release gate Firefox | Validado (implementado) | `.github/workflows/firefox-release-gate.yml` |
+| IAPOS real end-to-end | Pendiente (NO EJECUTADO EN ESTA CORRIDA) | Requiere `IAPOS_E2E_REAL=1` |
 | Grabacion defaults + baseline | Validado | Codigo + tests player/content |
-| Resume con preRunReset policy | Validado | Codigo + tests player |
-| Parser IIM comentarios extendidos | Validado | Codigo + tests iim-adapter |
+| Resume en subflujos complejos | Validado con limites explicitos | Codigo + tests en player (`if_exists`, `loop_until`, `try_fallback`, `call_macro`, `for_each_row`) y preservacion de filas/iteraciones remanentes; tab actions en subflujos complejos no soportadas en esta ronda |
+| Concurrencia pending playback por tab | Validado | `background.js` (mapa por tabId) |
+| Parser IIM comentarios extendidos/complejos | Validado | `iim-adapter.js` + tests de placeholders seguros |
+| Marcadores `_wmBlockKey/_wmBlockStart/_wmBlockEnd` | Parcial | Recorder/content los genera y editor los consume; sin campana QA manual dedicada en esta corrida |
 | UX visual fina (editor/script overlay) | Parcial | Verificado en codigo; falta recorrido manual amplio |
-| Performance en paginas muy dinamicas | Pendiente | No benchmark en esta corrida |
+| Performance en paginas muy dinamicas | Pendiente (NO EJECUTADO EN ESTA CORRIDA) | No benchmark en esta corrida |
 
 ## 6) Riesgos abiertos reales (sin exagerar)
 

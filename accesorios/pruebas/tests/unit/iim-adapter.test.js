@@ -156,6 +156,40 @@ test("importFromIim: parser legacy reconoce comentarios extendidos exportados po
   assert.equal(steps[4].type, "call_macro");
 });
 
+test("importFromIim: parser legacy reconoce placeholders de bloques complejos", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    '// IF_EXISTS SELECTOR="#alert" THEN=2 ELSE=1',
+    '// LOOP_UNTIL SELECTOR="#spinner" CONDITION="exists" MAX=7',
+    "// TRY_FALLBACK STEPS=2 FALLBACK=1",
+    '// FOR_EACH_ROW COLUMNS="NOMBRE,CIUDAD" ROWS=3'
+  ].join("\n");
+
+  const { steps } = adapter.importFromIim(script);
+  assert.equal(steps.length, 4);
+
+  assert.equal(steps[0].type, "if_exists");
+  assert.equal(steps[0].selector, "#alert");
+  assert.deepEqual(steps[0].then, []);
+  assert.deepEqual(steps[0].else, []);
+
+  assert.equal(steps[1].type, "loop_until");
+  assert.equal(steps[1].selector, "#spinner");
+  assert.equal(steps[1].condition, "exists");
+  assert.equal(steps[1].max_iterations, 7);
+  assert.deepEqual(steps[1].steps, []);
+
+  assert.equal(steps[2].type, "try_fallback");
+  assert.deepEqual(steps[2].steps, []);
+  assert.deepEqual(steps[2].fallback, []);
+
+  assert.equal(steps[3].type, "for_each_row");
+  assert.deepEqual(steps[3].columns, ["NOMBRE", "CIUDAD"]);
+  assert.deepEqual(steps[3].dataset, []);
+  assert.deepEqual(steps[3].steps, []);
+});
+
 // ── Round-trip de tipos extendidos ────────────────────────────────────────────
 
 test("round-trip: wait_for sobrevive export/import", () => {
@@ -513,4 +547,31 @@ test("exportToIim: sanea value sensible dentro de meta.preRunReset.controls", ()
   assert.equal(controls[0].value, undefined);
   assert.equal(controls[1].value, undefined);
   assert.equal(controls[2].value, "Juan");
+});
+
+test("H-09: exportToIim no filtra secretos sentinela en WM_JSON ni texto final", () => {
+  const macro = {
+    steps: [{ type: "click", selector: "#go" }],
+    meta: {
+      pageInventories: [{
+        url: "u",
+        controls: [
+          { selector: "#pwd", type: "password", name: "password", currentValue: "PASSWORD_SHOULD_NOT_LEAK" },
+          { selector: "#tok", name: "csrf_token", currentValue: "TOKEN_SHOULD_NOT_LEAK" }
+        ]
+      }],
+      preRunReset: {
+        version: 1,
+        controls: [
+          { selector: "#pwd", type: "password", name: "password", value: "PASSWORD_SHOULD_NOT_LEAK" },
+          { selector: "#sec", name: "api_secret", value: "SECRET_SHOULD_NOT_LEAK" }
+        ]
+      }
+    }
+  };
+
+  const script = adapter.exportToIim(macro);
+  assert.ok(!script.includes("PASSWORD_SHOULD_NOT_LEAK"));
+  assert.ok(!script.includes("TOKEN_SHOULD_NOT_LEAK"));
+  assert.ok(!script.includes("SECRET_SHOULD_NOT_LEAK"));
 });

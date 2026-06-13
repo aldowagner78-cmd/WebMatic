@@ -193,3 +193,66 @@ test("background: deduplica SHOW_FLOATING_BTN en ráfagas de onUpdated", () => {
   const floatingCalls = h.sentMessages.filter((c) => c.tabId === 21 && c.message && c.message.type === "SHOW_FLOATING_BTN");
   assert.equal(floatingCalls.length, 1);
 });
+
+test("background: SAVE/QUERY pending playback respeta aislamiento por tab y consume al leer", () => {
+  const h = bootBackground([
+    { id: 1, url: "https://site-a.test/home", active: true },
+    { id: 2, url: "https://site-b.test/home", active: false }
+  ]);
+
+  const saveResp = h.sendRuntimeMessage({
+    type: "SAVE_PLAYBACK_STATE",
+    targetTabId: 2,
+    steps: [{ type: "click", selector: "#go" }],
+    index: 1,
+    vars: { A: "1" },
+    speed: 1,
+    macroId: "m-1"
+  }, { tab: { id: 1, url: "https://site-a.test/home" } });
+  assert.equal(saveResp && saveResp.ok, true, "SAVE_PLAYBACK_STATE debe responder ok");
+
+  const fromTab1 = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 1 } });
+  assert.equal(fromTab1 && fromTab1.pending, null, "tab origen no debe recibir pending de otra tab");
+
+  const fromTab2 = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 2 } });
+  assert.ok(fromTab2 && fromTab2.pending, "tab destino debe recibir pending");
+  assert.equal(fromTab2.pending.tabId, 2);
+  assert.equal(Array.isArray(fromTab2.pending.steps), true);
+  assert.equal(fromTab2.pending.steps.length, 1);
+
+  const consumed = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 2 } });
+  assert.equal(consumed && consumed.pending, null, "pending debe consumirse luego de la primera lectura");
+});
+
+test("background: CLEAR_PENDING_PLAYBACK limpia por tab y tabs.onRemoved también limpia", () => {
+  const h = bootBackground([
+    { id: 7, url: "https://site-a.test/home", active: true },
+    { id: 8, url: "https://site-b.test/home", active: false },
+    { id: 9, url: "https://site-c.test/home", active: false }
+  ]);
+
+  h.sendRuntimeMessage({
+    type: "SAVE_PLAYBACK_STATE",
+    targetTabId: 8,
+    steps: [{ type: "input", selector: "#q", value: "abc" }],
+    index: 0
+  }, { tab: { id: 7, url: "https://site-a.test/home" } });
+
+  const clearResp = h.sendRuntimeMessage({ type: "CLEAR_PENDING_PLAYBACK", tabId: 8 }, { tab: { id: 7 } });
+  assert.equal(clearResp && clearResp.ok, true, "CLEAR_PENDING_PLAYBACK debe responder ok");
+
+  const afterClear = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 8 } });
+  assert.equal(afterClear && afterClear.pending, null, "clear explícito debe eliminar pending de esa tab");
+
+  h.sendRuntimeMessage({
+    type: "SAVE_PLAYBACK_STATE",
+    targetTabId: 9,
+    steps: [{ type: "navigate", url: "https://site-c.test/next" }],
+    index: 0
+  }, { tab: { id: 7, url: "https://site-a.test/home" } });
+
+  h.emitTabRemoved(9);
+
+  const afterRemove = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 9 } });
+  assert.equal(afterRemove && afterRemove.pending, null, "tabs.onRemoved debe limpiar pending de la tab cerrada");
+});
