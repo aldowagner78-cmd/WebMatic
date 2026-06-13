@@ -110,3 +110,9 @@ test("buildSelector: keeps final class+nth fallback", () => {
   const second = win.document.querySelectorAll("button")[1];
   assert.equal(Recorder.buildSelector(second), "button.cta:nth-of-type(2)");
 });
+
+test("buildSelector: dynamic id is used only as last resort when no stable alternative exists", () => {
+  resetBody('<div><button id="btn_9a8b7c_20260613"></button></div>');
+  const el = win.document.querySelector("button");
+  assert.equal(Recorder.buildSelector(el), "#btn_9a8b7c_20260613");
+});

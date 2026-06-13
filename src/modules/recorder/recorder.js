@@ -165,8 +165,13 @@
       const sameTag = siblings.filter((s) => s.tagName === element.tagName);
       const idx = sameTag.indexOf(element);
       const nth = sameTag.length > 1 ? `:nth-of-type(${idx + 1})` : "";
+      if (stableClasses) return `${tag}.${stableClasses}${nth}`;
+
+      // Last resort only: when no stable semantic/path/class fallback exists,
+      // keep dynamic id to avoid returning a too-generic selector like plain tag.
       if (elementId) return `#${E(elementId)}`;
-      return stableClasses ? `${tag}.${stableClasses}${nth}` : `${tag}${nth}`;
+
+      return `${tag}${nth}`;
     }
 
     /**
