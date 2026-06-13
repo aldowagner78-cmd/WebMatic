@@ -24,11 +24,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Firefox, geckodriver and zip
+      - name: Install zip
         run: |
           sudo apt-get update
           sudo apt-get install -y zip
-          sudo apt-get install -y firefox geckodriver || sudo apt-get install -y firefox-esr geckodriver
 
       - name: Install Playwright Firefox runtime
         run: npx playwright install --with-deps firefox
