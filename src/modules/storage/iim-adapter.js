@@ -359,6 +359,34 @@
       const macroName = _parseParam(body, "NAME");
       return macroName ? { type: "call_macro", macro_name: macroName, steps: [] } : null;
     }
+    if (body.startsWith("IF_EXISTS")) {
+      const selector = _parseParam(body, "SELECTOR");
+      if (!selector) return null;
+      return { type: "if_exists", selector, then: [], else: [] };
+    }
+    if (body.startsWith("LOOP_UNTIL")) {
+      const selector = _parseParam(body, "SELECTOR");
+      if (!selector) return null;
+      const condition = _parseParam(body, "CONDITION") || "not_exists";
+      const maxIterations = parseInt(_parseParam(body, "MAX"), 10);
+      return {
+        type: "loop_until",
+        selector,
+        condition,
+        max_iterations: Number.isFinite(maxIterations) && maxIterations > 0 ? maxIterations : 50,
+        steps: []
+      };
+    }
+    if (body.startsWith("TRY_FALLBACK")) {
+      return { type: "try_fallback", steps: [], fallback: [] };
+    }
+    if (body.startsWith("FOR_EACH_ROW")) {
+      const columnsRaw = _parseParam(body, "COLUMNS");
+      const columns = columnsRaw
+        ? columnsRaw.split(",").map((v) => String(v || "").trim()).filter(Boolean)
+        : [];
+      return { type: "for_each_row", columns, dataset: [], steps: [] };
+    }
 
     return null;
   }

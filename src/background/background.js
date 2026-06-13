@@ -88,9 +88,10 @@ const panelOpenTabs = new Set();
 const tabNavStateById = new Map(); // tabId -> { stack: string[], index: number }
 const lastBrowserNavEventByTab = new Map(); // tabId -> { type, url, at }
 
-// Stores pending playback state so it can be resumed after page navigation
-// { tabId, steps, index, vars, speed }
-let pendingPlayback = null;
+// Stores pending playback state so it can be resumed after page navigation.
+// Keyed by destination tabId to avoid singleton overwrite across concurrent playbacks.
+// Map<tabId, { tabId, steps, index, vars, speed, macroId }>
+const pendingPlaybackByTab = new Map();
 
 function _isRestrictedUrl(url) {
   const u = String(url || "").trim();
@@ -358,6 +359,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   }
 
   panelOpenTabs.delete(tabId);
+  pendingPlaybackByTab.delete(tabId);
   if (inlineRecordingTabId === tabId) inlineRecordingTabId = null;
   if (recordingActiveTabId === tabId) recordingActiveTabId = null;
 });
@@ -372,7 +374,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Called by player just before a navigating click
     if (sender && sender.tab && sender.tab.id) {
       const explicitTabId = Number(message.targetTabId);
-      pendingPlayback = {
+      const pending = {
         tabId: Number.isFinite(explicitTabId) && explicitTabId > 0 ? explicitTabId : sender.tab.id,
         steps: message.steps,
         index: message.index,
@@ -380,15 +382,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         speed: message.speed || 1,
         macroId: message.macroId || null
       };
+      pendingPlaybackByTab.set(pending.tabId, pending);
     }
     sendResponse({ ok: true });
     return true;
   }
 
   if (message?.type === "QUERY_PENDING_PLAYBACK") {
-    if (sender && sender.tab && sender.tab.id && pendingPlayback && pendingPlayback.tabId === sender.tab.id) {
-      const p = pendingPlayback;
-      pendingPlayback = null;
+    const senderTabId = sender && sender.tab && sender.tab.id ? Number(sender.tab.id) : 0;
+    if (senderTabId > 0 && pendingPlaybackByTab.has(senderTabId)) {
+      const p = pendingPlaybackByTab.get(senderTabId);
+      pendingPlaybackByTab.delete(senderTabId);
       sendResponse({ pending: p });
     } else {
       sendResponse({ pending: null });
@@ -397,7 +401,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message?.type === "CLEAR_PENDING_PLAYBACK") {
-    pendingPlayback = null;
+    const explicitTabId = Number(message.tabId);
+    if (Number.isFinite(explicitTabId) && explicitTabId > 0) {
+      pendingPlaybackByTab.delete(explicitTabId);
+    } else if (sender && sender.tab && sender.tab.id) {
+      pendingPlaybackByTab.delete(Number(sender.tab.id));
+    } else {
+      pendingPlaybackByTab.clear();
+    }
     sendResponse({ ok: true });
     return true;
   }
@@ -545,14 +556,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: false, error: "invalid_target_tab" });
         return;
       }
-      pendingPlayback = {
+      pendingPlaybackByTab.set(targetId, {
         tabId: targetId,
         steps: Array.isArray(message.steps) ? message.steps : [],
         index: Number.isFinite(Number(message.index)) ? Number(message.index) : 0,
         vars: message.vars || {},
         speed: message.speed || 1,
         macroId: message.macroId || null
-      };
+      });
 
       chrome.tabs.update(targetId, { active: true }, () => {
         void chrome.runtime.lastError;

@@ -952,16 +952,28 @@ async function main() {
     }
     if (!seVisible) throw new Error("No se abrió el editor visual tras detener grabación");
 
-    // 5) Expandir paso choose_option.
+    // 5) Expandir bloques colapsados y abrir el paso del select grabado.
     const openedChooseStep = await execSync(sessionId, `
       const panel = document.getElementById("webmatic-panel-root");
+      if (!panel) return { opened: false, rowCount: 0, reason: "panel_missing" };
+
+      // Asegura visibilidad de filas cuando el editor inicia con bloques colapsados.
+      const toggles = Array.from(panel.querySelectorAll(".wm-sved-block-toggle"));
+      toggles.forEach((btn) => {
+        const expanded = btn && String(btn.getAttribute("aria-expanded") || "").toLowerCase() === "true";
+        if (!expanded) btn.click();
+      });
+
       const rows = Array.from(panel.querySelectorAll(".wm-sved-row"));
       let opened = false;
       for (const row of rows) {
         const t = row.querySelector(".wm-sved-type");
         if (!t) continue;
         const type = (t.textContent || "").trim();
-        if (type === "choose_option") {
+        const desc = row.querySelector(".wm-sved-desc");
+        const descText = (desc && desc.textContent) ? String(desc.textContent) : "";
+        const isTargetSelect = descText.includes("#filtro-modalidad");
+        if (type === "choose_option" || ((type === "input" || type === "text") && isTargetSelect)) {
           const edit = row.querySelector(".wm-sved-btn-edit");
           if (edit) {
             edit.click();

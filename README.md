@@ -47,6 +47,8 @@ Incluye:
 - e2e de fixtures (modern/legacy/GeneXus/IAPOS simulado)
 - e2e seguro IAPOS
 
+Importante: `verify:v2:firefox:fast` es una validacion rapida y no habilita release por si sola.
+
 Para validacion completa de extension en Firefox:
 
 ```bash
@@ -54,6 +56,8 @@ npm run verify:v2:firefox:full
 ```
 
 Ademas de lo anterior, agrega e2e de extension Firefox.
+
+Release gate recomendado: considerar candidato a release unicamente cuando `verify:v2:firefox:full` este en verde.
 
 Publicar recien cuando este flujo completo quede en verde y la validacion manual en Firefox sea correcta.
 

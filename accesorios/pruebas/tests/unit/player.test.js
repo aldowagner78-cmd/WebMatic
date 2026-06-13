@@ -992,6 +992,234 @@ test("switch_tab: error en background dispara onError", async () => {
   assert.ok(gotError.includes("tab action failed"), `Error inesperado: ${gotError}`);
 });
 
+test("close_tab: delega handoff al background y corta ejecución en pestaña origen", async () => {
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const calls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    calls.push(msg);
+    if (msg && msg.type === "PLAYBACK_TAB_ACTION") {
+      if (typeof cb === "function") cb({ ok: true, handoff: true, tabId: 3 });
+      return;
+    }
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 200 });
+  await new Promise((resolve) => {
+    p.play([
+      { type: "close_tab", target: "current" },
+      { type: "set_variable", variable: "AFTER_CLOSE", value: "NO_DEBE_EJECUTAR_EN_TAB_ORIGEN" }
+    ], {
+      vars,
+      speed: 1,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  assert.ok(calls.some((c) => c.type === "PLAYBACK_TAB_ACTION" && c.action === "close_tab"));
+  assert.equal(vars.AFTER_CLOSE, undefined);
+});
+
+test("play: al finalizar limpia pending playback con CLEAR_PENDING_PLAYBACK", async () => {
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const calls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    calls.push(msg);
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const p = new Player({ retryMs: 20, timeoutMs: 200 });
+  await new Promise((resolve) => {
+    p.play([{ type: "wait", ms: 10 }], {
+      vars: {},
+      speed: 1,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  assert.ok(calls.some((c) => c && c.type === "CLEAR_PENDING_PLAYBACK"), "debe limpiar pending al terminar");
+});
+
+test("resume: if_exists con navigate en subpaso guarda continuacion del padre", async () => {
+  resetBody('<div id="exists"></div>');
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const saveCalls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    if (msg && msg.type === "SAVE_PLAYBACK_STATE") saveCalls.push(msg);
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  await new Promise((resolve) => {
+    p.play([
+      {
+        type: "if_exists",
+        selector: "#exists",
+        then: [{ type: "navigate", url: "https://example.com/inside-if" }],
+        else: []
+      },
+      { type: "set_variable", variable: "AFTER_IF", value: "ok" }
+    ], {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  const continuation = saveCalls.find((c) => Array.isArray(c.steps) && c.index === 0 && c.steps[0] && c.steps[0].type === "set_variable");
+  assert.ok(continuation, "debe guardar continuacion hacia el paso posterior al if_exists");
+});
+
+test("resume: try_fallback con navigate en fallback guarda continuacion", async () => {
+  resetBody('<div></div>');
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const saveCalls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    if (msg && msg.type === "SAVE_PLAYBACK_STATE") saveCalls.push(msg);
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 60 });
+  await new Promise((resolve) => {
+    p.play([
+      {
+        type: "try_fallback",
+        steps: [{ type: "click", selector: "#missing" }],
+        fallback: [{ type: "navigate", url: "https://example.com/from-fallback" }]
+      },
+      { type: "set_variable", variable: "AFTER_FALLBACK", value: "ok" }
+    ], {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  const continuation = saveCalls.find((c) => Array.isArray(c.steps) && c.index === 0 && c.steps[0] && c.steps[0].variable === "AFTER_FALLBACK");
+  assert.ok(continuation, "debe guardar continuacion hacia el paso posterior al try_fallback");
+});
+
+test("resume: for_each_row con navigate en subpaso guarda continuacion por fila", async () => {
+  resetBody('<div></div>');
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const saveCalls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    if (msg && msg.type === "SAVE_PLAYBACK_STATE") saveCalls.push(msg);
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  await new Promise((resolve) => {
+    p.play([
+      {
+        type: "for_each_row",
+        columns: ["VAL"],
+        dataset: [["a"]],
+        steps: [{ type: "navigate", url: "https://example.com/from-row" }]
+      },
+      { type: "set_variable", variable: "AFTER_ROWS", value: "ok" }
+    ], {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  const continuation = saveCalls.find((c) => Array.isArray(c.steps) && c.index === 0 && c.steps[0] && c.steps[0].variable === "AFTER_ROWS");
+  assert.ok(continuation, "debe guardar continuacion hacia el paso posterior al for_each_row");
+});
+
+test("resume: loop_until con navigate en subpaso guarda continuacion del padre", async () => {
+  resetBody('<div></div>');
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const saveCalls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    if (msg && msg.type === "SAVE_PLAYBACK_STATE") saveCalls.push(msg);
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  await new Promise((resolve) => {
+    p.play([
+      {
+        type: "loop_until",
+        selector: "#missing-loop",
+        condition: "not_exists",
+        max_iterations: 1,
+        steps: [{ type: "navigate", url: "https://example.com/from-loop" }]
+      },
+      { type: "set_variable", variable: "AFTER_LOOP", value: "ok" }
+    ], {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  const continuation = saveCalls.find((c) => Array.isArray(c.steps) && c.index === 0 && c.steps[0] && c.steps[0].variable === "AFTER_LOOP");
+  assert.ok(continuation, "debe guardar continuacion hacia el paso posterior al loop_until");
+});
+
+test("resume: call_macro con navigate en subpaso guarda continuacion del padre", async () => {
+  resetBody('<div></div>');
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const saveCalls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    if (msg && msg.type === "SAVE_PLAYBACK_STATE") saveCalls.push(msg);
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  await new Promise((resolve) => {
+    p.play([
+      {
+        type: "call_macro",
+        macro_name: "SubmacroNav",
+        steps: [{ type: "navigate", url: "https://example.com/from-call-macro" }]
+      },
+      { type: "set_variable", variable: "AFTER_CALL_MACRO", value: "ok" }
+    ], {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  const continuation = saveCalls.find((c) => Array.isArray(c.steps) && c.index === 0 && c.steps[0] && c.steps[0].variable === "AFTER_CALL_MACRO");
+  assert.ok(continuation, "debe guardar continuacion hacia el paso posterior al call_macro");
+});
+
 // ── Tests: choose_option ────────────────────────────────────────────────────────
 
 const SELECT_HTML = `

@@ -57,8 +57,14 @@ async function runLocalSafeFixture(log) {
     page = await ctx.newPage();
   } catch (e) {
     await new Promise((resolve) => server.close(resolve));
-    log("SKIP: Firefox de Playwright no está instalado. Ejecutar: npx playwright install firefox");
-    return true;
+    const allowSkip = String(process.env.ALLOW_PLAYWRIGHT_FIREFOX_SKIP || "") === "1";
+    const reason = "Firefox de Playwright no está instalado. Ejecutar: npx playwright install firefox";
+    if (allowSkip) {
+      log(`SKIP_EXPLICITO: ${reason}`);
+      return true;
+    }
+    log(`FAIL: ${reason} (setear ALLOW_PLAYWRIGHT_FIREFOX_SKIP=1 para permitir skip explícito)`);
+    return false;
   }
 
   let ok = true;

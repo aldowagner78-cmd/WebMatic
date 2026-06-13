@@ -11,6 +11,10 @@ if (!allowed.has(mode)) {
   process.exit(1);
 }
 
+if (mode === "fast") {
+  console.log("[verify-v2-firefox] AVISO: fast NO es release gate completo (falta test:e2e:firefox-extension)");
+}
+
 const steps = [
   "npm test",
   "npm run test:e2e:fixtures",
