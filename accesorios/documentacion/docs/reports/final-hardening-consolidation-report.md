@@ -2,7 +2,7 @@
 
 ## 1. Resumen ejecutivo
 
-Se consolidó la rama hardening/h09-prerunreset-stress con validación local completa en verde, push remoto exitoso y PR abierto hacia master. No se realizó merge ni se declaró release listo.
+Se consolidó la rama hardening/h09-prerunreset-stress con validación local completa en verde, push remoto exitoso, PR abierto hacia master y CI remoto Firefox Release Gate en verde. No se realizó merge ni se declaró release listo.
 
 ## 2. Rama y commits verificados
 
@@ -38,7 +38,11 @@ Se consolidó la rama hardening/h09-prerunreset-stress con validación local com
 ## 6. CI remoto
 
 - Consulta realizada con `gh run list --branch hardening/h09-prerunreset-stress --limit 10`.
-- Resultado observado: sin runs listados al momento de la verificación.
+- Runs finales verificados:
+	- `27477750103`: success
+	- `27477761311`: success
+	- `27477783653`: success
+- Estado final del check `verify-firefox`: success.
 
 ## 7. PR
 
@@ -61,12 +65,12 @@ Se dejaron fuera del commit/push de consolidación:
 
 ## 9. Riesgos remanentes
 
-1. Estado de CI remoto no confirmado como verde desde `gh run list` al momento de consulta.
-2. Validación real IAPOS read-only aún no ejecutada en esta ronda.
+1. Validación real IAPOS read-only aún no ejecutada en esta ronda.
+2. El trabajo de cierre aún conserva archivos untracked locales de prompts/backups no relacionados, excluidos de commits.
 
 ## 10. NO VERIFICADO
 
-- NO VERIFICADO: estado final (verde/rojo) del CI remoto para esta rama al momento de cierre, porque `gh run list` no devolvió ejecuciones.
+- NO VERIFICADO: ejecución real IAPOS read-only en esta ronda.
 
 ## 11. Próximo paso: IAPOS real read-only
 
@@ -109,12 +113,14 @@ No declarar release listo hasta completar validación real read-only sin regresi
 
 - Se realizó push del fix en commit `713a6bd`.
 - Se realizó push documental posterior en commit `28e143a`.
+- Se realizó push documental posterior en commit `a5347d5`.
 - Consulta posterior: `gh run list --branch hardening/h09-prerunreset-stress --limit 10`.
 - Runs nuevos detectados:
-	- `27477750103` (Firefox Release Gate): `in_progress`
-	- `27477761311` (Firefox Release Gate): `queued`
-- Verificación puntual de `27477750103` confirma que el step corregido `Install zip` finalizó en `success`.
+- `27477750103` (Firefox Release Gate): `success`
+- `27477761311` (Firefox Release Gate): `success`
+- `27477783653` (Firefox Release Gate): `success`
+- Verificación puntual de `27477783653` confirma `verify-firefox` en `SUCCESS`.
 
 ### NO VERIFICADO
 
-- NO VERIFICADO: resultado final (OK/FALLÓ) del run `27477750103` y del run en cola `27477761311`, porque siguen en ejecución/espera al cierre.
+- NO VERIFICADO: ejecución real IAPOS read-only en esta ronda.
