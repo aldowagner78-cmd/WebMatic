@@ -108,9 +108,13 @@ No declarar release listo hasta completar validación real read-only sin regresi
 ### Estado CI remoto posterior
 
 - Se realizó push del fix en commit `713a6bd`.
+- Se realizó push documental posterior en commit `28e143a`.
 - Consulta posterior: `gh run list --branch hardening/h09-prerunreset-stress --limit 10`.
-- Al cierre, no se observa aún un run nuevo asociado al último push.
+- Runs nuevos detectados:
+	- `27477750103` (Firefox Release Gate): `in_progress`
+	- `27477761311` (Firefox Release Gate): `queued`
+- Verificación puntual de `27477750103` confirma que el step corregido `Install zip` finalizó en `success`.
 
 ### NO VERIFICADO
 
-- NO VERIFICADO: resultado del próximo run remoto posterior al commit `713a6bd` (OK/FALLÓ), porque aún no aparece en `gh run list` al momento del cierre.
+- NO VERIFICADO: resultado final (OK/FALLÓ) del run `27477750103` y del run en cola `27477761311`, porque siguen en ejecución/espera al cierre.
