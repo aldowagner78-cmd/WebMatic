@@ -812,11 +812,27 @@ Estado: --</span>
       if (isOpen) {
         const area = scriptEditor.querySelector("[data-script-editor-area]");
         const title = scriptEditor.querySelector("[data-script-editor-title]");
-        if (area && document.activeElement !== area) {
+        const shouldHydrateScript = area && (document.activeElement !== area || !String(area.value || "").trim());
+        if (shouldHydrateScript) {
+          let fullScript = String(se.script || "");
+          if (!fullScript && area.dataset && area.dataset.wmFullScript) {
+            fullScript = String(area.dataset.wmFullScript || "");
+          }
+          if (!fullScript && Array.isArray(se.draftSteps) && se.draftSteps.length > 0) {
+            const adapter = globalScope.WebMaticIimAdapter;
+            if (adapter && typeof adapter.exportToIim === "function") {
+              try {
+                fullScript = adapter.exportToIim({ steps: se.draftSteps, meta: se.meta || null }) || "";
+              } catch (_e) {}
+            }
+          }
+          if (area.dataset) {
+            area.dataset.wmFullScript = fullScript;
+          }
           // Strip the WM_JSON embedded comment — it's an internal detail, not meant
           // for manual editing. If the user edits the IIM lines and saves, the save
           // handler will re-generate WM_JSON from the new steps automatically.
-          const displayScript = (se.script || "").split("\n").filter(
+          const displayScript = fullScript.split("\n").filter(
             (l) => !l.trimStart().startsWith("// WM_JSON:")
           ).join("\n");
           area.value = displayScript;

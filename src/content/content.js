@@ -1150,6 +1150,30 @@
     };
   }
 
+  function _resolveEditorMetaForSteps(macroMeta, steps) {
+    const resolved = _resolveEditorMetadata(macroMeta || null, steps);
+    const out = (macroMeta && typeof macroMeta === "object") ? JSON.parse(JSON.stringify(macroMeta)) : {};
+    if (resolved.inventories.length > 0) {
+      out.pageInventories = resolved.inventories;
+    } else {
+      delete out.pageInventories;
+    }
+    if (resolved.autocompleteCatalogs && Object.keys(resolved.autocompleteCatalogs).length > 0) {
+      out.autocompleteCatalogs = resolved.autocompleteCatalogs;
+    } else {
+      delete out.autocompleteCatalogs;
+    }
+    return Object.keys(out).length > 0 ? out : null;
+  }
+
+  function _macroPlaybackMeta(macro) {
+    const meta = macro && typeof macro.meta === "object" ? macro.meta : null;
+    return {
+      preRunReset: meta && typeof meta.preRunReset === "object" ? meta.preRunReset : null,
+      preRunResetPolicy: meta && typeof meta.preRunResetPolicy === "object" ? meta.preRunResetPolicy : null
+    };
+  }
+
   function _serializePageMetadataBackup(profiles) {
     return {
       version: 1,
@@ -1471,7 +1495,11 @@
     _autocompleteExpansionState: {},
     _autocompleteLastTypedBySelector: {},
     _autocompleteExpansionPromises: {},
-    preRunReset: null
+    preRunReset: null,
+    activeBlockKey: "",
+    seenBlockKeys: new Set(),
+    recordingStartUrl: "",
+    dragSourceSelector: ""
   };
   const RECORDER_DYNAMIC_METADATA_ENABLED = false;
 
@@ -4352,12 +4380,128 @@
     if (!overlay) return;
     const container = overlay.querySelector("[data-step-visual-container]");
     const area = overlay.querySelector("[data-script-editor-area]");
+    const scriptShell = overlay.querySelector("[data-script-editor-shell]");
     overlay.querySelectorAll("[data-script-tab]").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.scriptTab === tab);
     });
     if (container) container.style.display = tab === "visual" ? "" : "none";
+    if (scriptShell) scriptShell.style.display = tab === "script" ? "flex" : "none";
     if (area) area.style.display = tab === "script" ? "" : "none";
     _seActiveTab = tab;
+  }
+
+  function _stripWmJsonLine(scriptText) {
+    return String(scriptText || "").split("\n")
+      .filter((line) => !line.trimStart().startsWith("// WM_JSON:"))
+      .join("\n");
+  }
+
+  function _getDefaultScriptLines(sourceScript) {
+    if (!iimAdapter) return [];
+    let steps = [];
+    try {
+      const parsed = iimAdapter.importFromIim(sourceScript || "");
+      steps = Array.isArray(parsed && parsed.steps) ? parsed.steps : [];
+    } catch (_e) {
+      return [];
+    }
+    if (steps.length === 0) return [];
+
+    const lines = [];
+    let lineNo = 2; // VERSION + TAB
+    for (let i = 0; i < steps.length; i += 1) {
+      lineNo += 1; // exportToIim emits one human-readable line per step
+      const step = steps[i];
+      if (step && step._baselineDefault === true) lines.push(lineNo);
+    }
+    return lines;
+  }
+
+  function _ensureScriptDefaultLayer(overlay) {
+    if (!overlay) return null;
+    const area = overlay.querySelector("[data-script-editor-area]");
+    if (!area || !area.parentElement) return null;
+
+    let shell = overlay.querySelector("[data-script-editor-shell]");
+    let layer = overlay.querySelector("[data-script-default-layer]");
+    let inner = overlay.querySelector("[data-script-default-layer-inner]");
+
+    if (!shell) {
+      shell = document.createElement("div");
+      shell.className = "webmatic-script-code-shell";
+      shell.dataset.scriptEditorShell = "1";
+      area.parentElement.insertBefore(shell, area);
+      shell.appendChild(area);
+    }
+
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.className = "webmatic-script-default-layer";
+      layer.dataset.scriptDefaultLayer = "1";
+      shell.insertBefore(layer, area);
+    }
+
+    if (!inner) {
+      inner = document.createElement("div");
+      inner.className = "webmatic-script-default-layer-inner";
+      inner.dataset.scriptDefaultLayerInner = "1";
+      layer.appendChild(inner);
+    }
+
+    if (!area.dataset.wmDefaultLayerBound) {
+      area.dataset.wmDefaultLayerBound = "1";
+      area.addEventListener("scroll", () => {
+        const wrap = _ensureScriptDefaultLayer(overlay);
+        if (!wrap) return;
+        wrap.inner.style.transform = `translateY(${-wrap.area.scrollTop}px)`;
+      });
+      area.addEventListener("input", () => {
+        const fullScript = String(area.dataset.wmFullScript || "");
+        const canKeep = fullScript && _stripWmJsonLine(fullScript).trim() === String(area.value || "").trim();
+        area.dataset.wmDefaultLines = canKeep ? area.dataset.wmDefaultLines || "[]" : "[]";
+        _renderScriptDefaultLayer(overlay);
+      });
+    }
+
+    return { shell, layer, inner, area };
+  }
+
+  function _renderScriptDefaultLayer(overlay) {
+    const wrap = _ensureScriptDefaultLayer(overlay);
+    if (!wrap) return;
+
+    const linesRaw = String(wrap.area.dataset.wmDefaultLines || "[]");
+    let lines = [];
+    try { lines = JSON.parse(linesRaw); } catch (_e) { lines = []; }
+    lines = Array.isArray(lines) ? lines.filter((n) => Number.isFinite(Number(n)) && Number(n) >= 1).map((n) => Number(n)) : [];
+
+    wrap.inner.replaceChildren();
+    const cs = window.getComputedStyle(wrap.area);
+    const lineHeight = Math.max(parseFloat(cs.lineHeight) || 20, 14);
+    const padTop = parseFloat(cs.paddingTop) || 0;
+    const contentHeight = Math.max(wrap.area.scrollHeight, wrap.area.clientHeight);
+    wrap.inner.style.height = `${contentHeight}px`;
+    wrap.inner.style.transform = `translateY(${-wrap.area.scrollTop}px)`;
+
+    if (lines.length === 0) return;
+
+    const unique = Array.from(new Set(lines)).sort((a, b) => a - b);
+    unique.forEach((lineNo) => {
+      const mark = document.createElement("div");
+      mark.className = "webmatic-script-default-line";
+      mark.style.top = `${padTop + (lineNo - 1) * lineHeight}px`;
+      mark.style.height = `${lineHeight}px`;
+      wrap.inner.appendChild(mark);
+    });
+  }
+
+  function _syncScriptDefaultLayer(overlay, sourceScript) {
+    if (!overlay) return;
+    const wrap = _ensureScriptDefaultLayer(overlay);
+    if (!wrap) return;
+    const lines = _getDefaultScriptLines(sourceScript || "");
+    wrap.area.dataset.wmDefaultLines = JSON.stringify(lines);
+    _renderScriptDefaultLayer(overlay);
   }
 
   /** Get steps from the active editor mode (visual or script IIM). */
@@ -4384,7 +4528,8 @@
       : ((iimAdapter.importFromIim(macro.script || "") || {}).steps || []);
     const resolvedMeta = _resolveEditorMetadata(macro.meta || null, baseSteps);
     const promotedSteps = _promoteChooseOptionWithInventories(baseSteps, resolvedMeta.inventories);
-    const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: macro.meta || null });
+    const editorMeta = _resolveEditorMetaForSteps(macro.meta || null, baseSteps);
+    const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: editorMeta || macro.meta || null });
 
     store.dispatch({
       type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED,
@@ -4392,7 +4537,7 @@
         script,
         macroId: macro.id,
         draftSteps: promotedSteps,
-        meta: {
+        meta: editorMeta || {
           ...(macro.meta || {}),
           pageInventories: resolvedMeta.inventories,
           autocompleteCatalogs: resolvedMeta.autocompleteCatalogs
@@ -5426,8 +5571,116 @@
     return explicitClickable && checkIsHidden;
   }
 
+  function _contextKeyFromUrl(rawUrl) {
+    try {
+      const u = new URL(String(rawUrl || ""), window.location.href);
+      const host = String(u.host || "").toLowerCase();
+      const path = String(u.pathname || "").replace(/\/+$/, "") || "/";
+      return `${host}${path}`;
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function _resolveStepBlockKey(step) {
+    if (!step || typeof step !== "object") return recorderRuntime.activeBlockKey || _contextKeyFromUrl(window.location.href);
+    if (step.type === "navigate") return _contextKeyFromUrl(step.url || window.location.href);
+    if (step.type === "open_tab" || step.type === "switch_tab") {
+      const candidate = step.url || window.location.href;
+      return _contextKeyFromUrl(candidate);
+    }
+    if (step.type === "close_tab") return recorderRuntime.activeBlockKey || _contextKeyFromUrl(window.location.href);
+    return recorderRuntime.activeBlockKey || _contextKeyFromUrl(window.location.href);
+  }
+
+  // ── Auto wait_for injection ────────────────────────────────────────────────
+  // When the user clicks something and the NEXT element they interact with was
+  // not present in the DOM at click time, inject a wait_for before that step.
+  // This covers buttons that open modals, dropdowns, or sections with delay.
+  const _clickSnapshot = {
+    ts: 0,
+    selector: "",
+    missingAtClick: new Set()
+  };
+
+  function _snapshotMissingAfterClick(clickedSelector) {
+    _clickSnapshot.ts = Date.now();
+    _clickSnapshot.selector = clickedSelector;
+    _clickSnapshot.missingAtClick.clear();
+  }
+
+  function _checkAndInjectWaitFor(targetSelector, emitStep) {
+    if (!_clickSnapshot.ts || !targetSelector) return;
+    const emit = typeof emitStep === "function" ? emitStep : captureStep;
+    const elapsed = Date.now() - _clickSnapshot.ts;
+    // Only relevant if we click then interact within 30s
+    if (elapsed > 30000) { _clickSnapshot.ts = 0; return; }
+    // Check if the target element was absent right after the click.
+    // We do it now (before the interaction fires) — if it exists now but
+    // a MutationObserver hasn't flagged it as "was missing", we rely on
+    // _clickSnapshot.missingAtClick which was populated by the observer.
+    if (_clickSnapshot.missingAtClick.has(targetSelector)) {
+      _clickSnapshot.missingAtClick.delete(targetSelector);
+      _clickSnapshot.ts = 0;
+      emit({ type: "wait_for", selector: targetSelector, timeout: 10000 });
+    }
+  }
+
+  let _postClickObserver = null;
+  function _startPostClickObserver(clickedSelector) {
+    if (_postClickObserver) { _postClickObserver.disconnect(); _postClickObserver = null; }
+    _snapshotMissingAfterClick(clickedSelector);
+
+    // Collect selectors for all currently-present interactive elements.
+    const _presentNow = new Set();
+    try {
+      document.querySelectorAll("input,select,textarea,button,[contenteditable]").forEach((el) => {
+        const id = el.id ? `#${el.id}` : "";
+        if (id) _presentNow.add(id);
+      });
+    } catch (_) {}
+
+    _postClickObserver = new MutationObserver(() => {
+      // When new elements appear, mark their selectors as "were missing at click"
+      try {
+        document.querySelectorAll("input,select,textarea,button,[contenteditable]").forEach((el) => {
+          if (!el.id) return;
+          const id = `#${el.id}`;
+          if (!_presentNow.has(id)) {
+            _clickSnapshot.missingAtClick.add(id);
+            _presentNow.add(id);
+          }
+        });
+      } catch (_) {}
+    });
+    try {
+      _postClickObserver.observe(document.body || document.documentElement, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class", "hidden", "display"]
+      });
+    } catch (_) {}
+
+    // Stop observing after 15s regardless
+    setTimeout(() => {
+      if (_postClickObserver) { _postClickObserver.disconnect(); _postClickObserver = null; }
+    }, 15000);
+  }
+
   function captureStep(step) {
+    const blockKey = _resolveStepBlockKey(step);
     const stamped = Object.assign({ _ts: Date.now() }, step);
+    if (blockKey) {
+      stamped._wmBlockKey = blockKey;
+      const prevKey = recorderRuntime.activeBlockKey || "";
+      if (!prevKey || prevKey !== blockKey) {
+        stamped._wmBlockStart = true;
+      }
+      recorderRuntime.activeBlockKey = blockKey;
+      recorderRuntime.seenBlockKeys.add(blockKey);
+    }
+    if (step && step.type === "close_tab") {
+      stamped._wmBlockEnd = true;
+      recorderRuntime.activeBlockKey = "";
+    }
     chrome.runtime.sendMessage({ type: "RECORD_STEP", step: stamped }, () => { void chrome.runtime.lastError; });
     store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: stamped });
   }
@@ -5436,6 +5689,13 @@
     if (recorderRuntime.cleanup) {
       recorderRuntime.cleanup();
     }
+
+    if (!recorderRuntime.recordingStartUrl) {
+      recorderRuntime.recordingStartUrl = window.location.href;
+    }
+
+    recorderRuntime.activeBlockKey = _contextKeyFromUrl(window.location.href);
+    recorderRuntime.seenBlockKeys = new Set(recorderRuntime.activeBlockKey ? [recorderRuntime.activeBlockKey] : []);
 
     // Capture current URL as first step (only if not already the last step)
     const currentSteps = store.getState().draft.steps;
@@ -5501,7 +5761,12 @@
       }
       target = normalizeCaptureTarget(target);
       flashElement(target);
-      captureStep({ type: "click", selector: buildSelector(target) });
+      const clickSel = buildSelector(target);
+      // If this click is on an element that wasn't present at the previous click,
+      // inject a wait_for so playback waits for it to appear.
+      _checkAndInjectWaitFor(target.id ? `#${target.id}` : clickSel);
+      captureStep({ type: "click", selector: clickSel });
+      _startPostClickObserver(clickSel);
     };
 
     const onChange = (event) => {
@@ -5534,7 +5799,9 @@
         return;
       }
       if (target instanceof HTMLSelectElement) {
-        captureStep({ type: "choose_option", selector: buildSelector(target), value: target.value });
+        const selSel = buildSelector(target);
+        _checkAndInjectWaitFor(target.id ? `#${target.id}` : selSel);
+        captureStep({ type: "choose_option", selector: selSel, value: target.value });
         return;
       }
       // Dynamic copy/paste: if pasted value matches last copied text, use variable reference
@@ -5547,7 +5814,9 @@
       ) {
         recordedValue = `{{!${recorderRuntime.lastCopiedVar}}}`;
       }
-      captureStep({ type: "input", selector: buildSelector(target), value: recordedValue });
+      const inpSel = buildSelector(target);
+      _checkAndInjectWaitFor(target.id ? `#${target.id}` : inpSel);
+      captureStep({ type: "input", selector: inpSel, value: recordedValue });
     };
 
     const onKeydown = (event) => {
@@ -5564,6 +5833,11 @@
       // Printable chars → capture as text step; store will merge via Recorder.mergeKeySteps
       if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
         const selector = target instanceof Element ? buildSelector(target) : "";
+        if (target instanceof Element && target.id) {
+          _checkAndInjectWaitFor(`#${target.id}`);
+        } else if (selector) {
+          _checkAndInjectWaitFor(selector);
+        }
         const currentSteps = store.getState().draft.steps;
         const lastStep = currentSteps[currentSteps.length - 1];
         if (lastStep && lastStep.type === "text" && lastStep.selector === selector) {
@@ -5575,9 +5849,39 @@
       }
     };
 
+    const _resolveDropTarget = (el) => {
+      if (!(el instanceof Element)) return null;
+      const dz = el.closest && el.closest(".drag-zone,[ondrop],[data-dropzone],[role='listbox']");
+      return dz || normalizeCaptureTarget(el);
+    };
+
+    const onDragStart = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("#webmatic-panel-root") || target.closest("#webmatic-floating-recorder-global") || target.closest("#webmatic-floating-player-global")) return;
+      recorderRuntime.dragSourceSelector = buildSelector(normalizeCaptureTarget(target)) || "";
+    };
+
+    const onDrop = (event) => {
+      const src = recorderRuntime.dragSourceSelector || "";
+      recorderRuntime.dragSourceSelector = "";
+      if (!src) return;
+      const rawTarget = event.target;
+      if (!(rawTarget instanceof Element)) return;
+      if (rawTarget.closest("#webmatic-panel-root") || rawTarget.closest("#webmatic-floating-recorder-global") || rawTarget.closest("#webmatic-floating-player-global")) return;
+      const dropTarget = _resolveDropTarget(rawTarget);
+      if (!(dropTarget instanceof Element)) return;
+      const to = buildSelector(dropTarget) || "";
+      if (!to || to === src) return;
+      flashElement(dropTarget);
+      captureStep({ type: "drag_drop", from: src, to });
+    };
+
     document.addEventListener("click", onClick, true);
     document.addEventListener("change", onChange, true);
     document.addEventListener("keydown", onKeydown, true);
+    document.addEventListener("dragstart", onDragStart, true);
+    document.addEventListener("drop", onDrop, true);
 
     // ── Copy listener: record EXTRACT step + set up variable for paste substitution ──
     const onCopy = (event) => {
@@ -5736,6 +6040,8 @@
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("change", onChange, true);
       document.removeEventListener("keydown", onKeydown, true);
+      document.removeEventListener("dragstart", onDragStart, true);
+      document.removeEventListener("drop", onDrop, true);
       document.removeEventListener("copy", onCopy, true);
       document.removeEventListener("input", onContentEditableInput, true);
       document.removeEventListener("dblclick", onDblClick, true);
@@ -5752,6 +6058,7 @@
       recorderRuntime._ceTimer       = null;
       recorderRuntime._hoverTimer    = null;
       recorderRuntime._scrollTimer   = null;
+      recorderRuntime.dragSourceSelector = "";
       recorderRuntime.cleanup        = null;
     };
   }
@@ -5865,6 +6172,7 @@
     let _ceTimer = null;
     let _hoverEl = null, _hoverObs = null, _hoverSeen = false, _hoverTimer = null;
     let _scrollTimer = null;
+    let _inlineDragSource = "";
     let lastCopiedText = null, lastCopiedVar = null, varCounter = 0;
     const _lastInlineCheckChangeAt = new WeakMap();
     const _preferInlineClickOnCheckTargetAt = new WeakMap();
@@ -5935,7 +6243,10 @@
       }
       t = normalizeCaptureTarget(t);
       flashElement(t);
-      addStep({ type: "click", selector: buildSelector(t) });
+      const clickSel = buildSelector(t);
+      _checkAndInjectWaitFor(t.id ? `#${t.id}` : clickSel, addStep);
+      addStep({ type: "click", selector: clickSel });
+      _startPostClickObserver(clickSel);
     };
 
     const _onChange = (e) => {
@@ -5960,11 +6271,18 @@
         addStep({ type: "check", selector: buildSelector(t), checked: true });
         return;
       }
-      if (t instanceof HTMLSelectElement) { addStep({ type: "choose_option", selector: buildSelector(t), value: t.value }); return; }
+      if (t instanceof HTMLSelectElement) {
+        const sel = buildSelector(t);
+        _checkAndInjectWaitFor(t.id ? `#${t.id}` : sel, addStep);
+        addStep({ type: "choose_option", selector: sel, value: t.value });
+        return;
+      }
       const raw = t.value;
       const val = (lastCopiedText !== null && lastCopiedVar !== null && raw.trim() === lastCopiedText)
         ? `{{!${lastCopiedVar}}}` : raw;
-      addStep({ type: "input", selector: buildSelector(t), value: val });
+      const sel = buildSelector(t);
+      _checkAndInjectWaitFor(t.id ? `#${t.id}` : sel, addStep);
+      addStep({ type: "input", selector: sel, value: val });
     };
 
     const _onKeydown = (e) => {
@@ -5976,6 +6294,11 @@
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
         const sel = t instanceof Element ? buildSelector(t) : "";
+        if (t instanceof Element && t.id) {
+          _checkAndInjectWaitFor(`#${t.id}`, addStep);
+        } else if (sel) {
+          _checkAndInjectWaitFor(sel, addStep);
+        }
         const last = buffer[buffer.length - 1];
         if (last && last.type === "text" && last.selector === sel) {
           last.value = (last.value || "") + e.key; // merge text
@@ -5986,6 +6309,34 @@
           addStep({ type: "text", selector: sel, value: e.key });
         }
       }
+    };
+
+    const _resolveInlineDropTarget = (el) => {
+      if (!(el instanceof Element)) return null;
+      const dz = el.closest && el.closest(".drag-zone,[ondrop],[data-dropzone],[role='listbox']");
+      return dz || normalizeCaptureTarget(el);
+    };
+
+    const _onDragStart = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
+      _inlineDragSource = buildSelector(normalizeCaptureTarget(t)) || "";
+    };
+
+    const _onDrop = (e) => {
+      const src = _inlineDragSource || "";
+      _inlineDragSource = "";
+      if (!src) return;
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
+      const dropTarget = _resolveInlineDropTarget(t);
+      if (!(dropTarget instanceof Element)) return;
+      const to = buildSelector(dropTarget) || "";
+      if (!to || to === src) return;
+      flashElement(dropTarget);
+      addStep({ type: "drag_drop", from: src, to });
     };
 
     const _onDblClick = (e) => {
@@ -6081,6 +6432,8 @@
     document.addEventListener("input",     _onCeInput,  true);
     document.addEventListener("mouseover", _onMouseOver,true);
     document.addEventListener("scroll",    _onScroll,   true);
+    document.addEventListener("dragstart", _onDragStart,true);
+    document.addEventListener("drop",      _onDrop,     true);
 
     // ── Captura de eventos en iframes del mismo origen ──
     const _attachedFrameDocs = new WeakSet();
@@ -6094,6 +6447,8 @@
         frameDoc.addEventListener("dblclick", _onDblClick, true);
         frameDoc.addEventListener("copy",     _onCopy,     true);
         frameDoc.addEventListener("input",    _onCeInput,  true);
+        frameDoc.addEventListener("dragstart", _onDragStart, true);
+        frameDoc.addEventListener("drop", _onDrop, true);
         _attachedFrameDocs.add(frameDoc);
       } catch (_e) { /* iframe de origen cruzado — sin acceso */ }
     }
@@ -6107,6 +6462,8 @@
         frameDoc.removeEventListener("dblclick", _onDblClick, true);
         frameDoc.removeEventListener("copy",     _onCopy,     true);
         frameDoc.removeEventListener("input",    _onCeInput,  true);
+        frameDoc.removeEventListener("dragstart", _onDragStart, true);
+        frameDoc.removeEventListener("drop", _onDrop, true);
       } catch (_e) {}
     }
 
@@ -6137,6 +6494,8 @@
       document.removeEventListener("input",     _onCeInput,  true);
       document.removeEventListener("mouseover", _onMouseOver,true);
       document.removeEventListener("scroll",    _onScroll,   true);
+      document.removeEventListener("dragstart", _onDragStart,true);
+      document.removeEventListener("drop",      _onDrop,     true);
       // Desengancharse de todos los iframes
       if (_frameObs) { _frameObs.disconnect(); _frameObs = null; }
       try {
@@ -6146,6 +6505,7 @@
       } catch (_e) {}
       clearTimeout(_ceTimer); clearTimeout(_hoverTimer); clearTimeout(_scrollTimer);
       if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
+      _inlineDragSource = "";
       const p = document.getElementById(INLINE_REC_PANEL_ID);
       if (p && p.parentNode) p.parentNode.removeChild(p);
     }
@@ -6303,8 +6663,13 @@
       return out;
     })() : steps;
 
+    // Pass 0b: remove Tab navigation noise.
+    // Tab is useful for manual navigation, but as recorded macro steps it is
+    // highly brittle across pages/layouts and creates flaky replays.
+    const pass0b = pass0.filter((step) => !(step && step.type === "key" && step.key === "Tab"));
+
     // Pass 1: remove focus/defocus/option clicks
-    const pass1 = pass0.filter((step, i) => {
+    const pass1 = pass0b.filter((step, i) => {
       if (step.type !== "click") return true;
       // Remove clicks on <option> — SELECT value is set directly via TYPE
       if (step.selector && /^option[\[.]/i.test(step.selector)) return false;
@@ -6312,8 +6677,8 @@
       if (step.selector && /^(body|html)[\s.#[\]$]?/i.test(step.selector)) return false;
       // Remove focus click: CLICK(X) before TYPE/CHECK(X) on same selector,
       // even if separated by WAIT steps
-      for (let j = i + 1; j < steps.length; j++) {
-        const nx = steps[j];
+      for (let j = i + 1; j < pass0b.length; j++) {
+        const nx = pass0b[j];
         if (nx.type === "wait") continue; // skip auto-generated waits
         if ((isTypeLike(nx.type) || nx.type === "check") &&
             nx.selector && nx.selector === step.selector) return false;
@@ -6675,16 +7040,79 @@
       seen.add(sel);
 
       if (tag === "select") {
-        extraSteps.push({ type: "input", selector: sel, value: el.value, _fast: true });
+        extraSteps.push({ type: "input", selector: sel, value: el.value, _fast: true, _baselineDefault: true });
       } else if (type === "checkbox") {
-        extraSteps.push({ type: "check", selector: sel, checked: el.checked, _fast: true });
+        extraSteps.push({ type: "check", selector: sel, checked: el.checked, _fast: true, _baselineDefault: true });
       } else if (type === "radio") {
-        if (el.checked) extraSteps.push({ type: "check", selector: sel, checked: true, _fast: true });
+        if (el.checked) extraSteps.push({ type: "check", selector: sel, checked: true, _fast: true, _baselineDefault: true });
       } else {
-        extraSteps.push({ type: "input", selector: sel, value: el.value || "", _fast: true });
+        extraSteps.push({ type: "input", selector: sel, value: el.value || "", _fast: true, _baselineDefault: true });
       }
     }
     return extraSteps;
+  }
+
+  function _collectRecordedFieldSelectors(steps) {
+    const out = new Set();
+    if (!Array.isArray(steps)) return out;
+    steps.forEach((step) => {
+      if (!step || typeof step !== "object") return;
+      if ((step.type === "input" || step.type === "text" || step.type === "check" || step.type === "choose_option") && step.selector) {
+        out.add(String(step.selector));
+      }
+      if (Array.isArray(step.steps)) _collectRecordedFieldSelectors(step.steps).forEach((sel) => out.add(sel));
+      if (Array.isArray(step.then)) _collectRecordedFieldSelectors(step.then).forEach((sel) => out.add(sel));
+      if (Array.isArray(step.else)) _collectRecordedFieldSelectors(step.else).forEach((sel) => out.add(sel));
+      if (Array.isArray(step.fallback)) _collectRecordedFieldSelectors(step.fallback).forEach((sel) => out.add(sel));
+    });
+    return out;
+  }
+
+  function _withCapturedPageDefaults(recordedSteps) {
+    const baseSteps = Array.isArray(recordedSteps) ? recordedSteps.slice() : [];
+    const withBootstrap = _ensureRecordingBootstrapNavigate(baseSteps);
+
+    const touchedSelectors = _collectRecordedFieldSelectors(withBootstrap);
+    const defaults = capturePageDefaults(touchedSelectors);
+    if (!Array.isArray(defaults) || defaults.length === 0) return withBootstrap;
+    const fallbackKey = _contextKeyFromUrl(window.location.href);
+    const firstStepKey = withBootstrap.find((s) => s && typeof s === "object" && s._wmBlockKey)
+      ? String(withBootstrap.find((s) => s && typeof s === "object" && s._wmBlockKey)._wmBlockKey || "")
+      : "";
+    const blockKey = firstStepKey || fallbackKey;
+    const normalizedDefaults = blockKey
+      ? defaults.map((s) => ({ ...s, _wmBlockKey: blockKey }))
+      : defaults;
+
+    // Keep bootstrap navigation first, then defaults, then the rest.
+    const insertAt = withBootstrap[0] && _isNavigationLikeStep(withBootstrap[0]) ? 1 : 0;
+    return [
+      ...withBootstrap.slice(0, insertAt),
+      ...normalizedDefaults,
+      ...withBootstrap.slice(insertAt)
+    ];
+  }
+
+  function _isNavigationLikeStep(step) {
+    if (!step || typeof step !== "object") return false;
+    return step.type === "navigate" || step.type === "open_tab" || step.type === "switch_tab";
+  }
+
+  function _ensureRecordingBootstrapNavigate(steps) {
+    const list = Array.isArray(steps) ? steps.slice() : [];
+    if (list.length === 0 && !recorderRuntime.recordingStartUrl) return list;
+    if (list[0] && _isNavigationLikeStep(list[0])) return list;
+
+    const startUrl = recorderRuntime.recordingStartUrl || window.location.href;
+    if (!startUrl) return list;
+
+    const bootstrap = { type: "navigate", url: startUrl };
+    const startKey = _contextKeyFromUrl(startUrl);
+    if (startKey) {
+      bootstrap._wmBlockKey = startKey;
+      bootstrap._wmBlockStart = true;
+    }
+    return [bootstrap, ...list];
   }
 
   function addWaitHere() {
@@ -6727,25 +7155,26 @@
             const utils = globalScope.WebMaticUtils;
             const threshold = (afterStop.settings && afterStop.settings.waitThreshold) || 3;
             const recorded = afterStop.draft.steps;
-            const allSteps = _cleanupSteps(recorded);
+            const allSteps = _cleanupSteps(_withCapturedPageDefaults(recorded));
             const processedSteps = _finalizeWithInventory(utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps);
             const resolvedInv = [
               ...recorderRuntime.pageInventories,
               ..._resolveReusableMetadataForSteps(processedSteps).inventories
             ];
             const promotedSteps = _promoteChooseOptionWithInventories(processedSteps, resolvedInv);
-            const script = iimAdapter.exportToIim({ steps: promotedSteps });
+            const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: _recordingMeta() });
             store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: promotedSteps, meta: _recordingMeta() } });
           }
         } else {
           store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
+          recorderRuntime.recordingStartUrl = window.location.href;
           recorderRuntime.autocompleteCatalogs = {};
           recorderRuntime._autocompleteExpansionState = {};
           recorderRuntime._autocompleteLastTypedBySelector = {};
           recorderRuntime._autocompleteExpansionPromises = {};
           recorderRuntime.pageInventories = [];
-          captureScreenInventory();
           recorderRuntime.preRunReset = _captureInitialPreRunReset();
+          captureScreenInventory();
           startRecorderSession();
           createFloatingBtn(() => {
             stopRecorderSession();
@@ -6758,14 +7187,14 @@
               const utils = globalScope.WebMaticUtils;
               const threshold = (afterStop.settings && afterStop.settings.waitThreshold) || 3;
               const recorded = afterStop.draft.steps;
-              const allSteps = _cleanupSteps(recorded);
+              const allSteps = _cleanupSteps(_withCapturedPageDefaults(recorded));
               const processedSteps = _finalizeWithInventory(utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps);
               const resolvedInv = [
                 ...recorderRuntime.pageInventories,
                 ..._resolveReusableMetadataForSteps(processedSteps).inventories
               ];
               const promotedSteps = _promoteChooseOptionWithInventories(processedSteps, resolvedInv);
-              const script = iimAdapter.exportToIim({ steps: promotedSteps });
+              const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: _recordingMeta() });
               store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: promotedSteps, meta: _recordingMeta() } });
             }
             });
@@ -7205,8 +7634,6 @@
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _resolvedSteps = _resolveCallMacros(_macro.steps, _state.library.macros);
           const _preparedSteps = applyRuntimeDataToSteps(_resolvedSteps, _state.settings);
-          // Restaurar campos a defaults del perfil capturado, silenciosamente
-          _restoreProfileDefaultsForCurrentPage();
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _preparedSteps } });
           const _playVars = buildRuntimeVars(null, _state.settings);
           _playVars[PLAY_START_VAR] = playerRuntime.playStartedAtMs;
@@ -7214,8 +7641,7 @@
             speed: _state.settings.speed ?? 1,
             vars: _playVars,
             macroId: _macro.id,
-            preRunReset: (_macro.meta && _macro.meta.preRunReset) || null,
-            autoCaptureDefaults: true,
+            ..._macroPlaybackMeta(_macro),
             onStep: (step, index) => {
               tryAutoFillRuntimeDataOnPage(_state.settings);
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _preparedSteps } });
@@ -7277,7 +7703,6 @@
             let _fbIter = 0;
             const _fbResolved = _resolveCallMacros(_fbMacro.steps, _fbState.library.macros);
             const _fbPrepared = applyRuntimeDataToSteps(_fbResolved, _fbState.settings);
-            _restoreProfileDefaultsForCurrentPage();
             store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _fbPrepared } });
             function _fbNext() {
               if (_fbIter >= n || _fbPlayer._abort) {
@@ -7292,8 +7717,7 @@
                 speed: _fbState.settings.speed ?? 1,
                 vars: buildRuntimeVars(null, _fbState.settings),
                 macroId: _fbMacro.id,
-                preRunReset: (_fbMacro.meta && _fbMacro.meta.preRunReset) || null,
-                autoCaptureDefaults: true,
+                ..._macroPlaybackMeta(_fbMacro),
                 onStep: (step, index) => {
                   tryAutoFillRuntimeDataOnPage(_fbState.settings);
                   store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _fbPrepared } });
@@ -7334,7 +7758,6 @@
           // Initialize panel with all steps before starting (call_macro references resolved)
           const _lResolvedSteps = _resolveCallMacros(_lmacro.steps, _lstate.library.macros);
           const _lPreparedSteps = applyRuntimeDataToSteps(_lResolvedSteps, _lstate.settings);
-          _restoreProfileDefaultsForCurrentPage();
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lPreparedSteps } });
           function _lNext() {
             if (_lIter >= _lCount || _lPlayer._abort) {
@@ -7349,8 +7772,7 @@
               speed: _lstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lstate.settings),
               macroId: _lmacro.id,
-              preRunReset: (_lmacro.meta && _lmacro.meta.preRunReset) || null,
-              autoCaptureDefaults: true,
+              ..._macroPlaybackMeta(_lmacro),
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lstate.settings);
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lPreparedSteps } });
@@ -7393,8 +7815,7 @@
               speed: _lnstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lnstate.settings),
               macroId: _lnmacro.id,
-              preRunReset: (_lnmacro.meta && _lnmacro.meta.preRunReset) || null,
-              autoCaptureDefaults: true,
+              ..._macroPlaybackMeta(_lnmacro),
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lnstate.settings);
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _lnPrepared } });
@@ -7444,9 +7865,14 @@
         if (!overlay) return;
         const area = overlay.querySelector("[data-script-editor-area]");
         const container = overlay.querySelector("[data-step-visual-container]");
+        const _stripWmJson = (s) => _stripWmJsonLine(s);
         if (tab === "visual" && seEditor && iimAdapter && area) {
           // Script → Visual: parse current textarea into step editor
-          const parsed = iimAdapter.importFromIim(area.value);
+          const storedFull = area.dataset ? String(area.dataset.wmFullScript || "") : "";
+          const typedText = String(area.value || "");
+          const canUseStoredFull = storedFull && _stripWmJson(storedFull).trim() === typedText.trim();
+          const sourceScript = canUseStoredFull ? storedFull : typedText;
+          const parsed = iimAdapter.importFromIim(sourceScript);
           seEditor.setSteps((parsed && parsed.steps) || []);
           if (typeof seEditor.setInventory === "function") {
             const _se = store.getState().ui.scriptEditor;
@@ -7454,6 +7880,9 @@
             seEditor.setInventory(resolvedMeta.inventories);
             if (typeof seEditor.setAutocompleteCatalogs === "function") {
               seEditor.setAutocompleteCatalogs(resolvedMeta.autocompleteCatalogs);
+            }
+            if (typeof seEditor.setMeta === "function") {
+              seEditor.setMeta(_se.meta || null);
             }
           }
           if (!seEditor._onRecordRequest) {
@@ -7465,10 +7894,25 @@
         } else if (tab === "script" && seEditor && iimAdapter && area) {
           // Visual → Script: export current steps to textarea
           const steps = seEditor.getSteps();
-          const script = iimAdapter.exportToIim({ steps });
+          const script = iimAdapter.exportToIim({ steps, meta: typeof seEditor.getMeta === "function" ? seEditor.getMeta() : null });
           const displayScript = script.split("\n")
             .filter((l) => !l.trimStart().startsWith("// WM_JSON:")).join("\n");
           area.value = displayScript;
+          area.dataset.wmFullScript = script;
+          _syncScriptDefaultLayer(overlay, script);
+          _applyScriptTab(overlay, "script");
+        } else if (tab === "script" && area) {
+          // Fallback: seEditor no disponible — volcar script desde store o wmFullScript
+          const _se = store.getState().ui.scriptEditor;
+          let _fbScript = String(area.dataset ? area.dataset.wmFullScript || "" : "");
+          if (!_fbScript) _fbScript = String(_se.script || "");
+          if (!_fbScript && Array.isArray(_se.draftSteps) && _se.draftSteps.length > 0 && iimAdapter) {
+            try { _fbScript = iimAdapter.exportToIim({ steps: _se.draftSteps, meta: _se.meta || null }) || ""; } catch (_) {}
+          }
+          const _fbDisplay = _fbScript.split("\n").filter((l) => !l.trimStart().startsWith("// WM_JSON:")).join("\n");
+          if (_fbDisplay.trim()) area.value = _fbDisplay;
+          if (area.dataset) area.dataset.wmFullScript = _fbScript;
+          _syncScriptDefaultLayer(overlay, _fbScript);
           _applyScriptTab(overlay, "script");
         } else {
           _applyScriptTab(overlay, tab);
@@ -7479,7 +7923,7 @@
         const panel = document.getElementById("webmatic-panel-root");
         let textToCopy = "";
         if (_seActiveTab === "visual" && seEditor && iimAdapter) {
-          textToCopy = iimAdapter.exportToIim({ steps: seEditor.getSteps() });
+          textToCopy = iimAdapter.exportToIim({ steps: seEditor.getSteps(), meta: typeof seEditor.getMeta === "function" ? seEditor.getMeta() : null });
         } else {
           const area = panel && panel.querySelector("[data-script-editor-area]");
           textToCopy = area ? area.value : "";
@@ -7497,16 +7941,16 @@
         const currentState = store.getState();
         const macroId = currentState.ui.scriptEditor.macroId;
         const seState = currentState.ui.scriptEditor;
+        const editorMeta = (seEditor && typeof seEditor.getMeta === "function") ? seEditor.getMeta() : (seState.meta || null);
         if (!macroId) {
           // No existing macro: act as Save As
           const name = await uiShell.wmModal("prompt", { message: "Nombre para la macro:", okLabel: "Guardar" });
           if (!name || !name.trim()) return;
           const stepsRaw = _resolveEditorSteps(area, seState, seState.draftSteps);
-          const steps = _promoteChooseOptionWithInventories(
-            stepsRaw,
-            _resolveEditorMetadata(seState && seState.meta ? seState.meta : null, stepsRaw).inventories
-          );
-          const scriptToStore = iimAdapter ? iimAdapter.exportToIim({ steps }) : (area ? area.value : "");
+          const resolvedMeta = _resolveEditorMetadata(editorMeta, stepsRaw);
+          const steps = _promoteChooseOptionWithInventories(stepsRaw, resolvedMeta.inventories);
+          const macroMeta = _resolveEditorMetaForSteps(editorMeta, stepsRaw);
+          const scriptToStore = iimAdapter ? iimAdapter.exportToIim({ steps, meta: macroMeta }) : (area ? area.value : "");
           const macro = {
             id: `macro_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
             name: name.trim(),
@@ -7514,7 +7958,7 @@
             script: scriptToStore,
             createdAt: Date.now()
           };
-          if (seState.meta && typeof seState.meta === "object") macro.meta = seState.meta;
+          if (macroMeta) macro.meta = macroMeta;
           store.dispatch({ type: contracts.ActionTypes.MACRO_SAVED, payload: macro });
           store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_CLOSED });
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro "${macro.name}" guardada` });
@@ -7522,13 +7966,12 @@
         } else {
           const originalSteps = currentState.library.macros.find((m) => m.id === macroId)?.steps || [];
           const stepsRaw = _resolveEditorSteps(area, seState, originalSteps);
-          const steps = _promoteChooseOptionWithInventories(
-            stepsRaw,
-            _resolveEditorMetadata(seState && seState.meta ? seState.meta : null, stepsRaw).inventories
-          );
-          const scriptToStore = iimAdapter ? iimAdapter.exportToIim({ steps }) : (area ? area.value : "");
+          const resolvedMeta = _resolveEditorMetadata(editorMeta, stepsRaw);
+          const steps = _promoteChooseOptionWithInventories(stepsRaw, resolvedMeta.inventories);
+          const macroMeta = _resolveEditorMetaForSteps(editorMeta, stepsRaw);
+          const scriptToStore = iimAdapter ? iimAdapter.exportToIim({ steps, meta: macroMeta }) : (area ? area.value : "");
           const updatedMacros = currentState.library.macros.map((m) =>
-            m.id === macroId ? { ...m, script: scriptToStore, steps, ...(seState.meta ? { meta: seState.meta } : {}) } : m
+            m.id === macroId ? { ...m, script: scriptToStore, steps, ...(macroMeta ? { meta: macroMeta } : {}) } : m
           );
           store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: updatedMacros });
           store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_CLOSED });
@@ -7543,12 +7986,12 @@
         const name = await uiShell.wmModal("prompt", { message: "Nombre para la nueva macro:", okLabel: "Guardar" });
         if (!name || !name.trim()) return;
         const seStateSa = store.getState().ui.scriptEditor;
+        const editorMetaSa = (seEditor && typeof seEditor.getMeta === "function") ? seEditor.getMeta() : (seStateSa.meta || null);
         const stepsRaw = _resolveEditorSteps(area, seStateSa, seStateSa.draftSteps);
-        const steps = _promoteChooseOptionWithInventories(
-          stepsRaw,
-          _resolveEditorMetadata(seStateSa && seStateSa.meta ? seStateSa.meta : null, stepsRaw).inventories
-        );
-        const scriptToStoreSa = iimAdapter ? iimAdapter.exportToIim({ steps }) : (area ? area.value : "");
+        const resolvedMetaSa = _resolveEditorMetadata(editorMetaSa, stepsRaw);
+        const steps = _promoteChooseOptionWithInventories(stepsRaw, resolvedMetaSa.inventories);
+        const macroMetaSa = _resolveEditorMetaForSteps(editorMetaSa, stepsRaw);
+        const scriptToStoreSa = iimAdapter ? iimAdapter.exportToIim({ steps, meta: macroMetaSa }) : (area ? area.value : "");
         const macro = {
           id: `macro_${Date.now()}_${Math.floor(Math.random() * 10000)}`,
           name: name.trim(),
@@ -7556,7 +7999,7 @@
           script: scriptToStoreSa,
           createdAt: Date.now()
         };
-        if (seStateSa.meta && typeof seStateSa.meta === "object") macro.meta = seStateSa.meta;
+        if (macroMetaSa) macro.meta = macroMetaSa;
         store.dispatch({ type: contracts.ActionTypes.MACRO_SAVED, payload: macro });
         store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_CLOSED });
         store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro "${macro.name}" guardada` });
@@ -7606,7 +8049,7 @@
           ...macro,
           steps: promotedSteps,
           script: iimAdapter
-            ? iimAdapter.exportToIim({ steps: promotedSteps, meta: macro.meta || null })
+            ? iimAdapter.exportToIim({ steps: promotedSteps, meta: _resolveEditorMetaForSteps(macro.meta || null, exportSteps) })
             : String(macro.script || "")
         };
 
@@ -7660,7 +8103,7 @@
               }
 
               const script = (iimAdapter && typeof iimAdapter.exportToIim === "function")
-                ? iimAdapter.exportToIim({ steps, meta: parsedMacro.meta || null })
+                ? iimAdapter.exportToIim({ steps, meta: _resolveEditorMetaForSteps(parsedMacro.meta || null, rawSteps) })
                 : String(parsedMacro.script || "");
 
               const macro = {
@@ -8200,6 +8643,29 @@
             seEditor.setAutocompleteCatalogs(resolvedMeta.autocompleteCatalogs);
           }
         }
+        if (typeof seEditor.setMeta === "function") {
+          seEditor.setMeta(seState.meta || null);
+        }
+        const area = overlay && overlay.querySelector("[data-script-editor-area]");
+        if (area) {
+          let openScript = String(seState.script || "");
+          if (!openScript && Array.isArray(steps) && steps.length > 0 && iimAdapter) {
+            try {
+              openScript = iimAdapter.exportToIim({
+                steps,
+                meta: typeof seEditor.getMeta === "function" ? seEditor.getMeta() : (seState.meta || null)
+              }) || "";
+            } catch (_e) {
+              openScript = "";
+            }
+          }
+          if (area.dataset) area.dataset.wmFullScript = openScript;
+          const displayScript = String(openScript || "").split("\n")
+            .filter((l) => !l.trimStart().startsWith("// WM_JSON:"))
+            .join("\n");
+          area.value = displayScript;
+          _syncScriptDefaultLayer(overlay, openScript);
+        }
         _applyScriptTab(overlay, "visual");
         seEditor.mount(container, () => {});
       }
@@ -8435,8 +8901,7 @@
               speed: p.speed,
               vars: _resumeVars,
               macroId: p.macroId,
-              preRunReset: (_rmacro.meta && _rmacro.meta.preRunReset) || null,
-              autoCaptureDefaults: true,
+              ..._macroPlaybackMeta(_rmacro),
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_rstate.settings);
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rPreparedSteps } });
@@ -8496,8 +8961,7 @@
                 speed: p.speed,
                 vars: buildRuntimeVars(p.vars, _rnstate.settings),
                 macroId: p.macroId,
-                preRunReset: (_rnmacro.meta && _rnmacro.meta.preRunReset) || null,
-                autoCaptureDefaults: true,
+                ..._macroPlaybackMeta(_rnmacro),
                 onStep: (step, index) => {
                   tryAutoFillRuntimeDataOnPage(_rnstate.settings);
                   store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _rnPrepared } });
@@ -8531,8 +8995,7 @@
           startIndex: p.index,
           vars: _resumeVars,
           macroId: p.macroId,
-          preRunReset: ((store.getState().library.macros.find((m) => m.id === p.macroId) || {}).meta || {}).preRunReset || null,
-          autoCaptureDefaults: true,
+          ..._macroPlaybackMeta(store.getState().library.macros.find((m) => m.id === p.macroId) || null),
           onStep: (step, index) => {
             tryAutoFillRuntimeDataOnPage(store.getState().settings);
             store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: p.steps } });
@@ -8633,11 +9096,14 @@
         const combinedMeta = (editorContext && editorContext.meta && typeof editorContext.meta === "object")
           ? editorContext.meta
           : _recordingMeta();
+        const combinedScript = (editorContext && editorContext.script)
+          ? String(editorContext.script)
+          : (iimAdapter ? iimAdapter.exportToIim({ steps: combined, meta: combinedMeta || null }) : "");
         store.dispatch({
           type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED,
           payload: {
             macroId: (editorContext && editorContext.macroId) || null,
-            script: (editorContext && editorContext.script) || "",
+            script: combinedScript,
             draftSteps: combined,
             meta: combinedMeta || null
           }
@@ -8730,10 +9196,10 @@
       // We must (re)start the recorder session on this page so events are captured.
       store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
       recorderRuntime.pageInventories = [];
-      captureScreenInventory();
       if (!recorderRuntime.preRunReset) {
         recorderRuntime.preRunReset = _captureInitialPreRunReset();
       }
+      captureScreenInventory();
       // Restore steps accumulated on previous pages in this recording session
       if (message.steps && message.steps.length > 0) {
         const restored = message.steps.map((step) => {
@@ -8754,15 +9220,15 @@
           const utils = globalScope.WebMaticUtils;
           const threshold = (afterStop.settings && afterStop.settings.waitThreshold) || 3;
           const recorded = afterStop.draft.steps;
-          const allSteps = _cleanupSteps(recorded);
+          const allSteps = _cleanupSteps(_withCapturedPageDefaults(recorded));
           const waitedSteps = utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps;
           const processedSteps = _finalizeWithInventory(waitedSteps);
               const resolvedInv = [
                 ...recorderRuntime.pageInventories,
                 ..._resolveReusableMetadataForSteps(processedSteps).inventories
               ];
-              const promotedSteps = _promoteChooseOptionWithInventories(processedSteps, resolvedInv);
-          const script = iimAdapter.exportToIim({ steps: promotedSteps });
+                const promotedSteps = _promoteChooseOptionWithInventories(processedSteps, resolvedInv);
+              const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: _recordingMeta() });
           store.dispatch({
             type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED,
             payload: { script, macroId: null, draftSteps: promotedSteps, meta: _recordingMeta() }

@@ -398,20 +398,25 @@
             saveModal: { open: false, script: "" }
           }
         };
-      case ActionTypes.SCRIPT_EDITOR_OPENED:
+      case ActionTypes.SCRIPT_EDITOR_OPENED: {
+        const editorDraftSteps = Array.isArray(action.payload?.draftSteps) ? action.payload.draftSteps : [];
+        const editorScript = String(action.payload?.script || "");
+        // Si el script viene vacío pero hay steps, se genera desde los steps en el render
+        // (el store solo guarda lo que se recibe; la generación on-demand está en ui-shell.js)
         return {
           ...state,
           ui: {
             ...state.ui,
             scriptEditor: {
               open: true,
-              script: String(action.payload?.script || ""),
+              script: editorScript,
               macroId: action.payload?.macroId || null,
-              draftSteps: Array.isArray(action.payload?.draftSteps) ? action.payload.draftSteps : [],
+              draftSteps: editorDraftSteps,
               meta: (action.payload && typeof action.payload.meta === "object") ? action.payload.meta : null
             }
           }
         };
+      }
       case ActionTypes.SCRIPT_EDITOR_CLOSED:
         return {
           ...state,

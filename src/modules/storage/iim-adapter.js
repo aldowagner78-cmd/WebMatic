@@ -236,7 +236,12 @@
 
     lines.forEach((line) => {
       const l = line.trim();
-      if (!l || l.startsWith("VERSION") || l.startsWith("TAB") || l.startsWith("//")) return;
+      if (!l || l.startsWith("VERSION") || l.startsWith("TAB")) return;
+      if (l.startsWith("//")) {
+        const commentStep = _parseCommentInstruction(l);
+        if (commentStep) steps.push(commentStep);
+        return;
+      }
 
       if (l.startsWith("NAVIGATE")) {
         const url = _parseParam(l, "URL");
@@ -312,6 +317,50 @@
     });
 
     return { steps };
+  }
+
+  function _parseCommentInstruction(line) {
+    const body = String(line || "").replace(/^\s*\/\/\s*/, "").trim();
+    if (!body) return null;
+
+    if (body.startsWith("WAIT_FOR")) {
+      const selector = _parseParam(body, "SELECTOR");
+      const timeout = parseInt(_parseParam(body, "TIMEOUT"), 10) || 10000;
+      return selector ? { type: "wait_for", selector, timeout } : null;
+    }
+    if (body.startsWith("DBLCLICK")) {
+      const selector = _parseParam(body, "SELECTOR");
+      return selector ? { type: "dblclick", selector } : null;
+    }
+    if (body.startsWith("SCROLL_TO")) {
+      const selector = _parseParam(body, "SELECTOR");
+      return selector ? { type: "scroll_to", selector } : null;
+    }
+    if (body.startsWith("HOVER")) {
+      const selector = _parseParam(body, "SELECTOR");
+      return selector ? { type: "hover", selector } : null;
+    }
+    if (body.startsWith("SET")) {
+      const variable = _parseParam(body, "VAR");
+      const value = _parseParam(body, "VALUE");
+      return variable ? { type: "set_variable", variable, value } : null;
+    }
+    if (body.startsWith("DRAG_DROP")) {
+      const from = _parseParam(body, "FROM");
+      const to = _parseParam(body, "TO");
+      return (from && to) ? { type: "drag_drop", from, to } : null;
+    }
+    if (body.startsWith("PROMPT")) {
+      const label = _parseParam(body, "LABEL");
+      const variable = _parseParam(body, "VAR");
+      return variable ? { type: "prompt", label: label || "", variable } : null;
+    }
+    if (body.startsWith("CALL_MACRO")) {
+      const macroName = _parseParam(body, "NAME");
+      return macroName ? { type: "call_macro", macro_name: macroName, steps: [] } : null;
+    }
+
+    return null;
   }
 
   // Parses KEY=value from a macro line.

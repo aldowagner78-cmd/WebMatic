@@ -1073,7 +1073,7 @@
         }
 
         const value = expandVariables(step.value || "", vars);
-        const _silentStep = !!step._fast;
+        const _silentStep = _isSilentInternalStep(step);
 
         if (step.type === "click") {
           if (!_silentStep) _highlightElement(el);
@@ -1588,6 +1588,17 @@
     return "";
   }
 
+  function _normalizePreRunResetPolicy(policy) {
+    const raw = String(policy && typeof policy === "object" ? policy.mode : policy || "").trim().toLowerCase();
+    if (raw === "start_and_resume" || raw === "resume" || raw === "all") return "start_and_resume";
+    return "start_only";
+  }
+
+  function _isSilentInternalStep(step) {
+    // Solo ocultamos pasos tecnicos internos para no perder visibilidad de la macro real.
+    return !!(step && step._fast === true && (step.type === "capture_defaults" || step._baselineDefault === true));
+  }
+
   function _collectDefaultStepsFromPage(opts) {
     const preserveSelectors = opts?.preserveSelectors || new Set();
     const explicitExcludes = opts?.explicitExcludes || [];
@@ -1942,13 +1953,13 @@
       vars[PLAY_START_VAR] = _playStartMs;
       const startIndex = options.startIndex || 0;
       const macroId = options.macroId || null;
-      const hasExplicitCaptureDefaults = runtimeSteps.some((s) => s && s.type === "capture_defaults");
+      const preRunResetPolicy = _normalizePreRunResetPolicy(options.preRunResetPolicy || null);
       this.isPlaying = true;
       this._abort = false;
       this._speed = speed;
       _fallbackBucket = [];
 
-      if (startIndex === 0 && options.preRunReset && typeof options.preRunReset === "object") {
+      if (options.preRunReset && typeof options.preRunReset === "object" && (startIndex === 0 || preRunResetPolicy === "start_and_resume")) {
         _restoreFormFromBaseline(options.preRunReset);
       }
 
@@ -1983,37 +1994,21 @@
       }
 
       try {
-        // Auto-normalización de defaults: opt-in (options.autoCaptureDefaults === true).
-        // Por defecto NO se inyecta, para no alterar macros que no usan defaults.
-        // Las macros con un paso capture_defaults explícito siguen funcionando igual.
-        const autoCaptureEnabled = options.autoCaptureDefaults === true;
-        let autoCaptureDone = !autoCaptureEnabled || hasExplicitCaptureDefaults || startIndex > 0;
         for (let i = startIndex; i < runtimeSteps.length; i++) {
           if (this._abort) break;
           const step = runtimeSteps[i];
-
-          // Automatic safety net: if the macro doesn't include capture_defaults,
-          // normalize defaults right before the first field-mutating step.
-          if (!autoCaptureDone && (step.type === "input" || step.type === "text" || step.type === "check" || step.type === "choose_option")) {
-            const autoStep = {
-              type: "capture_defaults",
-              _fast: true,
-              _preserveSelectors: Array.from(_collectModifiedSelectors(runtimeSteps, i))
-            };
-            await executeStep(autoStep, vars, this.retryMs, this.timeoutMs, this._speed);
-            autoCaptureDone = true;
-          }
 
           const capturePreserve = step.type === "capture_defaults"
             ? Array.from(_collectModifiedSelectors(runtimeSteps, i + 1))
             : null;
           const runnableStep = capturePreserve ? { ...step, _preserveSelectors: capturePreserve } : step;
-          if (typeof options.onStep === "function" && !runnableStep._fast) options.onStep(step, i);
+          const _silentRuntimeStep = _isSilentInternalStep(runnableStep);
+          if (typeof options.onStep === "function" && !_silentRuntimeStep) options.onStep(step, i);
 
           // Save resumption state BEFORE every step — if a navigation happens at any
           // point during this step (or any sleep/wait afterwards), the new page can
           // resume from index i+1. We only clear pending state on full completion.
-            if (!runnableStep._fast && step.type !== "if_exists" && step.type !== "loop_until" &&
+            if (!_silentRuntimeStep && step.type !== "if_exists" && step.type !== "loop_until" &&
               step.type !== "try_fallback" && step.type !== "call_macro" &&
                 step.type !== "for_each_row" && step.type !== "open_tab" &&
                 step.type !== "switch_tab" && step.type !== "close_tab") {
@@ -2025,8 +2020,8 @@
             });
           }
 
-          // Pasos _fast (capturePageDefaults): ejecutar sin delay ni overhead de mensajes
-          if (runnableStep._fast) {
+          // Pasos tecnicos internos: ejecutar sin delay ni overhead de mensajes
+          if (_silentRuntimeStep) {
             await executeStep(runnableStep, vars, this.retryMs, this.timeoutMs, this._speed);
             continue;
           }

@@ -88,6 +88,60 @@
     return btn;
   }
 
+  const RESET_POLICY_OPTIONS = [
+    {
+      value: "start_only",
+      label: "Solo al inicio",
+      hint: "Aplica el baseline al arrancar la macro. Mantiene el comportamiento legacy."
+    },
+    {
+      value: "start_and_resume",
+      label: "Inicio y reanudación",
+      hint: "Aplica el baseline al arrancar y también al retomar tras navegación o cambio de pestaña."
+    }
+  ];
+
+  function _cloneMeta(meta) {
+    if (!meta || typeof meta !== "object") return null;
+    return JSON.parse(JSON.stringify(meta));
+  }
+
+  function _normalizeResetPolicyMode(policy) {
+    const raw = String(policy && typeof policy === "object" ? policy.mode : policy || "").trim().toLowerCase();
+    return raw === "start_and_resume" ? "start_and_resume" : "start_only";
+  }
+
+  function _normalizeStepEditorMeta(meta) {
+    const out = _cloneMeta(meta) || {};
+    out.preRunResetPolicy = { mode: _normalizeResetPolicyMode(out.preRunResetPolicy) };
+    return out;
+  }
+
+  function _isBaselineDefaultStep(step) {
+    return !!(step && step._baselineDefault === true);
+  }
+
+  function _normalizeComparableStepValue(value) {
+    if (Array.isArray(value)) return value.map(_normalizeComparableStepValue);
+    if (value && typeof value === "object") {
+      const out = {};
+      Object.keys(value).sort().forEach((key) => {
+        if (key === "_baselineDefault" || key === "_fast") return;
+        if (key.startsWith("_wm")) return;
+        out[key] = _normalizeComparableStepValue(value[key]);
+      });
+      return out;
+    }
+    if (typeof value === "undefined") return null;
+    return value;
+  }
+
+  function _hasMeaningfulStepChanges(originalStep, updatedStep) {
+    const a = _normalizeComparableStepValue(originalStep || {});
+    const b = _normalizeComparableStepValue(updatedStep || {});
+    return JSON.stringify(a) !== JSON.stringify(b);
+  }
+
   class StepEditor {
     constructor() {
       this.steps = [];
@@ -101,6 +155,7 @@
       this._inventory = [];         // inventario de controles capturado al grabar
       this._autocompleteCatalogs = {}; // meta.autocompleteCatalogs
       this._movedStepMeta = new Map(); // stepRef -> {source, at}
+      this._macroMeta = _normalizeStepEditorMeta(null);
       this._dragFromIdx = null;
       this._dragMode = "step"; // "step" | "block"
       this._collapsedBlocks = new Set(); // keys "start:end" de bloques colapsados
@@ -116,6 +171,15 @@
 
     setAutocompleteCatalogs(catalogs) {
       this._autocompleteCatalogs = (catalogs && typeof catalogs === "object") ? catalogs : {};
+    }
+
+    setMeta(meta) {
+      this._macroMeta = _normalizeStepEditorMeta(meta);
+      this._render();
+    }
+
+    getMeta() {
+      return _cloneMeta(this._macroMeta);
     }
 
     _catalogOptionsForSelector(selector) {
@@ -454,13 +518,67 @@
     }
 
     _fire() {
-      if (typeof this._onChange === "function") this._onChange(this.getSteps());
+      if (typeof this._onChange === "function") this._onChange(this.getSteps(), this.getMeta());
+    }
+
+    _resetPolicyHint(mode) {
+      const found = RESET_POLICY_OPTIONS.find((opt) => opt.value === _normalizeResetPolicyMode(mode));
+      return found ? found.hint : RESET_POLICY_OPTIONS[0].hint;
+    }
+
+    _setResetPolicyMode(mode) {
+      const next = _normalizeStepEditorMeta(this._macroMeta);
+      next.preRunResetPolicy = { mode: _normalizeResetPolicyMode(mode) };
+      this._macroMeta = next;
+    }
+
+    _buildMacroMetaPanel() {
+      const panel = document.createElement("div");
+      panel.className = "wm-sved-meta-panel";
+
+      const title = document.createElement("div");
+      title.className = "wm-sved-meta-title";
+      title.textContent = "Política de reseteo";
+      panel.appendChild(title);
+
+      const row = document.createElement("label");
+      row.className = "wm-sved-field-label";
+      row.textContent = "Cuándo restaurar campos";
+
+      const select = document.createElement("select");
+      select.className = "wm-sved-select";
+      select.dataset.field = "preRunResetPolicy";
+      const currentMode = _normalizeResetPolicyMode(this._macroMeta && this._macroMeta.preRunResetPolicy);
+      RESET_POLICY_OPTIONS.forEach((opt) => {
+        const option = document.createElement("option");
+        option.value = opt.value;
+        option.textContent = opt.label;
+        if (opt.value === currentMode) option.selected = true;
+        select.appendChild(option);
+      });
+      row.appendChild(select);
+      panel.appendChild(row);
+
+      const hint = document.createElement("div");
+      hint.className = "wm-sved-meta-hint";
+      hint.textContent = this._resetPolicyHint(currentMode);
+      panel.appendChild(hint);
+
+      select.addEventListener("change", () => {
+        this._setResetPolicyMode(select.value);
+        hint.textContent = this._resetPolicyHint(select.value);
+        this._fire();
+      });
+
+      return panel;
     }
 
     _render() {
       const c = this._container;
       if (!c) return;
       c.replaceChildren();
+
+      c.appendChild(this._buildMacroMetaPanel());
 
       if (this.steps.length === 0 && !this._addFormOpen) {
         const empty = document.createElement("div");
@@ -523,10 +641,12 @@
           const canCollapse = blockSize > 1;
           const hasOpenEditInBlock = this._editIdx !== null && this._editIdx >= start && this._editIdx <= end;
           const collapsed = canCollapse && this._collapsedBlocks.has(blockKey) && !hasOpenEditInBlock;
+          const isDefaultsBlock = _isBaselineDefaultStep(this.steps[start]);
           if (canCollapse && this._collapsedBlocks.has(blockKey)) persistedCollapsed.add(blockKey);
 
           const blockWrap = document.createElement("section");
           blockWrap.className = `wm-sved-block wm-sved-block-theme-${((blockOrdinal - 1) % 4) + 1}`;
+          if (isDefaultsBlock) blockWrap.classList.add("wm-sved-block-defaults");
           blockWrap.dataset.blockStart = String(start);
           blockWrap.dataset.blockEnd = String(end);
           if (collapsed) blockWrap.classList.add("wm-sved-block-collapsed");
@@ -539,6 +659,15 @@
           blockTag.textContent = `bloque ${blockOrdinal}`;
           blockTag.title = `Bloque encadenado de ${blockSize} pasos`;
           blockHeader.appendChild(blockTag);
+
+          const blockContext = this._formatBlockContextLabel(this._stepBlockKey(this.steps[start]));
+          if (blockContext) {
+            const ctx = document.createElement("span");
+            ctx.className = "wm-sved-block-context";
+            ctx.textContent = blockContext;
+            ctx.title = `Contexto del bloque: ${this._stepBlockKey(this.steps[start])}`;
+            blockHeader.appendChild(ctx);
+          }
 
           const blockMeta = document.createElement("span");
           blockMeta.className = "wm-sved-block-meta";
@@ -581,6 +710,7 @@
             row.dataset.stepIdx = String(rowIdx);
             const rowBlock = this._findExecutionBlockBounds(rowIdx);
             const blockLead = !!rowBlock && rowBlock.start === rowIdx;
+            const isBaselineDefault = _isBaselineDefaultStep(step);
 
             const movedMeta = this._movedStepMeta.get(step);
             if (movedMeta) {
@@ -590,6 +720,7 @@
 
             row.classList.add("wm-sved-row-block");
             row.classList.add(blockOrdinal % 2 === 0 ? "wm-sved-row-block-even" : "wm-sved-row-block-odd");
+            if (isBaselineDefault) row.classList.add("wm-sved-row-default");
 
             if (dragEnabled) {
               row.setAttribute("draggable", "true");
@@ -642,6 +773,13 @@
             typeTag.className = "wm-sved-type";
             typeTag.textContent = step.type;
 
+            const defaultBadge = isBaselineDefault ? document.createElement("span") : null;
+            if (defaultBadge) {
+              defaultBadge.className = "wm-sved-default-badge";
+              defaultBadge.textContent = "default";
+              defaultBadge.title = "Paso capturado automáticamente desde el estado inicial de la página";
+            }
+
             const desc = document.createElement("span");
             desc.className = "wm-sved-desc";
             const lbl = _shortLabel(step);
@@ -691,6 +829,7 @@
             row.appendChild(num);
             row.appendChild(icon);
             row.appendChild(typeTag);
+            if (defaultBadge) row.appendChild(defaultBadge);
             row.appendChild(desc);
             row.appendChild(ctrl);
             blockBody.appendChild(row);
@@ -1000,6 +1139,7 @@
       confirmBtn.className = "wm-sved-confirm-btn";
       confirmBtn.textContent = "✔ Guardar";
       confirmBtn.addEventListener("click", () => {
+        const originalStep = step && typeof step === "object" ? { ...step } : step;
         const updated = { type: typeSelect.value };
         fieldsDiv.querySelectorAll("[data-field]").forEach((inp) => {
           if (inp.dataset.fieldtype === "toggle") {
@@ -1028,6 +1168,24 @@
           updated.dataset = step.dataset || [];
           updated.steps = step.steps || [];
         }
+
+        // Preserve block layout metadata handled by the visual editor.
+        if (step && step._wmBlockStart) updated._wmBlockStart = true;
+        if (step && step._wmCollapsed) updated._wmCollapsed = true;
+
+        // If a captured default was edited, promote it to a normal user step.
+        // If it was not changed, keep it as silent default.
+        if (_isBaselineDefaultStep(step)) {
+          const changed = _hasMeaningfulStepChanges(originalStep, updated);
+          if (changed) {
+            delete updated._baselineDefault;
+            delete updated._fast;
+          } else {
+            updated._baselineDefault = true;
+            updated._fast = true;
+          }
+        }
+
         this.steps[idx] = updated;
         this._editIdx = null;
         this._render();
@@ -1233,14 +1391,40 @@
       this._movedStepMeta.set(stepRef, { source, at: Date.now() });
     }
 
+    _normalizeBlockKey(raw) {
+      const key = String(raw || "").trim();
+      return key || "";
+    }
+
+    _stepBlockKey(step) {
+      if (!step || typeof step !== "object") return "";
+      return this._normalizeBlockKey(step._wmBlockKey);
+    }
+
+    _formatBlockContextLabel(blockKey) {
+      const key = this._normalizeBlockKey(blockKey);
+      if (!key) return "";
+      const slash = key.indexOf("/");
+      if (slash < 0) return key;
+      const host = key.slice(0, slash);
+      const path = key.slice(slash) || "/";
+      if (path.length <= 32) return `${host}${path}`;
+      return `${host}${path.slice(0, 29)}...`;
+    }
+
     _isExecutionBlockBoundaryType(stepType) {
-      return stepType === "open_tab" || stepType === "switch_tab";
+      return stepType === "navigate" || stepType === "open_tab" || stepType === "switch_tab" || stepType === "close_tab";
     }
 
     _isExecutionBlockBoundaryStep(step, idx) {
       if (!step || typeof step !== "object") return false;
       if (idx === 0) return true;
       if (step._wmBlockStart === true || String(step._wmBlockStart).toLowerCase() === "true") return true;
+      const currKey = this._stepBlockKey(step);
+      const prev = this.steps[idx - 1];
+      const prevKey = this._stepBlockKey(prev);
+      if (currKey && prevKey && currKey !== prevKey) return true;
+      if (currKey && prevKey && currKey === prevKey) return false;
       return this._isExecutionBlockBoundaryType(step.type);
     }
 

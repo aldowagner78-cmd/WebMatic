@@ -1124,7 +1124,7 @@ test("capture_defaults: NO se auto-inyecta por defecto (no resetea otros campos)
   });
 });
 
-test("capture_defaults: con autoCaptureDefaults=true sí normaliza los defaults", async () => {
+test("capture_defaults: autoCaptureDefaults se ignora y no normaliza defaults", async () => {
   await withVisibleLayout(async () => {
     resetBody(TWO_SELECTS_HTML);
     win.document.getElementById("other").value = "b";
@@ -1135,8 +1135,8 @@ test("capture_defaults: con autoCaptureDefaults=true sí normaliza los defaults"
         vars: {}, speed: 1, autoCaptureDefaults: true, onDone: resolve, onError: resolve
       });
     });
-    // Con opt-in activo, #other se normaliza a su default "a"; #trigger se respeta.
-    assert.equal(win.document.getElementById("other").value, "a");
+    // Sin auto-inyección, #other conserva su valor (no se resetea al default "a").
+    assert.equal(win.document.getElementById("other").value, "b");
     assert.equal(win.document.getElementById("trigger").value, "y");
   });
 });
@@ -1151,7 +1151,6 @@ test("capture_defaults auto (_fast) no dispara onStep extra", async () => {
       p.play([{ type: "choose_option", selector: "#trigger", value: "y" }], {
         vars: {},
         speed: 1,
-        autoCaptureDefaults: true,
         onStep: (step) => seen.push(step.type),
         onDone: resolve,
         onError: resolve
@@ -1209,6 +1208,42 @@ test("preRunReset: restaura baseline antes del primer paso", async () => {
 
     assert.equal(win.document.getElementById("otro").value, "LIMPIO");
     assert.equal(win.document.getElementById("trigger").value, "y");
+  });
+});
+
+test("preRunReset: inicio y reanudacion tambien restaura baseline", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(`
+      <input id="campo" type="text" value="LIMPIO">
+    `);
+
+    win.document.getElementById("campo").value = "SUCIO";
+
+    const baseline = {
+      version: 1,
+      controls: [
+        { selector: "#campo", tag: "input", type: "text", value: "LIMPIO" }
+      ]
+    };
+
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    await new Promise((resolve) => {
+      p.play([
+        { type: "set_variable", variable: "A", value: "1" },
+        { type: "set_variable", variable: "B", value: "2" }
+      ], {
+        vars: {},
+        speed: 1,
+        startIndex: 1,
+        preRunReset: baseline,
+        preRunResetPolicy: { mode: "start_and_resume" },
+        onDone: resolve,
+        onError: resolve
+      });
+    });
+
+    assert.equal(win.document.getElementById("campo").value, "LIMPIO");
   });
 });
 

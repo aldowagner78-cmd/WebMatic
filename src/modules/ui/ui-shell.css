@@ -1245,6 +1245,45 @@
   background: var(--webmatic-card-bg, #f8fafc);
   color: var(--webmatic-text, #1e293b);
   tab-size: 2;
+  position: relative;
+  z-index: 2;
+}
+
+.webmatic-script-code-shell {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: none;
+  flex-direction: column;
+  background: var(--webmatic-card-bg, #f8fafc);
+}
+
+.webmatic-script-code-shell .webmatic-script-textarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: transparent;
+}
+
+.webmatic-script-default-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+  border-radius: 0;
+}
+
+.webmatic-script-default-layer-inner {
+  position: relative;
+  width: 100%;
+}
+
+.webmatic-script-default-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, rgba(15, 118, 110, 0.24), rgba(15, 118, 110, 0.08));
+  border-left: 3px solid rgba(15, 118, 110, 0.88);
 }
 
 .webmatic-script-footer {
@@ -1448,6 +1487,84 @@
   margin-bottom: 10px;
 }
 
+.wm-sved-meta-panel {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--webmatic-border, #e2e8f0) 72%, var(--webmatic-accent, #059669) 28%);
+  border-radius: 12px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--webmatic-card-bg, #fff) 94%, var(--webmatic-accent, #059669) 6%), color-mix(in srgb, var(--webmatic-card-bg, #fff) 88%, var(--webmatic-accent, #059669) 12%));
+}
+
+.wm-sved-meta-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, var(--webmatic-text-muted, #64748b) 78%, var(--webmatic-accent, #059669) 22%);
+}
+
+.wm-sved-meta-panel .wm-sved-field-label {
+  margin: 0;
+}
+
+.wm-sved-meta-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--webmatic-text-muted, #64748b);
+}
+
+.wm-sved-defaults-group {
+  display: grid;
+  gap: 4px;
+  margin: 2px 0 4px;
+  padding: 8px 10px;
+  border-left: 4px solid #0f766e;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.10), rgba(15, 118, 110, 0.04));
+}
+
+.wm-sved-defaults-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #115e59;
+}
+
+.wm-sved-defaults-hint {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #0f766e;
+}
+
+.wm-sved-block-defaults {
+  --wm-sved-block-accent: #0f766e;
+}
+
+.wm-sved-row-default {
+  background: linear-gradient(90deg, rgba(15, 118, 110, 0.2), rgba(15, 118, 110, 0.08));
+  border-color: rgba(15, 118, 110, 0.5);
+  box-shadow: inset 3px 0 0 rgba(15, 118, 110, 0.92);
+}
+
+.wm-sved-default-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 118, 110, 0.28);
+  background: rgba(15, 118, 110, 0.10);
+  color: #115e59;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .wm-sved-block {
   --wm-sved-block-accent: var(--webmatic-accent, #059669);
   --wm-sved-block-bg: color-mix(in srgb, var(--wm-sved-block-accent) 9%, var(--webmatic-card-bg, #fff) 91%);
@@ -1487,6 +1604,21 @@
   color: color-mix(in srgb, var(--webmatic-text-muted, #64748b) 80%, var(--wm-sved-block-accent) 20%);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.wm-sved-block-context {
+  font-size: 10px;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--wm-sved-block-accent) 72%, #0f172a 28%);
+  border: 1px solid color-mix(in srgb, var(--wm-sved-block-accent) 40%, var(--webmatic-border, #e2e8f0) 60%);
+  background: color-mix(in srgb, var(--wm-sved-block-accent) 10%, var(--webmatic-card-bg, #fff) 90%);
+  border-radius: 999px;
+  padding: 2px 7px;
+  letter-spacing: 0.02em;
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wm-sved-block-toggle {
@@ -1630,6 +1762,17 @@
   background: color-mix(in srgb, #22c55e 6%, var(--webmatic-card-bg, #fff) 94%);
 }
 
+.wm-sved-row.wm-sved-row-default,
+.wm-sved-row.wm-sved-row-default.wm-sved-row-block-odd,
+.wm-sved-row.wm-sved-row-default.wm-sved-row-block-even,
+.wm-sved-row.wm-sved-row-default:hover,
+.wm-sved-row.wm-sved-row-default.wm-sved-row-moved,
+.wm-sved-row.wm-sved-row-default.wm-sved-row-moved:hover {
+  background: linear-gradient(90deg, rgba(15, 118, 110, 0.38), rgba(15, 118, 110, 0.16)) !important;
+  border-color: rgba(15, 118, 110, 0.78) !important;
+  box-shadow: inset 5px 0 0 rgba(15, 118, 110, 0.98), 0 0 0 1px rgba(15, 118, 110, 0.18) !important;
+}
+
 .wm-sved-block-tag {
   position: static;
   font-size: 10px;
@@ -1641,6 +1784,12 @@
   color: color-mix(in srgb, #0f172a 74%, var(--wm-sved-block-accent) 26%);
   border: 1px solid color-mix(in srgb, var(--wm-sved-block-accent) 45%, var(--webmatic-border, #e2e8f0) 55%);
   background: color-mix(in srgb, var(--wm-sved-block-accent) 13%, var(--webmatic-card-bg, #fff) 87%);
+}
+
+.wm-sved-block-tag-default {
+  color: #0f766e;
+  border-color: rgba(15, 118, 110, 0.45);
+  background: rgba(15, 118, 110, 0.14);
 }
 
 .wm-sved-row-drop-before,

@@ -121,6 +121,41 @@ test("importFromIim: parser legacy ignora lineas que comienzan con //", () => {
   assert.equal(steps[0].selector, "#real");
 });
 
+test("importFromIim: parser legacy reconoce // WAIT_FOR como paso ejecutable", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    '// WAIT_FOR SELECTOR="#nombre" TIMEOUT=7500',
+    'TYPE SELECTOR="#nombre" CONTENT="Juan"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(script);
+  assert.equal(steps.length, 2);
+  assert.equal(steps[0].type, "wait_for");
+  assert.equal(steps[0].selector, "#nombre");
+  assert.equal(steps[0].timeout, 7500);
+  assert.equal(steps[1].type, "input");
+});
+
+test("importFromIim: parser legacy reconoce comentarios extendidos exportados por WebMatic", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    '// HOVER SELECTOR="#menu"',
+    '// SET VAR="X" VALUE="42"',
+    '// DRAG_DROP FROM="#a" TO="#b"',
+    '// PROMPT LABEL="Codigo" VAR="COD"',
+    '// CALL_MACRO NAME="Login"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(script);
+  assert.equal(steps.length, 5);
+  assert.equal(steps[0].type, "hover");
+  assert.equal(steps[1].type, "set_variable");
+  assert.equal(steps[1].variable, "X");
+  assert.equal(steps[2].type, "drag_drop");
+  assert.equal(steps[3].type, "prompt");
+  assert.equal(steps[4].type, "call_macro");
+});
+
 // ── Round-trip de tipos extendidos ────────────────────────────────────────────
 
 test("round-trip: wait_for sobrevive export/import", () => {
