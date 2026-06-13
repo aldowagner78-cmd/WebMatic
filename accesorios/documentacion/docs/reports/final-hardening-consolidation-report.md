@@ -75,3 +75,42 @@ Ejecutar validación real controlada usando checklist dedicado, con reglas estri
 ## 12. Criterio de release
 
 No declarar release listo hasta completar validación real read-only sin regresiones.
+
+## 13. Diagnóstico CI remoto PR #1
+
+### Run fallido analizado
+
+- RUN_ID: 27477258131
+- Workflow: Firefox Release Gate
+- Event: pull_request
+- Job/step fallido: verify-firefox / Install Firefox, geckodriver and zip
+- URL: https://github.com/aldowagner78-cmd/WebMatic/actions/runs/27477258131
+
+### Causa raíz
+
+- El runner `ubuntu-latest` (noble) no resolvió paquetes apt requeridos por el step:
+	- `E: Unable to locate package geckodriver`
+	- `E: Package 'firefox-esr' has no installation candidate`
+- El proceso falla con `exit code 100` antes de ejecutar tests/verificaciones.
+
+### Corrección aplicada
+
+- Se eliminó la instalación apt de `firefox/geckodriver` del workflow.
+- Se dejó instalación de `zip` y se mantiene instalación de runtime Firefox mediante Playwright.
+- Archivo modificado: `.github/workflows/firefox-release-gate.yml`.
+
+### Validación local posterior
+
+- `npm test`: OK
+- `npm run verify:v2:firefox:fast`: OK
+- `npm run verify:v2:firefox:full`: OK
+
+### Estado CI remoto posterior
+
+- Se realizó push del fix en commit `713a6bd`.
+- Consulta posterior: `gh run list --branch hardening/h09-prerunreset-stress --limit 10`.
+- Al cierre, no se observa aún un run nuevo asociado al último push.
+
+### NO VERIFICADO
+
+- NO VERIFICADO: resultado del próximo run remoto posterior al commit `713a6bd` (OK/FALLÓ), porque aún no aparece en `gh run list` al momento del cierre.
