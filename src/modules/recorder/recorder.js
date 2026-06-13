@@ -21,6 +21,37 @@
     }
 
     /**
+     * Heuristica para detectar valores probablemente dinamicos (ids/tokens/hash).
+     * Evita sobrepenalizar identificadores humanos cortos y estables.
+     */
+    static isLikelyDynamicValue(value) {
+      const raw = String(value == null ? "" : value).trim();
+      if (!raw) return false;
+
+      const lower = raw.toLowerCase();
+      const stableCommon = new Set([
+        "login", "username", "password", "submit", "buscar", "autorizar", "btnguardar", "codigoafiliado"
+      ]);
+      if (stableCommon.has(lower)) return false;
+
+      if (/^[0-9]{6,}$/.test(raw)) return true;
+      if (/\d{10,}/.test(raw)) return true;
+      if (/\b20\d{6}\b/.test(raw)) return true;
+      if (/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i.test(raw)) return true;
+      if (/\b[a-f0-9]{16,}\b/i.test(raw)) return true;
+      if (/(^|[_:-])(react|reactid|ng|vue|v)[_:-]/i.test(raw)) return true;
+
+      // Prefijos internos de frameworks / toolchains.
+      if (/^(:?r\d|__next|ember|svelte|astro)/i.test(raw)) return true;
+
+      // Segmentos alfanumericos largos (hash/tokens) o sufijos numericos extensos.
+      if (/(?:[_:-])[a-z0-9]{10,}(?:[_:-]|$)/i.test(raw)) return true;
+      if (/(?:[_:-])\d{5,}(?:$|[_:-])/.test(raw)) return true;
+
+      return false;
+    }
+
+    /**
      * Builds a CSS selector for an element using priority:
      * id → name → aria-label → placeholder → data-testid →
      * a[href] (for link/image-in-link) → gxrow action → text → tag+position
@@ -39,9 +70,34 @@
       }
 
       const tag = element.tagName.toLowerCase();
+      const elementId = String(element.id || "");
+      const hasStableId = !!elementId && !Recorder.isLikelyDynamicValue(elementId);
 
-      if (element.id) {
-        return "#" + element.id;
+      if (hasStableId) {
+        return "#" + elementId;
+      }
+
+      if (element.dataset && element.dataset.testid) {
+        return `[data-testid="${E(element.dataset.testid)}"]`;
+      }
+
+      if (element.getAttribute("aria-label")) {
+        return `[aria-label="${E(element.getAttribute("aria-label"))}"]`;
+      }
+
+      if (element.getAttribute("placeholder")) {
+        return `${tag}[placeholder="${E(element.getAttribute("placeholder"))}"]`;
+      }
+
+      // title attribute (stable in legacy/enterprise apps)
+      const titleAttr = element.getAttribute("title");
+      if (titleAttr && titleAttr.length <= 80) {
+        const gxRow = element.closest && element.closest("[gxrow]");
+        if (gxRow) {
+          const rowNum = gxRow.getAttribute("gxrow");
+          return `[gxrow="${E(rowNum)}"] [title="${E(titleAttr)}"]`;
+        }
+        return `[title="${E(titleAttr)}"]`;
       }
 
       if (element.getAttribute("name")) {
@@ -67,31 +123,6 @@
         }
       }
 
-      if (element.getAttribute("aria-label")) {
-        return `[aria-label="${E(element.getAttribute("aria-label"))}"]`;
-      }
-
-      if (element.getAttribute("placeholder")) {
-        return `${tag}[placeholder="${E(element.getAttribute("placeholder"))}"]`;
-      }
-
-      if (element.dataset && element.dataset.testid) {
-        return `[data-testid="${E(element.dataset.testid)}"]`;
-      }
-
-      // GeneXus grid row action: element is inside a [gxrow] row
-      const gxRow = element.closest && element.closest("[gxrow]");
-      if (gxRow) {
-        const rowNum = gxRow.getAttribute("gxrow");
-        if (element.title) return `[gxrow="${E(rowNum)}"] [title="${E(element.title)}"]`;
-      }
-
-      // title attribute (stable in legacy/enterprise apps)
-      const titleAttr = element.getAttribute("title");
-      if (titleAttr && titleAttr.length <= 80) {
-        return `[title="${E(titleAttr)}"]`;
-      }
-
       // Stable data-* attribute (skip auto-generated/dynamic ones)
       const stableData = Array.from(element.attributes).find((a) => {
         if (!a.name.startsWith("data-")) return false;
@@ -103,7 +134,11 @@
 
       const text = (element.textContent || "").replace(/\s+/g, " ").trim();
       if (text && text.length <= 60) {
-        return `${tag}[text="${E(text)}"]`;
+        const sameTextCount = Array.from((element.ownerDocument || document).querySelectorAll(tag))
+          .filter((el) => ((el.textContent || "").replace(/\s+/g, " ").trim() === text)).length;
+        if (sameTextCount === 1) {
+          return `${tag}[text="${E(text)}"]`;
+        }
       }
 
       // Anchor selector: nearest ancestor with a stable id + relative path
@@ -130,6 +165,7 @@
       const sameTag = siblings.filter((s) => s.tagName === element.tagName);
       const idx = sameTag.indexOf(element);
       const nth = sameTag.length > 1 ? `:nth-of-type(${idx + 1})` : "";
+      if (elementId) return `#${E(elementId)}`;
       return stableClasses ? `${tag}.${stableClasses}${nth}` : `${tag}${nth}`;
     }
 
