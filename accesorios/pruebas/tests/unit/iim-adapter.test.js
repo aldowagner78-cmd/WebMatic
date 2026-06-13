@@ -548,3 +548,30 @@ test("exportToIim: sanea value sensible dentro de meta.preRunReset.controls", ()
   assert.equal(controls[1].value, undefined);
   assert.equal(controls[2].value, "Juan");
 });
+
+test("H-09: exportToIim no filtra secretos sentinela en WM_JSON ni texto final", () => {
+  const macro = {
+    steps: [{ type: "click", selector: "#go" }],
+    meta: {
+      pageInventories: [{
+        url: "u",
+        controls: [
+          { selector: "#pwd", type: "password", name: "password", currentValue: "PASSWORD_SHOULD_NOT_LEAK" },
+          { selector: "#tok", name: "csrf_token", currentValue: "TOKEN_SHOULD_NOT_LEAK" }
+        ]
+      }],
+      preRunReset: {
+        version: 1,
+        controls: [
+          { selector: "#pwd", type: "password", name: "password", value: "PASSWORD_SHOULD_NOT_LEAK" },
+          { selector: "#sec", name: "api_secret", value: "SECRET_SHOULD_NOT_LEAK" }
+        ]
+      }
+    }
+  };
+
+  const script = adapter.exportToIim(macro);
+  assert.ok(!script.includes("PASSWORD_SHOULD_NOT_LEAK"));
+  assert.ok(!script.includes("TOKEN_SHOULD_NOT_LEAK"));
+  assert.ok(!script.includes("SECRET_SHOULD_NOT_LEAK"));
+});
