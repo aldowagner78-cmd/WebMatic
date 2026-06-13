@@ -22,9 +22,11 @@ Se implementó release gate CI, se eliminaron skips silenciosos por defecto en e
 - `iapos-safe` ahora falla si falta Firefox Playwright.
 - Solo permite skip con `ALLOW_PLAYWRIGHT_FIREFOX_SKIP=1`.
 
-3. Resume robusto en subflujos del player.
+3. Resume en subflujos del player (con límites explícitos).
 - Se guarda estado de continuación antes de subpasos relevantes.
 - Se propaga continuación recursiva en `if_exists`, `loop_until`, `try_fallback`, `call_macro`, `for_each_row`.
+- En `for_each_row` y `loop_until` se preserva estado pendiente (filas/iteraciones remanentes) para reanudación.
+- `open_tab/switch_tab/close_tab` dentro de subflujos complejos quedan explícitamente no soportados en esta ronda.
 
 4. Concurrencia de pending playback.
 - Cambio de singleton global a mapa por `tabId` en background.
@@ -141,6 +143,7 @@ Un candidato a release se considera apto solo si:
 	- Verificado para `if_exists`, `loop_until`, `try_fallback`, `call_macro`, `for_each_row` con tests unitarios.
 3. Navegación por pestañas.
 	- `open_tab`, `switch_tab`, `close_tab` auditados en player/background y con tests unitarios.
+	- Limitación explícita: dentro de subflujos complejos no están soportados en esta ronda.
 4. pending playback por tab.
 	- `SAVE_PLAYBACK_STATE`, `QUERY_PENDING_PLAYBACK`, `CLEAR_PENDING_PLAYBACK`, limpieza en `tabs.onRemoved` y consumo one-shot verificados.
 5. IIM adapter.
@@ -162,6 +165,7 @@ Un candidato a release se considera apto solo si:
 2. Implementación y corrida de testbench H-08 de selectores dinámicos agresivos.
 3. Implementación y corrida de benchmark H-09 con 500/1000 controles en entorno controlado.
 4. Corrida read-only en entorno IAPOS real (`IAPOS_E2E_REAL=1`).
+5. `open_tab/switch_tab/close_tab` dentro de `if_exists/loop_until/try_fallback/call_macro/for_each_row`.
 
 ### Conclusión técnica
 

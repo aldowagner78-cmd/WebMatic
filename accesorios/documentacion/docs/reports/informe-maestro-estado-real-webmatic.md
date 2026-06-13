@@ -172,7 +172,7 @@ Archivos/carpetas no trackeados detectados:
 | CI release gate Firefox | Validado (implementado) | `.github/workflows/firefox-release-gate.yml` |
 | IAPOS real end-to-end | Pendiente (NO EJECUTADO EN ESTA CORRIDA) | Requiere `IAPOS_E2E_REAL=1` |
 | Grabacion defaults + baseline | Validado | Codigo + tests player/content |
-| Resume en subflujos complejos | Validado | Codigo + tests nuevos en player (`if_exists`, `try_fallback`, `for_each_row`) |
+| Resume en subflujos complejos | Validado con limites explicitos | Codigo + tests en player (`if_exists`, `loop_until`, `try_fallback`, `call_macro`, `for_each_row`) y preservacion de filas/iteraciones remanentes; tab actions en subflujos complejos no soportadas en esta ronda |
 | Concurrencia pending playback por tab | Validado | `background.js` (mapa por tabId) |
 | Parser IIM comentarios extendidos/complejos | Validado | `iim-adapter.js` + tests de placeholders seguros |
 | Marcadores `_wmBlockKey/_wmBlockStart/_wmBlockEnd` | Parcial | Recorder/content los genera y editor los consume; sin campana QA manual dedicada en esta corrida |

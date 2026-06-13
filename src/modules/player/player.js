@@ -1927,6 +1927,34 @@
     return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
   }
 
+  function _cloneDatasetRows(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows.map((row) => {
+      if (Array.isArray(row)) return row.slice();
+      if (row && typeof row === "object") return { ...row };
+      return row;
+    });
+  }
+
+  function _buildForEachRowContinuationStep(step, remainingRows) {
+    const cloned = { ...(step || {}) };
+    cloned.columns = Array.isArray(step && step.columns) ? step.columns.slice() : [];
+    cloned.dataset = _cloneDatasetRows(remainingRows);
+    cloned.steps = Array.isArray(step && step.steps)
+      ? step.steps.map((s) => (s && typeof s === "object" ? { ...s } : s))
+      : [];
+    return cloned;
+  }
+
+  function _buildLoopUntilContinuationStep(step, remainingIterations) {
+    const cloned = { ...(step || {}) };
+    cloned.steps = Array.isArray(step && step.steps)
+      ? step.steps.map((s) => (s && typeof s === "object" ? { ...s } : s))
+      : [];
+    cloned.max_iterations = remainingIterations;
+    return cloned;
+  }
+
   class Player {
     constructor(options) {
       this.retryMs = options?.retryMs ?? 500;
@@ -2069,11 +2097,15 @@
               const _luKeep = _luCond === "exists" ? !!_luEl : !_luEl;
               if (!_luKeep) break;
               if (Array.isArray(step.steps) && step.steps.length > 0) {
+                const _remainingLoopIterations = Math.max(0, _luMax - (_luIter + 1));
+                const _loopContinuation = _remainingLoopIterations > 0
+                  ? [_buildLoopUntilContinuationStep(step, _remainingLoopIterations), ...runtimeSteps.slice(i + 1)]
+                  : runtimeSteps.slice(i + 1);
                 await this._runSubSteps(
                   step.steps,
                   vars,
                   baseDelayMs,
-                  runtimeSteps.slice(i + 1),
+                  _loopContinuation,
                   { speed, macroId }
                 );
               }
@@ -2138,11 +2170,15 @@
                 vars[col] = _feRow[ci] !== undefined ? String(_feRow[ci]) : "";
               });
               if (Array.isArray(step.steps) && step.steps.length > 0) {
+                const _remainingRows = _feRows.slice(_ri + 1);
+                const _rowContinuation = _remainingRows.length > 0
+                  ? [_buildForEachRowContinuationStep(step, _remainingRows), ...runtimeSteps.slice(i + 1)]
+                  : runtimeSteps.slice(i + 1);
                 await this._runSubSteps(
                   step.steps,
                   vars,
                   baseDelayMs,
-                  runtimeSteps.slice(i + 1),
+                  _rowContinuation,
                   { speed, macroId }
                 );
               }
@@ -2342,7 +2378,11 @@
           const _luKeep = _luCond === "exists" ? !!_luEl : !_luEl;
           if (!_luKeep) break;
           if (Array.isArray(step.steps) && step.steps.length > 0) {
-            await this._runSubSteps(step.steps, vars, baseDelayMs, continuationSteps, runtimeMeta);
+            const _remainingLoopIterations = Math.max(0, _luMax - (_luIter + 1));
+            const _loopContinuation = _remainingLoopIterations > 0
+              ? [_buildLoopUntilContinuationStep(step, _remainingLoopIterations), ...continuationSteps]
+              : continuationSteps;
+            await this._runSubSteps(step.steps, vars, baseDelayMs, _loopContinuation, runtimeMeta);
           }
         }
         return;
@@ -2376,10 +2416,17 @@
             vars[col] = _feRow[ci] !== undefined ? String(_feRow[ci]) : "";
           });
           if (Array.isArray(step.steps) && step.steps.length > 0) {
-            await this._runSubSteps(step.steps, vars, baseDelayMs, continuationSteps, runtimeMeta);
+            const _remainingRows = _feRows.slice(_ri + 1);
+            const _rowContinuation = _remainingRows.length > 0
+              ? [_buildForEachRowContinuationStep(step, _remainingRows), ...continuationSteps]
+              : continuationSteps;
+            await this._runSubSteps(step.steps, vars, baseDelayMs, _rowContinuation, runtimeMeta);
           }
         }
         return;
+      }
+      if (step.type === "open_tab" || step.type === "switch_tab" || step.type === "close_tab") {
+        throw new Error("tab actions inside complex sub-steps are not supported yet; move them to top-level playback steps");
       }
       // Simple step (navigate in sub-context treated as executeStep — no page-save needed)
       await executeStep(step, vars, this.retryMs, this.timeoutMs, this._speed);
