@@ -24,6 +24,8 @@
 
 El editor de script debe abrirse. Verificar:
 
+- El primer campo editado después de iniciar grabación debe generar TYPE/INPUT (por ejemplo `#afiliado` en la primera visita a Página A).
+
 #### Tab "Script" (txt de IIM) → Botón Copiar
 
 1. Hacer click en el tab "Script".

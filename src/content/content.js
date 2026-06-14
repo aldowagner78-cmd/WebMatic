@@ -138,6 +138,7 @@
         return;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        if (_isTextEntryCaptureTarget(e.target)) return;
         _send({ type: "text", selector: e.target instanceof Element ? _sel(e.target) : "", value: e.key });
       }
     }, true);
@@ -5552,6 +5553,15 @@
     }
   }
 
+  function _isTextEntryCaptureTarget(el) {
+    if (el instanceof HTMLTextAreaElement) return true;
+    if (el instanceof HTMLInputElement) {
+      const t = String(el.type || "text").toLowerCase();
+      return t === "" || t === "text" || t === "search" || t === "email" || t === "number" || t === "tel" || t === "url";
+    }
+    return false;
+  }
+
   function _shouldPreferClickOverCheck(originalTarget, checkTarget) {
     if (!(originalTarget instanceof Element) || !(checkTarget instanceof HTMLInputElement)) return false;
 
@@ -5832,6 +5842,7 @@
       }
       // Printable chars → capture as text step; store will merge via Recorder.mergeKeySteps
       if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+        if (_isTextEntryCaptureTarget(target)) return;
         const selector = target instanceof Element ? buildSelector(target) : "";
         if (target instanceof Element && target.id) {
           _checkAndInjectWaitFor(`#${target.id}`);
@@ -6293,6 +6304,7 @@
         addStep({ type: "key", key: e.key }); return;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+        if (_isTextEntryCaptureTarget(t)) return;
         const sel = t instanceof Element ? buildSelector(t) : "";
         if (t instanceof Element && t.id) {
           _checkAndInjectWaitFor(`#${t.id}`, addStep);
@@ -6687,19 +6699,11 @@
       return true;
     });
 
-    // Pass 2: keep only last TYPE/CHECK per selector
-    const lastIdx = new Map();
-    pass1.forEach((step, i) => {
-      if ((isTypeLike(step.type) || step.type === "check") && step.selector) {
-        lastIdx.set(step.selector, i);
-      }
-    });
-    const pass2 = pass1.filter((step, i) => {
-      if ((isTypeLike(step.type) || step.type === "check") && step.selector) {
-        return lastIdx.get(step.selector) === i;
-      }
-      return true;
-    });
+    // Pass 2: deduplicate only local runs for the same selector.
+    // Do not collapse edits of the same field separated by later interactions.
+    const pass2 = RecorderClass && typeof RecorderClass.dedupeFieldRuns === "function"
+      ? RecorderClass.dedupeFieldRuns(pass1)
+      : pass1;
 
     // Pass 2b: promote recorded text/input to choose_option only when we can
     // prove the value belongs to a known option catalog.
