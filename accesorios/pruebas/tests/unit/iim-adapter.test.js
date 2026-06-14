@@ -575,3 +575,85 @@ test("H-09: exportToIim no filtra secretos sentinela en WM_JSON ni texto final",
   assert.ok(!script.includes("TOKEN_SHOULD_NOT_LEAK"));
   assert.ok(!script.includes("SECRET_SHOULD_NOT_LEAK"));
 });
+
+// ── Round-trip con meta.preRunReset ─────────────────────────────────────────
+
+test("round-trip IIM: conserva meta.preRunReset con controles no sensibles", () => {
+  const steps = [
+    { type: "navigate", url: "https://a.local/" },
+    { type: "choose_option", selector: "#estado", value: "autorizado" }
+  ];
+  const preRunReset = {
+    version: 1,
+    url: "https://a.local/",
+    title: "Página A",
+    capturedAt: 1000000,
+    controls: [
+      { selector: "#estado", tag: "select", type: "select-one", value: "pendiente" },
+      { selector: "#urgente", tag: "input", type: "checkbox", checked: false },
+      { selector: "#afiliado", tag: "input", type: "text", value: "123456" }
+    ]
+  };
+  const script = adapter.exportToIim({ steps, meta: { preRunReset } });
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  assert.ok(line, "el script exportado debe contener // WM_JSON:");
+  const { steps: rtSteps, meta: rtMeta } = adapter.importFromIim(script);
+  assert.equal(rtSteps.length, 2);
+  assert.ok(rtMeta && rtMeta.preRunReset, "el import debe recuperar preRunReset");
+  assert.equal(rtMeta.preRunReset.controls.length, 3);
+  assert.equal(rtMeta.preRunReset.controls[0].selector, "#estado");
+  assert.equal(rtMeta.preRunReset.controls[0].value, "pendiente");
+  assert.equal(rtMeta.preRunReset.controls[2].value, "123456");
+});
+
+test("round-trip IIM: preRunReset sensibles son sanitizados y no se filtran en import", () => {
+  const steps = [{ type: "navigate", url: "https://a.local/" }];
+  const preRunReset = {
+    version: 1,
+    controls: [
+      { selector: "#pwd", tag: "input", type: "password", name: "password", value: "SENSITIVE_MUST_NOT_LEAK" },
+      { selector: "#campo", tag: "input", type: "text", value: "valor-ok" }
+    ]
+  };
+  const script = adapter.exportToIim({ steps, meta: { preRunReset } });
+  assert.ok(!script.includes("SENSITIVE_MUST_NOT_LEAK"), "valor sensible no debe aparecer en el IIM");
+  const { meta: rtMeta } = adapter.importFromIim(script);
+  assert.ok(rtMeta && rtMeta.preRunReset);
+  // El control sensible existe en preRunReset pero sin value
+  const sensitiveCtrl = rtMeta.preRunReset.controls.find((c) => c.selector === "#pwd");
+  assert.ok(sensitiveCtrl, "el control sensible debe seguir presente en preRunReset");
+  assert.equal(sensitiveCtrl.value, undefined, "el valor sensible no debe aparecer");
+  // El no sensible conserva su valor
+  const safeCtrl = rtMeta.preRunReset.controls.find((c) => c.selector === "#campo");
+  assert.equal(safeCtrl && safeCtrl.value, "valor-ok");
+});
+
+test("round-trip IIM: macro grabada A→B→A conserva preRunReset y pasos en orden", () => {
+  const steps = [
+    { type: "navigate", url: "https://a.local/", _wmBlockKey: "a.local/", _wmBlockStart: true },
+    { type: "choose_option", selector: "#estado", value: "autorizado", _wmBlockKey: "a.local/" },
+    { type: "navigate", url: "https://b.local/", _wmBlockKey: "b.local/", _wmBlockStart: true },
+    { type: "input", selector: "#obs", value: "Prueba", _wmBlockKey: "b.local/" },
+    { type: "navigate", url: "https://a.local/", _wmBlockKey: "a.local/", _wmBlockStart: true },
+    { type: "input", selector: "#afiliado", value: "789000", _wmBlockKey: "a.local/" }
+  ];
+  const preRunReset = {
+    version: 1,
+    url: "https://a.local/",
+    controls: [
+      { selector: "#estado", tag: "select", value: "pendiente" },
+      { selector: "#afiliado", tag: "input", type: "text", value: "123456" }
+    ]
+  };
+  const script = adapter.exportToIim({ steps, meta: { preRunReset } });
+  assert.ok(script.includes("// WM_JSON:"), "debe incluir WM_JSON");
+  const { steps: rtSteps, meta: rtMeta } = adapter.importFromIim(script);
+  // Orden de pasos preservado
+  assert.equal(rtSteps.length, 6);
+  assert.equal(rtSteps[0].url, "https://a.local/");
+  assert.equal(rtSteps[3].value, "Prueba");
+  assert.equal(rtSteps[5].value, "789000");
+  // preRunReset conservado
+  assert.ok(rtMeta && rtMeta.preRunReset);
+  assert.equal(rtMeta.preRunReset.controls[1].value, "123456");
+});
