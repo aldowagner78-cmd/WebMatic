@@ -295,3 +295,91 @@ test("bloques colapsados muestran accion contextual de agregar bloque", () => {
   assert.equal(actionButtons.length, 1);
   assert.ok(actionButtons[0].textContent.includes("Agregar bloque"), `Esperado "Agregar bloque" en "${actionButtons[0].textContent}"`);
 });
+
+test("bloques por contexto: A -> B -> A marca reingreso sin fusionar bloques", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "navigate", url: "https://a.local", _wmBlockKey: "a.local/", _wmBlockStart: true },
+    { type: "click", selector: "#a1", _wmBlockKey: "a.local/" },
+    { type: "switch_tab", url: "https://b.local", _wmBlockKey: "b.local/", _wmBlockStart: true },
+    { type: "click", selector: "#b1", _wmBlockKey: "b.local/" },
+    { type: "switch_tab", url: "https://a.local", _wmBlockKey: "a.local/", _wmBlockStart: true },
+    { type: "click", selector: "#a2", _wmBlockKey: "a.local/" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const blocks = Array.from(container.querySelectorAll(".wm-sved-block"));
+  assert.equal(blocks.length, 3);
+  assert.equal(blocks[0].dataset.blockVisit, "1");
+  assert.equal(blocks[1].dataset.blockVisit, "1");
+  assert.equal(blocks[2].dataset.blockVisit, "2");
+  assert.equal(blocks[2].dataset.blockReentry, "true");
+  assert.ok(blocks[2].classList.contains("wm-sved-block-reentry"));
+  assert.equal(container.querySelectorAll(".wm-sved-block-reentry-badge").length, 1);
+  assert.equal(container.querySelectorAll(".wm-sved-row").length, 3);
+  const contexts = Array.from(container.querySelectorAll(".wm-sved-block-context")).map((node) => node.textContent);
+  assert.deepEqual(contexts, ["a.local/", "b.local/", "a.local/"]);
+});
+
+test("bloques por contexto: mismo contexto consecutivo no marca reingreso falso", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "navigate", url: "https://a.local", _wmBlockKey: "a.local/", _wmBlockStart: true },
+    { type: "click", selector: "#a1", _wmBlockKey: "a.local/" },
+    { type: "input", selector: "#a2", value: "hola", _wmBlockKey: "a.local/" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const blocks = container.querySelectorAll(".wm-sved-block");
+  assert.equal(blocks.length, 1);
+  assert.equal(blocks[0].dataset.blockVisit, "1");
+  assert.equal(blocks[0].dataset.blockReentry, undefined);
+  assert.equal(container.querySelectorAll(".wm-sved-block-reentry-badge").length, 0);
+});
+
+test("bloques por contexto: defaults mantienen estilo aunque haya reingreso posterior", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "capture_defaults", _wmBlockKey: "a.local/", _wmBlockStart: true, _baselineDefault: true },
+    { type: "click", selector: "#b", _wmBlockKey: "b.local/", _wmBlockStart: true },
+    { type: "switch_tab", url: "https://a.local", _wmBlockKey: "a.local/", _wmBlockStart: true },
+    { type: "click", selector: "#a2", _wmBlockKey: "a.local/" }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const blocks = Array.from(container.querySelectorAll(".wm-sved-block"));
+  assert.ok(blocks[0].classList.contains("wm-sved-block-defaults"));
+  assert.equal(blocks[0].dataset.blockVisit, "1");
+  assert.ok(blocks[2].classList.contains("wm-sved-block-reentry"));
+});
+
+test("bloques por contexto: macros viejas sin _wmBlockKey siguen renderizando", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "click", selector: "#a", _wmBlockStart: true },
+    { type: "click", selector: "#b" },
+    { type: "click", selector: "#c", _wmBlockStart: true }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const blocks = container.querySelectorAll(".wm-sved-block");
+  assert.equal(blocks.length, 2);
+  assert.equal(container.querySelectorAll(".wm-sved-block-context").length, 0);
+  assert.equal(container.querySelectorAll(".wm-sved-block-reentry-badge").length, 0);
+});

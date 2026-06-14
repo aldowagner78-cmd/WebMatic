@@ -625,6 +625,7 @@
         };
 
         const persistedCollapsed = new Set();
+        const blockContextMeta = this._buildExecutionBlockContextMeta();
         let idx = 0;
         while (idx < this.steps.length) {
           const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
@@ -642,13 +643,17 @@
           const hasOpenEditInBlock = this._editIdx !== null && this._editIdx >= start && this._editIdx <= end;
           const collapsed = canCollapse && this._collapsedBlocks.has(blockKey) && !hasOpenEditInBlock;
           const isDefaultsBlock = _isBaselineDefaultStep(this.steps[start]);
+          const contextMeta = blockContextMeta.get(start) || { visitIndex: 0, isReentry: false, blockKey: "", contextLabel: "" };
           if (canCollapse && this._collapsedBlocks.has(blockKey)) persistedCollapsed.add(blockKey);
 
           const blockWrap = document.createElement("section");
           blockWrap.className = `wm-sved-block wm-sved-block-theme-${((blockOrdinal - 1) % 4) + 1}`;
           if (isDefaultsBlock) blockWrap.classList.add("wm-sved-block-defaults");
+          if (contextMeta.isReentry) blockWrap.classList.add("wm-sved-block-reentry");
           blockWrap.dataset.blockStart = String(start);
           blockWrap.dataset.blockEnd = String(end);
+          if (contextMeta.visitIndex > 0) blockWrap.dataset.blockVisit = String(contextMeta.visitIndex);
+          if (contextMeta.isReentry) blockWrap.dataset.blockReentry = "true";
           if (collapsed) blockWrap.classList.add("wm-sved-block-collapsed");
 
           const blockHeader = document.createElement("div");
@@ -660,13 +665,32 @@
           blockTag.title = `Bloque encadenado de ${blockSize} pasos`;
           blockHeader.appendChild(blockTag);
 
-          const blockContext = this._formatBlockContextLabel(this._stepBlockKey(this.steps[start]));
+          const blockContext = contextMeta.contextLabel || this._formatBlockContextLabel(this._stepBlockKey(this.steps[start]));
           if (blockContext) {
             const ctx = document.createElement("span");
             ctx.className = "wm-sved-block-context";
             ctx.textContent = blockContext;
-            ctx.title = `Contexto del bloque: ${this._stepBlockKey(this.steps[start])}`;
+            const visitSuffix = contextMeta.visitIndex > 0 ? ` · visita ${contextMeta.visitIndex}` : "";
+            ctx.title = `Contexto del bloque: ${this._stepBlockKey(this.steps[start])}${visitSuffix}`;
             blockHeader.appendChild(ctx);
+          }
+
+          if (contextMeta.visitIndex > 0) {
+            const visitBadge = document.createElement("span");
+            visitBadge.className = "wm-sved-block-visit-badge";
+            visitBadge.textContent = `visita ${contextMeta.visitIndex}`;
+            visitBadge.title = contextMeta.isReentry
+              ? "Este bloque vuelve a un contexto ya usado antes en la grabación"
+              : "Primera visita a este contexto durante la grabación";
+            blockHeader.appendChild(visitBadge);
+          }
+
+          if (contextMeta.isReentry) {
+            const reentryBadge = document.createElement("span");
+            reentryBadge.className = "wm-sved-block-reentry-badge";
+            reentryBadge.textContent = "reingreso";
+            reentryBadge.title = "Este bloque vuelve a un contexto ya usado antes en la grabación";
+            blockHeader.appendChild(reentryBadge);
           }
 
           const blockMeta = document.createElement("span");
@@ -1500,6 +1524,42 @@
         if (this._isExecutionBlockBoundaryStep(s, i)) ord += 1;
       }
       return ord;
+    }
+
+    _buildExecutionBlockContextMeta() {
+      const meta = new Map();
+      if (!Array.isArray(this.steps) || this.steps.length === 0) return meta;
+      const visitCountByKey = new Map();
+      let idx = 0;
+      while (idx < this.steps.length) {
+        const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
+        const start = block.start;
+        const end = block.end;
+        if (start !== idx) {
+          idx += 1;
+          continue;
+        }
+        const key = this._stepBlockKey(this.steps[start]);
+        if (key) {
+          const visitIndex = (visitCountByKey.get(key) || 0) + 1;
+          visitCountByKey.set(key, visitIndex);
+          meta.set(start, {
+            visitIndex,
+            isReentry: visitIndex > 1,
+            blockKey: key,
+            contextLabel: this._formatBlockContextLabel(key)
+          });
+        } else {
+          meta.set(start, {
+            visitIndex: 0,
+            isReentry: false,
+            blockKey: "",
+            contextLabel: ""
+          });
+        }
+        idx = end + 1;
+      }
+      return meta;
     }
 
     _moveRangeToIndex(start, end, toIndex, source) {
