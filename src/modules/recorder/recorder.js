@@ -196,6 +196,38 @@
       return merged;
     }
 
+    /**
+     * Deduplica solo rafagas locales de cambios sobre el mismo selector,
+     * preservando ediciones del mismo campo en momentos distintos del flujo.
+     */
+    static dedupeFieldRuns(steps) {
+      const isFieldLike = (s) => !!(s && (s.type === "input" || s.type === "text" || s.type === "check") && s.selector);
+      const out = [];
+      const list = Array.isArray(steps) ? steps : [];
+
+      for (let i = 0; i < list.length; i += 1) {
+        const step = list[i];
+        if (!isFieldLike(step)) {
+          out.push(step);
+          continue;
+        }
+
+        let dropCurrent = false;
+        for (let j = i + 1; j < list.length; j += 1) {
+          const nx = list[j];
+          if (nx && nx.type === "wait") continue;
+          if (isFieldLike(nx) && nx.selector === step.selector) {
+            dropCurrent = true;
+          }
+          break;
+        }
+
+        if (!dropCurrent) out.push(step);
+      }
+
+      return out;
+    }
+
     static _PRE_RUN_RESET_SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security)/i;
 
     static isSensitivePreRunField(el) {
