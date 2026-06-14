@@ -1621,6 +1621,33 @@
   text-overflow: ellipsis;
 }
 
+.wm-sved-block-visit-badge,
+.wm-sved-block-reentry-badge {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--wm-sved-block-accent) 28%, var(--webmatic-border, #e2e8f0) 72%);
+  white-space: nowrap;
+}
+
+.wm-sved-block-visit-badge {
+  color: color-mix(in srgb, var(--wm-sved-block-accent) 76%, #0f172a 24%);
+  background: color-mix(in srgb, var(--wm-sved-block-accent) 12%, var(--webmatic-card-bg, #fff) 88%);
+}
+
+.wm-sved-block-reentry {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--wm-sved-block-accent) 16%, transparent 84%);
+}
+
+.wm-sved-block-reentry-badge {
+  color: #9a3412;
+  border-color: rgba(234, 88, 12, 0.32);
+  background: rgba(249, 115, 22, 0.12);
+}
+
 .wm-sved-block-toggle {
   all: unset;
   margin-left: auto;
