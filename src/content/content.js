@@ -7926,7 +7926,8 @@
           textToCopy = iimAdapter.exportToIim({ steps: seEditor.getSteps(), meta: typeof seEditor.getMeta === "function" ? seEditor.getMeta() : null });
         } else {
           const area = panel && panel.querySelector("[data-script-editor-area]");
-          textToCopy = area ? area.value : "";
+          // Use the full script (with WM_JSON) stored in dataset; fall back to visible value
+          textToCopy = (area && area.dataset && area.dataset.wmFullScript) ? area.dataset.wmFullScript : (area ? area.value : "");
         }
         navigator.clipboard.writeText(textToCopy).catch(() => {
           const area = panel && panel.querySelector("[data-script-editor-area]");

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Página A - Defaults Recording Fixture</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 500px; }
+    label { display: block; margin: 10px 0 4px; font-weight: bold; }
+    input, select { width: 100%; padding: 6px; box-sizing: border-box; }
+    button { margin-top: 16px; padding: 8px 20px; background: #059669; color: white; border: none; cursor: pointer; }
+    nav { margin-bottom: 20px; }
+    nav a { margin-right: 12px; color: #0ea5e9; }
+  </style>
+</head>
+<body>
+  <h1>Página A</h1>
+  <nav>
+    <a href="pagina-b.html">Ir a Página B</a>
+  </nav>
+  <form id="form-a" onsubmit="return false">
+    <label for="afiliado">Número de Afiliado</label>
+    <input id="afiliado" name="afiliado" type="text" value="123456">
+
+    <label for="estado">Estado</label>
+    <select id="estado" name="estado">
+      <option value="pendiente" selected>Pendiente</option>
+      <option value="autorizado">Autorizado</option>
+      <option value="observado">Observado</option>
+    </select>
+
+    <label for="urgente">Urgente</label>
+    <input id="urgente" name="urgente" type="checkbox">
+
+    <button type="submit">Guardar (sólo fixture - no hace nada)</button>
+  </form>
+  <p style="font-size:12px;color:#64748b;margin-top:20px;">
+    Fixture local para prueba manual de auto-defaults recording.
+    Valores por defecto: afiliado=123456, estado=pendiente, urgente=no marcado.
+  </p>
+</body>
+</html>
