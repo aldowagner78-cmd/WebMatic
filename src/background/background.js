@@ -541,6 +541,53 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "PLAYBACK_NAVIGATE") {
+    const currentTabId = sender && sender.tab && sender.tab.id ? Number(sender.tab.id) : 0;
+    if (!currentTabId) {
+      sendResponse({ ok: false, error: "missing_sender_tab" });
+      return true;
+    }
+
+    const rawUrl = String(message.url || "").trim();
+    if (!rawUrl) {
+      sendResponse({ ok: false, error: "navigate_missing_url" });
+      return true;
+    }
+
+    let targetUrl = rawUrl;
+    try {
+      targetUrl = new URL(rawUrl, String(sender.tab.url || "about:blank")).href;
+    } catch (_e) {
+      sendResponse({ ok: false, error: "navigate_invalid_url" });
+      return true;
+    }
+
+    if (Array.isArray(message.steps)) {
+      pendingPlaybackByTab.set(currentTabId, {
+        tabId: currentTabId,
+        steps: message.steps,
+        index: Number.isFinite(Number(message.index)) ? Number(message.index) : 0,
+        vars: message.vars || {},
+        speed: message.speed || 1,
+        macroId: message.macroId || null
+      });
+    }
+
+    chrome.tabs.update(currentTabId, { url: targetUrl }, () => {
+      if (chrome.runtime.lastError) {
+        pendingPlaybackByTab.delete(currentTabId);
+        sendResponse({
+          ok: false,
+          error: "navigate_tab_update_failed",
+          detail: chrome.runtime.lastError.message || "unknown"
+        });
+        return;
+      }
+      sendResponse({ ok: true, handoff: true, tabId: currentTabId });
+    });
+    return true;
+  }
+
   if (message?.type === "PLAYBACK_TAB_ACTION") {
     const action = String(message.action || "");
     const step = message.step || {};

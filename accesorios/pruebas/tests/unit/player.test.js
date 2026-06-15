@@ -725,6 +725,107 @@ test("navigate: cambio solo de hash permite que pasos siguientes ejecuten", asyn
   assert.equal(vars.AFTER_HASH_NAV, "ok", "paso siguiente al navigate con hash debe ejecutar");
 });
 
+test("navigate: hacia file:// delega en background y evita location.href directo", async () => {
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const calls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    calls.push(msg);
+    if (msg && msg.type === "PLAYBACK_NAVIGATE") {
+      if (typeof cb === "function") cb({ ok: true, handoff: true, tabId: 1 });
+      return;
+    }
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const vars = {};
+  const p = new Player({ retryMs: 20, timeoutMs: 300 });
+  await new Promise((resolve) => {
+    p.play([
+      { type: "navigate", url: "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html" },
+      { type: "set_variable", variable: "AFTER_FILE_NAV", value: "NO_DEBE_EJECUTAR" }
+    ], {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  const delegated = calls.find((c) => c && c.type === "PLAYBACK_NAVIGATE");
+  assert.ok(delegated, "debe delegar navigate file:// al background");
+  assert.equal(delegated.index, 1, "debe preservar continuation para resume");
+  assert.equal(Array.isArray(delegated.steps), true, "debe enviar steps para pending playback");
+  assert.equal(vars.AFTER_FILE_NAV, undefined, "la continuación debe retomarse tras la navegación");
+});
+
+test("navigate: error del background en file:// dispara onError claro", async () => {
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    if (msg && msg.type === "PLAYBACK_NAVIGATE") {
+      if (typeof cb === "function") cb({ ok: false, error: "navigate_tab_update_failed" });
+      return;
+    }
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  let gotError = "";
+  const p = new Player({ retryMs: 20, timeoutMs: 200 });
+  await new Promise((resolve) => {
+    p.play([{ type: "navigate", url: "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html" }], {
+      vars: {},
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: (err) => { gotError = String(err && err.message || ""); resolve(); }
+    });
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  assert.ok(gotError.includes("navigate failed"), `Error inesperado: ${gotError}`);
+});
+
+test("navigate: http/https mantiene flujo existente sin PLAYBACK_NAVIGATE", async () => {
+  const prevSendMessage = globalThis.chrome.runtime.sendMessage;
+  const calls = [];
+  globalThis.chrome.runtime.sendMessage = (msg, cb) => {
+    calls.push(msg);
+    if (typeof cb === "function") cb({ ok: true });
+  };
+
+  const originalHref = window.location.href;
+  let requestedHref = null;
+  try {
+    Object.defineProperty(window.location, "href", {
+      configurable: true,
+      get() { return originalHref; },
+      set(v) { requestedHref = String(v || ""); }
+    });
+  } catch (_e) {
+    requestedHref = null;
+  }
+
+  const p = new Player({ retryMs: 20, timeoutMs: 200 });
+  await new Promise((resolve) => {
+    p.play([{ type: "navigate", url: "https://example.com/otra-ruta" }], {
+      vars: {},
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+    setTimeout(resolve, 80);
+  });
+
+  globalThis.chrome.runtime.sendMessage = prevSendMessage;
+  assert.equal(calls.some((c) => c && c.type === "PLAYBACK_NAVIGATE"), false, "no debe delegar http/https normal");
+  if (requestedHref !== null) {
+    assert.ok(requestedHref.includes("https://example.com/otra-ruta"), "debe seguir usando location.href en flujo normal");
+  }
+});
+
 test("play: ignora wait_for transitorio antes de navigate", async () => {
   resetBody('<div></div>');
   const vars = {};

@@ -256,3 +256,51 @@ test("background: CLEAR_PENDING_PLAYBACK limpia por tab y tabs.onRemoved tambié
   const afterRemove = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 9 } });
   assert.equal(afterRemove && afterRemove.pending, null, "tabs.onRemoved debe limpiar pending de la tab cerrada");
 });
+
+test("background: PLAYBACK_NAVIGATE usa tabs.update y preserva pending para resume", () => {
+  const h = bootBackground([
+    { id: 31, url: "https://site-a.test/home", active: true }
+  ]);
+
+  const resp = h.sendRuntimeMessage({
+    type: "PLAYBACK_NAVIGATE",
+    url: "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html",
+    steps: [{ type: "wait", ms: 1 }],
+    index: 1,
+    vars: { A: "1" },
+    speed: 1,
+    macroId: "m-file"
+  }, { tab: { id: 31, url: "https://site-a.test/home" } });
+
+  assert.equal(resp && resp.ok, true, "PLAYBACK_NAVIGATE debe responder ok");
+  assert.equal((h.tabsMap.get(31) || {}).url, "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html");
+
+  const pending = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 31 } });
+  assert.ok(pending && pending.pending, "debe persistir pending en la misma tab tras navegar");
+  assert.equal(pending.pending.index, 1);
+});
+
+test("background: PLAYBACK_NAVIGATE informa error claro y limpia pending si tabs.update falla", () => {
+  const h = bootBackground([
+    { id: 41, url: "https://site-a.test/home", active: true }
+  ]);
+
+  h.chrome.tabs.update = (_tabId, _props, cb) => {
+    h.chrome.runtime.lastError = { message: "blocked" };
+    if (typeof cb === "function") cb();
+    h.chrome.runtime.lastError = null;
+  };
+
+  const resp = h.sendRuntimeMessage({
+    type: "PLAYBACK_NAVIGATE",
+    url: "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html",
+    steps: [{ type: "click", selector: "#x" }],
+    index: 1
+  }, { tab: { id: 41, url: "https://site-a.test/home" } });
+
+  assert.equal(resp && resp.ok, false, "si tabs.update falla debe responder error");
+  assert.equal(resp && resp.error, "navigate_tab_update_failed");
+
+  const pending = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 41 } });
+  assert.equal(pending && pending.pending, null, "no debe dejar pending colgado ante fallo");
+});
