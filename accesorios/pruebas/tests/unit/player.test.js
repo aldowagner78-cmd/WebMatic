@@ -101,6 +101,22 @@ test("wait_for: espera hasta que el elemento aparece en el DOM", async () => {
   assert.equal(result.ok, true, result.error || "check via label falló");
 });
 
+test("wait_for: espera a que el elemento sea visible/accionable, no solo existente", async () => {
+  resetBody('<input id="modal-motivo" type="text" style="display:none" value="">');
+
+  setTimeout(() => {
+    const el = win.document.getElementById("modal-motivo");
+    el.style.display = "block";
+  }, 100);
+
+  const result = await runStep(
+    { type: "wait_for", selector: "#modal-motivo", timeout: 400 },
+    {},
+    { retryMs: 20, timeoutMs: 500 }
+  );
+  assert.equal(result.ok, true, result.error || "wait_for debe esperar visibilidad/accionabilidad");
+});
+
 test("wait_for: falla si el elemento nunca aparece (timeout propio)", async () => {
   resetBody('<div></div>');
   // timeout corto en el step mismo
@@ -133,6 +149,20 @@ test("click: omite login faltante cuando no hay formulario de password visible",
   assert.equal(result.ok, true, result.error || "deberia omitir click de login inexistente");
 });
 
+test("click: elige coincidencia visible cuando la primera esta oculta", async () => {
+  resetBody([
+    '<button class="btn-modal" style="display:none">Oculto</button>',
+    '<button id="visible-btn" class="btn-modal">Visible</button>'
+  ].join(""));
+
+  let clickedVisible = 0;
+  win.document.getElementById("visible-btn").addEventListener("click", () => { clickedVisible += 1; });
+
+  const result = await runStep({ type: "click", selector: ".btn-modal" });
+  assert.equal(result.ok, true, result.error || "click sobre selector con oculto+visible falló");
+  assert.equal(clickedVisible, 1);
+});
+
 test("input: omite selector login IAPOS faltante cuando ya hay sesion", async () => {
   resetBody('<div id="app-auth">Sesion iniciada</div>');
   const result = await runStep(
@@ -154,6 +184,43 @@ test("input login faltante: bypass inmediato sin esperar timeout completo", asyn
   const elapsed = Date.now() - startedAt;
   assert.equal(result.ok, true, result.error || "deberia omitir input de login IAPOS inexistente");
   assert.ok(elapsed < 700, `bypass demasiado lento: ${elapsed}ms`);
+});
+
+test("input/type: escribe en coincidencia visible cuando la primera esta oculta", async () => {
+  resetBody([
+    '<input class="campo-nombre" type="text" style="display:none" value="">',
+    '<input id="nombre-visible" class="campo-nombre" type="text" value="">'
+  ].join(""));
+
+  const result = await runStep({ type: "input", selector: ".campo-nombre", value: "Juan" });
+  assert.equal(result.ok, true, result.error || "input con selector múltiple falló");
+  assert.equal(win.document.getElementById("nombre-visible").value, "Juan");
+});
+
+test("modal demorado: wait_for + input escribe cuando #modal-motivo se vuelve visible", async () => {
+  resetBody('<input id="modal-motivo" type="text" style="display:none" value="">');
+
+  const p = new Player({ retryMs: 20, timeoutMs: 600 });
+  let failed = null;
+  await new Promise((resolve) => {
+    setTimeout(() => {
+      const el = win.document.getElementById("modal-motivo");
+      el.style.display = "block";
+    }, 120);
+
+    p.play([
+      { type: "wait_for", selector: "#modal-motivo", timeout: 500 },
+      { type: "input", selector: "#modal-motivo", value: "MODAL DEMORADO INTEGRAL OK" }
+    ], {
+      vars: {},
+      speed: 1,
+      onDone: resolve,
+      onError: (err) => { failed = err; resolve(); }
+    });
+  });
+
+  assert.equal(failed, null, failed && failed.message);
+  assert.equal(win.document.getElementById("modal-motivo").value, "MODAL DEMORADO INTEGRAL OK");
 });
 
 test("play: onDone incluye durationMs en summary", async () => {
@@ -242,6 +309,20 @@ test("check: usa activador visual asociado cuando el input esta oculto", async (
 
   const result = await runStep({ type: "check", selector: "#r1", checked: true });
   assert.equal(result.ok, true, result.error || "check oculto falló");
+});
+
+test("check normal: no regresion en checkbox visible", async () => {
+  resetBody('<input id="chk-ok" type="checkbox">');
+  const result = await runStep({ type: "check", selector: "#chk-ok", checked: true });
+  assert.equal(result.ok, true, result.error || "check normal falló");
+  assert.equal(win.document.getElementById("chk-ok").checked, true);
+});
+
+test("choose_option normal: no regresion en select visible", async () => {
+  resetBody('<select id="pais"><option value="ar">Argentina</option><option value="br">Brasil</option></select>');
+  const result = await runStep({ type: "choose_option", selector: "#pais", value: "br" });
+  assert.equal(result.ok, true, result.error || "choose_option normal falló");
+  assert.equal(win.document.getElementById("pais").value, "br");
 });
 
 test("check: resuelve input asociado cuando el selector apunta al label", async () => {
