@@ -319,7 +319,42 @@
         if (!dropCurrent) out.push(step);
       }
 
-      return out;
+      const withRealWaits = [];
+      let lastRealStep = null;
+      let hasExplicitWaitAfterLastClick = false;
+      const isBaselineOrAuto = (s) => !!(s && (s._baselineDefault || s._fast));
+      const isExplicitWait = (s) => !!(s && (s.type === "wait" || s.type === "wait_for"));
+      const isRealStep = (s) => !!(s && !isExplicitWait(s) && !isBaselineOrAuto(s));
+
+      for (const step of out) {
+        if (isExplicitWait(step)) {
+          withRealWaits.push(step);
+          if (lastRealStep && lastRealStep.type === "click") hasExplicitWaitAfterLastClick = true;
+          continue;
+        }
+
+        if (!isRealStep(step)) {
+          withRealWaits.push(step);
+          continue;
+        }
+
+        if (lastRealStep && lastRealStep.type === "click" && !hasExplicitWaitAfterLastClick) {
+          const prevTs = Number(lastRealStep._ts);
+          const curTs = Number(step._ts);
+          if (Number.isFinite(prevTs) && Number.isFinite(curTs)) {
+            const deltaMs = Math.max(0, curTs - prevTs);
+            if (deltaMs >= 1200) {
+              withRealWaits.push({ type: "wait", seconds: Math.min(10, Math.ceil(deltaMs / 1000)) });
+            }
+          }
+        }
+
+        withRealWaits.push(step);
+        lastRealStep = step;
+        hasExplicitWaitAfterLastClick = false;
+      }
+
+      return withRealWaits;
     }
 
     static _PRE_RUN_RESET_SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;

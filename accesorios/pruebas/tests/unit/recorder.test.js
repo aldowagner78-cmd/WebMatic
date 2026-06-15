@@ -153,6 +153,55 @@ test("dedupeFieldRuns: deduplica rafaga local input/change y conserva ultimo val
   assert.equal(fieldSteps[0].value, "111111");
 });
 
+test("dedupeFieldRuns: inserta WAIT=2 tras click si pasan 1500ms antes de input", () => {
+  const steps = [
+    { type: "click", selector: "#btn-modal-delay", _ts: 1000 },
+    { type: "input", selector: "#modal-motivo", value: "ok", _ts: 2500 }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+  assert.deepEqual(out.map((s) => s.type), ["click", "wait", "input"]);
+  assert.equal(out[1].seconds, 2);
+});
+
+test("dedupeFieldRuns: no inserta WAIT si pasan menos de 1200ms", () => {
+  const steps = [
+    { type: "click", selector: "#btn-modal-delay", _ts: 1000 },
+    { type: "input", selector: "#modal-motivo", value: "ok", _ts: 2100 }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+  assert.deepEqual(out.map((s) => s.type), ["click", "input"]);
+});
+
+test("dedupeFieldRuns: no inserta WAIT entre _baselineDefault y paso real", () => {
+  const steps = [
+    { type: "click", selector: "#btn-modal-delay", _ts: 1000, _baselineDefault: true, _fast: true },
+    { type: "input", selector: "#modal-motivo", value: "ok", _ts: 3200 }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+  assert.deepEqual(out.map((s) => s.type), ["click", "input"]);
+});
+
+test("dedupeFieldRuns: no duplica WAIT si luego ya existe wait_for o wait", () => {
+  const withWaitFor = [
+    { type: "click", selector: "#btn-modal-delay", _ts: 1000 },
+    { type: "wait_for", selector: "#modal-motivo", timeout: 10000, _ts: 1100 },
+    { type: "input", selector: "#modal-motivo", value: "ok", _ts: 3500 }
+  ];
+  const outWaitFor = Recorder.dedupeFieldRuns(withWaitFor);
+  assert.deepEqual(outWaitFor.map((s) => s.type), ["click", "wait_for", "input"]);
+
+  const withWait = [
+    { type: "click", selector: "#btn-modal-delay", _ts: 1000 },
+    { type: "wait", seconds: 2, _ts: 1200 },
+    { type: "input", selector: "#modal-motivo", value: "ok", _ts: 3500 }
+  ];
+  const outWait = Recorder.dedupeFieldRuns(withWait);
+  assert.deepEqual(outWait.map((s) => s.type), ["click", "wait", "input"]);
+});
+
 test("selectorResolvesToElement: rechaza selector que apunta a descendiente inválido", () => {
   resetBody('<input id="chk-tecnologia" name="generos" type="checkbox">');
   const el = win.document.getElementById("chk-tecnologia");
