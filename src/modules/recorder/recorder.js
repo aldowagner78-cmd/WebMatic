@@ -20,6 +20,53 @@
       return String(value == null ? "" : value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     }
 
+    static escapeCssIdent(value) {
+      const raw = String(value == null ? "" : value);
+      try {
+        const cssApi = (typeof globalThis !== "undefined" && globalThis.CSS) ? globalThis.CSS : null;
+        if (cssApi && typeof cssApi.escape === "function") return cssApi.escape(raw);
+      } catch (_e) { /* ignore */ }
+      return raw.replace(/([^a-zA-Z0-9_-])/g, "\\$1");
+    }
+
+    static _normalizeText(value) {
+      return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    }
+
+    static _resolveSelectorInDoc(doc, selector) {
+      if (!doc || !selector) return { element: null, unique: false };
+      const textMatch = /^(\w+)\[text="([^"]+)"\]$/.exec(selector);
+      if (textMatch) {
+        const [, tagName, text] = textMatch;
+        const expected = Recorder._normalizeText(text);
+        let hits = [];
+        try {
+          hits = Array.from(doc.querySelectorAll(tagName)).filter((el) => Recorder._normalizeText(el.textContent) === expected);
+        } catch (_e) {
+          hits = [];
+        }
+        return { element: hits[0] || null, unique: hits.length === 1 };
+      }
+
+      try {
+        const found = doc.querySelector(selector);
+        const all = doc.querySelectorAll(selector);
+        return { element: found || null, unique: all.length === 1 };
+      } catch (_e) {
+        return { element: null, unique: false };
+      }
+    }
+
+    static selectorResolvesToElement(doc, selector, element, opts) {
+      if (!doc || !selector || !(element instanceof Element)) return false;
+      const options = opts && typeof opts === "object" ? opts : {};
+      const requireUnique = options.requireUnique !== false;
+      const resolved = Recorder._resolveSelectorInDoc(doc, selector);
+      if (!resolved.element || resolved.element !== element) return false;
+      if (requireUnique && !resolved.unique) return false;
+      return true;
+    }
+
     /**
      * Heuristica para detectar valores probablemente dinamicos (ids/tokens/hash).
      * Evita sobrepenalizar identificadores humanos cortos y estables.
@@ -59,6 +106,13 @@
     static buildSelector(element) {
       if (!element || !(element instanceof Element)) return "";
       const E = Recorder.escapeAttr;
+      const EI = Recorder.escapeCssIdent;
+      const doc = element.ownerDocument || document;
+
+      const accept = (selector, options) => {
+        if (!selector) return "";
+        return Recorder.selectorResolvesToElement(doc, selector, element, options) ? selector : "";
+      };
 
       // If element is <img> or <input type=image> inside an <a>, target the <a>
       const tag0 = element.tagName.toLowerCase();
@@ -71,22 +125,33 @@
 
       const tag = element.tagName.toLowerCase();
       const elementId = String(element.id || "");
-      const hasStableId = !!elementId && !Recorder.isLikelyDynamicValue(elementId);
-
-      if (hasStableId) {
-        return "#" + elementId;
+      if (elementId) {
+        const byId = accept("#" + EI(elementId));
+        if (byId) return byId;
       }
 
       if (element.dataset && element.dataset.testid) {
-        return `[data-testid="${E(element.dataset.testid)}"]`;
+        const byTestId = accept(`[data-testid="${E(element.dataset.testid)}"]`);
+        if (byTestId) return byTestId;
+      }
+      if (element.dataset && element.dataset.test) {
+        const byDataTest = accept(`[data-test="${E(element.dataset.test)}"]`);
+        if (byDataTest) return byDataTest;
+      }
+      if (element.dataset && element.dataset.cy) {
+        const byDataCy = accept(`[data-cy="${E(element.dataset.cy)}"]`);
+        if (byDataCy) return byDataCy;
       }
 
       if (element.getAttribute("aria-label")) {
-        return `[aria-label="${E(element.getAttribute("aria-label"))}"]`;
+        const aria = E(element.getAttribute("aria-label"));
+        const byAria = accept(`${tag}[aria-label="${aria}"]`) || accept(`[aria-label="${aria}"]`);
+        if (byAria) return byAria;
       }
 
       if (element.getAttribute("placeholder")) {
-        return `${tag}[placeholder="${E(element.getAttribute("placeholder"))}"]`;
+        const byPlaceholder = accept(`${tag}[placeholder="${E(element.getAttribute("placeholder"))}"]`);
+        if (byPlaceholder) return byPlaceholder;
       }
 
       // title attribute (stable in legacy/enterprise apps)
@@ -95,22 +160,36 @@
         const gxRow = element.closest && element.closest("[gxrow]");
         if (gxRow) {
           const rowNum = gxRow.getAttribute("gxrow");
-          return `[gxrow="${E(rowNum)}"] [title="${E(titleAttr)}"]`;
+          const byRowTitle = accept(`[gxrow="${E(rowNum)}"] [title="${E(titleAttr)}"]`);
+          if (byRowTitle) return byRowTitle;
         }
-        return `[title="${E(titleAttr)}"]`;
+        const byTitle = accept(`[title="${E(titleAttr)}"]`);
+        if (byTitle) return byTitle;
       }
 
       if (element.getAttribute("name")) {
         const nameAttr = element.getAttribute("name");
+        const typeAttr = String((element.getAttribute && element.getAttribute("type")) || "").toLowerCase();
+        if (tag === "input" && typeAttr) {
+          const byTypeAndName = accept(`${tag}[type="${E(typeAttr)}"][name="${E(nameAttr)}"]`);
+          if (byTypeAndName) return byTypeAndName;
+        }
+        const byTagName = accept(`${tag}[name="${E(nameAttr)}"]`);
+        if (byTagName) return byTagName;
+
         const sameName = Array.from((element.ownerDocument || document).getElementsByTagName(tag))
           .filter((el) => el.getAttribute("name") === nameAttr).length;
         if (sameName === 1) {
-          return `${tag}[name="${E(nameAttr)}"]`;
+          const byName = accept(`${tag}[name="${E(nameAttr)}"]`);
+          if (byName) return byName;
         }
         // Duplicate names are common in paged grids/modals; anchor the selector to a parent id.
-        const anc = element.closest("[id]");
+        let anc = element.parentElement;
+        while (anc && !anc.id) anc = anc.parentElement;
         if (anc && anc.id && !/^(wm-|webmatic-)/.test(anc.id)) {
-          return `#${anc.id} ${tag}[name="${E(nameAttr)}"]`;
+          const anchored = `#${EI(anc.id)} ${tag}[name="${E(nameAttr)}"]`;
+          const byAnchoredName = accept(anchored);
+          if (byAnchoredName) return byAnchoredName;
         }
       }
 
@@ -119,7 +198,8 @@
         const href = element.getAttribute("href");
         // Prefer short/stable hrefs (relative paths without long hash tokens)
         if (href.length <= 80 && !href.startsWith("javascript")) {
-          return `a[href="${E(href)}"]`;
+          const byHref = accept(`a[href="${E(href)}"]`);
+          if (byHref) return byHref;
         }
       }
 
@@ -130,14 +210,18 @@
         if (a.value.length > 80 || a.value === "") return false;
         return true;
       });
-      if (stableData) return `[${stableData.name}="${E(stableData.value)}"]`;
+      if (stableData) {
+        const byStableData = accept(`[${stableData.name}="${E(stableData.value)}"]`);
+        if (byStableData) return byStableData;
+      }
 
       const text = (element.textContent || "").replace(/\s+/g, " ").trim();
-      if (text && text.length <= 60) {
+      if ((tag === "button" || tag === "a") && text && text.length <= 60) {
         const sameTextCount = Array.from((element.ownerDocument || document).querySelectorAll(tag))
           .filter((el) => ((el.textContent || "").replace(/\s+/g, " ").trim() === text)).length;
         if (sameTextCount === 1) {
-          return `${tag}[text="${E(text)}"]`;
+          const byText = accept(`${tag}[text="${E(text)}"]`);
+          if (byText) return byText;
         }
       }
 
@@ -149,9 +233,11 @@
           const ancChildren = Array.from(anc.children || []);
           const ancSame = ancChildren.filter((s) => s.tagName === element.tagName);
           if (ancSame.length > 1) {
-            return `#${anc.id} ${tag}:nth-of-type(${ancSame.indexOf(element) + 1})`;
+            const byAncNth = accept(`#${EI(anc.id)} ${tag}:nth-of-type(${ancSame.indexOf(element) + 1})`);
+            if (byAncNth) return byAncNth;
           }
-          return `#${anc.id} ${tag}`;
+          const byAncTag = accept(`#${EI(anc.id)} ${tag}`);
+          if (byAncTag) return byAncTag;
         }
         anc = anc.parentElement;
         ancDepth++;
@@ -165,13 +251,21 @@
       const sameTag = siblings.filter((s) => s.tagName === element.tagName);
       const idx = sameTag.indexOf(element);
       const nth = sameTag.length > 1 ? `:nth-of-type(${idx + 1})` : "";
-      if (stableClasses) return `${tag}.${stableClasses}${nth}`;
+      if (stableClasses) {
+        const byClass = accept(`${tag}.${stableClasses}${nth}`);
+        if (byClass) return byClass;
+      }
 
       // Last resort only: when no stable semantic/path/class fallback exists,
       // keep dynamic id to avoid returning a too-generic selector like plain tag.
-      if (elementId) return `#${E(elementId)}`;
+      if (elementId) {
+        const byAnyId = accept(`#${EI(elementId)}`, { requireUnique: false });
+        if (byAnyId) return byAnyId;
+      }
 
-      return `${tag}${nth}`;
+      const byTagNth = accept(`${tag}${nth}`);
+      if (byTagNth) return byTagNth;
+      return "";
     }
 
     /**

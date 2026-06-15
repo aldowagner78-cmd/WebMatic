@@ -277,6 +277,66 @@ test("check: no aborta en widget custom cuando el input oculto no refleja checke
   assert.equal(result.ok, true, result.error || "check custom best-effort falló");
 });
 
+test("check legacy: fallback #id desde selector descendiente inválido en checkbox", async () => {
+  resetBody('<input id="chk-tecnologia" name="generos" type="checkbox">');
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  let failed = null;
+  let summary = null;
+
+  await new Promise((resolve) => {
+    p.play([
+      { type: "check", selector: '#chk-tecnologia input[name="generos"]', checked: true }
+    ], {
+      vars: {},
+      speed: 1,
+      onDone: (s) => { summary = s || null; resolve(); },
+      onError: (err) => { failed = err; resolve(); }
+    });
+  });
+
+  assert.equal(failed, null, failed && failed.message);
+  assert.equal(win.document.getElementById("chk-tecnologia").checked, true);
+  assert.ok(Array.isArray(summary && summary.fallbacks));
+  assert.ok((summary.fallbacks || []).some((f) => f && f.kind === "legacy_descendant_selector"));
+});
+
+test("check legacy: fallback #id desde selector descendiente inválido en radio", async () => {
+  resetBody('<input id="rad-divorciado" name="estadoCivil" type="radio">');
+  const result = await runStep({ type: "check", selector: '#rad-divorciado input[name="estadoCivil"]', checked: true });
+  assert.equal(result.ok, true, result.error || "radio legacy fallback falló");
+  assert.equal(win.document.getElementById("rad-divorciado").checked, true);
+});
+
+test("check nuevo: selector #chk-tecnologia funciona sin fallback", async () => {
+  resetBody('<input id="chk-tecnologia" name="generos" type="checkbox">');
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  let summary = null;
+  await new Promise((resolve) => {
+    p.play([{ type: "check", selector: "#chk-tecnologia", checked: true }], {
+      vars: {}, speed: 1,
+      onDone: (s) => { summary = s || null; resolve(); },
+      onError: resolve
+    });
+  });
+  assert.equal(win.document.getElementById("chk-tecnologia").checked, true);
+  assert.equal((summary && summary.fallbacks || []).some((f) => f && f.kind === "legacy_descendant_selector"), false);
+});
+
+test("check nuevo: selector #rad-casado funciona sin fallback", async () => {
+  resetBody('<input id="rad-casado" name="estadoCivil" type="radio">');
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  let summary = null;
+  await new Promise((resolve) => {
+    p.play([{ type: "check", selector: "#rad-casado", checked: true }], {
+      vars: {}, speed: 1,
+      onDone: (s) => { summary = s || null; resolve(); },
+      onError: resolve
+    });
+  });
+  assert.equal(win.document.getElementById("rad-casado").checked, true);
+  assert.equal((summary && summary.fallbacks || []).some((f) => f && f.kind === "legacy_descendant_selector"), false);
+});
+
 // ── Tests: set_variable ───────────────────────────────────────────────────────
 
 test("set_variable: evalúa expresión numérica simple", async () => {

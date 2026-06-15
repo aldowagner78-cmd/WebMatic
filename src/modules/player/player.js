@@ -555,6 +555,39 @@
     return interactable || matches[0];
   }
 
+  function _resolveLegacyDescendantFallback(step, selector) {
+    const sel = String(selector || "").trim();
+    if (!sel) return null;
+    const m = /^(#[^\s>+~]+)\s+(input|select|textarea|button)\b/i.exec(sel);
+    if (!m) return null;
+
+    const baseSelector = m[1];
+    const targetEl = findElement(baseSelector);
+    if (!(targetEl instanceof Element)) return null;
+
+    const stepType = String(step && step.type || "").toLowerCase();
+    const tag = String(targetEl.tagName || "").toLowerCase();
+    const type = String((targetEl.getAttribute && targetEl.getAttribute("type")) || "").toLowerCase();
+
+    if (stepType === "check") {
+      if (targetEl instanceof HTMLInputElement && (type === "checkbox" || type === "radio")) return targetEl;
+      return null;
+    }
+
+    if (stepType === "input" || stepType === "text" || stepType === "choose_option") {
+      if (targetEl instanceof HTMLInputElement || targetEl instanceof HTMLTextAreaElement || targetEl instanceof HTMLSelectElement) return targetEl;
+      if (targetEl.isContentEditable) return targetEl;
+      return null;
+    }
+
+    if (stepType === "click" || stepType === "dblclick" || stepType === "extract" || stepType === "scroll_to" || stepType === "hover") {
+      if (tag === "input" || tag === "textarea" || tag === "select" || tag === "button" || tag === "a") return targetEl;
+      if (_isInteractable(targetEl)) return targetEl;
+    }
+
+    return null;
+  }
+
   function _findAssociatedCheckInput(el) {
     if (!el || !(el instanceof Element)) return null;
     if (el instanceof HTMLInputElement) {
@@ -1106,7 +1139,7 @@
         }
 
         const selector = expandVariables(step.selector || "", vars);
-        const el = step.type === "check" ? findBestCheckTarget(selector) : findElement(selector);
+        let el = step.type === "check" ? findBestCheckTarget(selector) : findElement(selector);
 
         if (!el) {
           if (_shouldBypassMissingLoginStep(step.type, selector)) {
@@ -1120,14 +1153,24 @@
               resolve();
               return;
             }
-            if (step.type === "click" && _trySyntheticGalleryClick(selector)) {
+            const legacyFallbackEl = _resolveLegacyDescendantFallback(step, selector);
+            if (legacyFallbackEl) {
+              el = legacyFallbackEl;
+              try {
+                if (Array.isArray(_fallbackBucket)) {
+                  _fallbackBucket.push({ kind: "legacy_descendant_selector", original: selector });
+                }
+              } catch (_e) { /* ignore */ }
+            } else if (step.type === "click" && _trySyntheticGalleryClick(selector)) {
               resolve();
               return;
+            } else {
+              _logSelectorFailure(step.type || "unknown", selector);
+              reject(new Error(`Elemento no encontrado: ${selector}. Ver consola: [WebMatic][selector-diagnostic]`));
+              return;
             }
-            _logSelectorFailure(step.type || "unknown", selector);
-            reject(new Error(`Elemento no encontrado: ${selector}. Ver consola: [WebMatic][selector-diagnostic]`));
           }
-          return;
+          if (!el) return;
         }
 
         const value = expandVariables(step.value || "", vars);

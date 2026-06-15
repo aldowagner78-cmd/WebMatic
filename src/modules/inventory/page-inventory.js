@@ -55,7 +55,24 @@
   function _altSelectors(el, primary) {
     const alts = [];
     const tag = el.tagName.toLowerCase();
-    const push = (sel) => { if (sel && sel !== primary && !alts.includes(sel)) alts.push(sel); };
+    const doc = el.ownerDocument || (typeof document !== "undefined" ? document : null);
+    const rec = globalScope.WebMaticRecorder;
+    const isValidForElement = (selector) => {
+      const sel = String(selector || "").trim();
+      if (!sel || !doc) return false;
+      if (rec && typeof rec.selectorResolvesToElement === "function") {
+        return rec.selectorResolvesToElement(doc, sel, el);
+      }
+      try {
+        return doc.querySelector(sel) === el && doc.querySelectorAll(sel).length === 1;
+      } catch (_e) {
+        return false;
+      }
+    };
+    const push = (sel) => {
+      if (!sel || sel === primary || alts.includes(sel)) return;
+      if (isValidForElement(sel)) alts.push(sel);
+    };
     if (el.id) push("#" + el.id);
     const name = el.getAttribute && el.getAttribute("name");
     if (name) push(`${tag}[name="${_esc(name)}"]`);

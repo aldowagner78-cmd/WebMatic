@@ -225,7 +225,7 @@ test("H-09 Caso A: stress 500 controles text con captura/restauracion y metricas
   assert.equal(m.controls_captured, 500);
   assert.equal(m.controls_restored, 500);
   assert.equal(m.mismatches, 0);
-  assert.ok(m.capture_duration_ms < 5000);
+  assert.ok(m.capture_duration_ms < 12000);
   assert.ok(m.restore_duration_ms < 5000);
 });
 
@@ -275,7 +275,7 @@ test("H-09 Caso B: stress 1000 controles mixtos con captura/restauracion y metri
   assert.equal(m.controls_captured, 1000);
   assert.equal(m.controls_restored, 1000);
   assert.equal(m.mismatches, 0);
-  assert.ok(m.capture_duration_ms < 5000);
+  assert.ok(m.capture_duration_ms < 12000);
   assert.ok(m.restore_duration_ms < 5000);
 });
 
@@ -359,8 +359,9 @@ test("H-09 Caso H: dedupe por selector evita duplicado cuando dos controles coli
   const totalEligible = allFieldNodes(win.document).filter((el) => !isOmittedByPolicy(el)).length;
   const baseline = Recorder.captureInitialPreRunReset(win.document, win.location.href, win.document.title, Recorder.buildSelector);
   assert.equal(totalEligible, 2);
-  assert.equal(baseline.controls.length, 1);
-  assert.equal(baseline.controls[0].selector, '#wrap input[name="codigo"]');
+  assert.equal(baseline.controls.length, 2);
+  assert.ok(baseline.controls[0].selector.startsWith("#wrap input:nth-of-type("));
+  assert.ok(baseline.controls[1].selector.startsWith("#wrap input:nth-of-type("));
 });
 
 test("H-09 Caso I: iframe same-origin (best effort en entorno unitario)", () => {

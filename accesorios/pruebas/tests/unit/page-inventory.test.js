@@ -74,6 +74,36 @@ test("captureControl: checkbox → controlKind checkbox + currentValue booleano 
   assert.equal(c.currentValue, "true");
 });
 
+test("captureControl: para checkbox/radio/select/text con id usa selector #id", () => {
+  resetBody([
+    '<input id="txt-nombre" type="text" value="Juan">',
+    '<input id="chk-tecnologia" type="checkbox" checked>',
+    '<input id="rad-casado" name="estadoCivil" type="radio" checked>',
+    '<select id="pais"><option value="ar" selected>Argentina</option></select>'
+  ].join(""));
+
+  const txt = inv.captureControl(win.document.getElementById("txt-nombre"));
+  const chk = inv.captureControl(win.document.getElementById("chk-tecnologia"));
+  const rad = inv.captureControl(win.document.getElementById("rad-casado"));
+  const sel = inv.captureControl(win.document.getElementById("pais"));
+
+  assert.equal(txt.selector, "#txt-nombre");
+  assert.equal(chk.selector, "#chk-tecnologia");
+  assert.equal(rad.selector, "#rad-casado");
+  assert.equal(sel.selector, "#pais");
+});
+
+test("captureControl: altSelectors solo incluye selectores que resuelven al mismo elemento", () => {
+  resetBody('<input id="chk-tecnologia" name="generos" type="checkbox">');
+  const el = win.document.getElementById("chk-tecnologia");
+  const c = inv.captureControl(el);
+  assert.ok(Array.isArray(c.altSelectors));
+  c.altSelectors.forEach((s) => {
+    assert.equal(win.document.querySelector(s), el, `altSelector invalido: ${s}`);
+  });
+  assert.equal(c.altSelectors.includes('#chk-tecnologia input[name="generos"]'), false);
+});
+
 test("captureControl: button → controlKind button sin currentValue", () => {
   resetBody('<button id="enviar">Enviar</button>');
   const el = win.document.getElementById("enviar");
