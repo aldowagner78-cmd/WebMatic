@@ -17,22 +17,22 @@ function resetBody(html) {
   win.document.body.innerHTML = html;
 }
 
-test("buildSelector: prefers data-testid over dynamic id", () => {
+test("buildSelector: usa #id cuando el id resuelve al mismo elemento", () => {
   resetBody('<button id="btn_abc_123_20260613" data-testid="approve-button">Authorize</button>');
   const el = win.document.querySelector("button");
-  assert.equal(Recorder.buildSelector(el), '[data-testid="approve-button"]');
+  assert.equal(Recorder.buildSelector(el), "#btn_abc_123_20260613");
 });
 
-test("buildSelector: prefers aria-label over dynamic id", () => {
+test("buildSelector: usa #id por encima de aria-label cuando es válido", () => {
   resetBody('<button id="x9f8a7_20260613" aria-label="Authorize request">OK</button>');
   const el = win.document.querySelector("button");
-  assert.equal(Recorder.buildSelector(el), '[aria-label="Authorize request"]');
+  assert.equal(Recorder.buildSelector(el), "#x9f8a7_20260613");
 });
 
-test("buildSelector: prefers title over dynamic id", () => {
+test("buildSelector: usa #id por encima de title cuando es válido", () => {
   resetBody('<button id="btn_random_998877" title="Authorize">A</button>');
   const el = win.document.querySelector("button");
-  assert.equal(Recorder.buildSelector(el), '[title="Authorize"]');
+  assert.equal(Recorder.buildSelector(el), "#btn_random_998877");
 });
 
 test("buildSelector: duplicate names use stable parent context", () => {
@@ -78,8 +78,8 @@ test("buildSelector: dom mutation keeps stable selector", () => {
   const second = win.document.querySelector("button");
   const secondSelector = Recorder.buildSelector(second);
 
-  assert.equal(firstSelector, '[data-testid="approve-button"]');
-  assert.equal(secondSelector, '[data-testid="approve-button"]');
+  assert.equal(firstSelector, "#btn_123_20260613");
+  assert.equal(secondSelector, "#btn_889_20260614");
 });
 
 test("buildSelector: keeps stable simple id", () => {
@@ -91,7 +91,7 @@ test("buildSelector: keeps stable simple id", () => {
 test("buildSelector: keeps unique name selector", () => {
   resetBody('<input name="email" type="text">');
   const el = win.document.querySelector("input");
-  assert.equal(Recorder.buildSelector(el), 'input[name="email"]');
+  assert.equal(Recorder.buildSelector(el), 'input[type="text"][name="email"]');
 });
 
 test("buildSelector: keeps short stable href", () => {
@@ -151,4 +151,79 @@ test("dedupeFieldRuns: deduplica rafaga local input/change y conserva ultimo val
   assert.equal(fieldSteps.length, 1);
   assert.equal(fieldSteps[0].type, "input");
   assert.equal(fieldSteps[0].value, "111111");
+});
+
+test("selectorResolvesToElement: rechaza selector que apunta a descendiente inválido", () => {
+  resetBody('<input id="chk-tecnologia" name="generos" type="checkbox">');
+  const el = win.document.getElementById("chk-tecnologia");
+  const ok = Recorder.selectorResolvesToElement(win.document, '#chk-tecnologia input[name="generos"]', el);
+  assert.equal(ok, false);
+});
+
+test("buildSelector general: checkbox con id propio y name compartido -> #id", () => {
+  resetBody('<input id="chk-tecnologia" name="generos" type="checkbox"><input id="chk-musica" name="generos" type="checkbox">');
+  const el = win.document.getElementById("chk-tecnologia");
+  assert.equal(Recorder.buildSelector(el), "#chk-tecnologia");
+});
+
+test("buildSelector general: radio con id propio y name compartido -> #id", () => {
+  resetBody('<input id="rad-casado" name="estadoCivil" type="radio"><input id="rad-soltero" name="estadoCivil" type="radio">');
+  const el = win.document.getElementById("rad-casado");
+  assert.equal(Recorder.buildSelector(el), "#rad-casado");
+});
+
+test("buildSelector general: select con id propio -> #id", () => {
+  resetBody('<select id="pais"><option value="ar">Argentina</option></select>');
+  const el = win.document.getElementById("pais");
+  assert.equal(Recorder.buildSelector(el), "#pais");
+});
+
+test("buildSelector general: textarea con id propio -> #id", () => {
+  resetBody('<textarea id="notas"></textarea>');
+  const el = win.document.getElementById("notas");
+  assert.equal(Recorder.buildSelector(el), "#notas");
+});
+
+test("buildSelector general: input dentro de label con id propio -> #id", () => {
+  resetBody('<label>Genero<input id="gen-id" name="genero" type="checkbox"></label>');
+  const el = win.document.getElementById("gen-id");
+  assert.equal(Recorder.buildSelector(el), "#gen-id");
+});
+
+test("buildSelector general: input sin id y name único usa selector por name válido", () => {
+  resetBody('<input name="correo" type="text">');
+  const el = win.document.querySelector('input[name="correo"]');
+  const selector = Recorder.buildSelector(el);
+  assert.equal(selector, 'input[type="text"][name="correo"]');
+  assert.equal(win.document.querySelector(selector), el);
+});
+
+test("buildSelector general: input sin id y name duplicado usa fallback validado", () => {
+  resetBody('<div id="form-a"><input name="codigo"></div><div id="form-b"><input name="codigo"></div>');
+  const el = win.document.querySelector("#form-a input");
+  const selector = Recorder.buildSelector(el);
+  assert.equal(selector, '#form-a input[name="codigo"]');
+  assert.equal(win.document.querySelector(selector), el);
+});
+
+test("preRunReset: captura selectores canónicos #id para checkbox/radio/select/text", () => {
+  resetBody([
+    '<input id="txt-nombre" type="text" value="Juan">',
+    '<input id="chk-tecnologia" type="checkbox" checked>',
+    '<input id="rad-casado" name="estadoCivil" type="radio" checked>',
+    '<select id="pais"><option value="ar" selected>Argentina</option></select>'
+  ].join(""));
+
+  const pre = Recorder.captureInitialPreRunReset(win.document, "https://example.com", "T", Recorder.buildSelector);
+  assert.ok(pre && Array.isArray(pre.controls));
+
+  const selectors = pre.controls.map((c) => c.selector);
+  assert.ok(selectors.includes("#txt-nombre"));
+  assert.ok(selectors.includes("#chk-tecnologia"));
+  assert.ok(selectors.includes("#rad-casado"));
+  assert.ok(selectors.includes("#pais"));
+
+  selectors.forEach((s) => {
+    assert.equal(/#\w[\w-]*\s+(input|select|textarea)\[/.test(s), false);
+  });
 });
