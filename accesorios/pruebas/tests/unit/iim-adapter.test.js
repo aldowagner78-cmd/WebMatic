@@ -608,6 +608,24 @@ test("exportToIim: selector sensible token tampoco filtra valor real", () => {
   assert.ok(script.includes('TYPE SELECTOR="#nombre" CONTENT="Juan"'));
 });
 
+test("exportToIim: omite _baselineDefault en lineas humanas pero lo conserva en WM_JSON", () => {
+  const macro = {
+    steps: [
+      { type: "check", selector: '#chk-tecnologia input[name="generos"]', checked: false, _baselineDefault: true },
+      { type: "input", selector: "#nombre", value: "Juan" }
+    ]
+  };
+
+  const script = adapter.exportToIim(macro);
+  assert.ok(!script.includes('CHECK SELECTOR="#chk-tecnologia input[name=\\"generos\\\"]" CHECKED="false"'));
+  assert.ok(script.includes('TYPE SELECTOR="#nombre" CONTENT="Juan"'));
+
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  assert.equal(parsed.steps.length, 2, "WM_JSON debe conservar todos los pasos");
+  assert.equal(parsed.steps[0]._baselineDefault, true, "WM_JSON conserva marca de baseline");
+});
+
 // ── Round-trip con meta.preRunReset ─────────────────────────────────────────
 
 test("round-trip IIM: conserva meta.preRunReset con controles no sensibles", () => {

@@ -55,6 +55,10 @@
     return out;
   }
 
+  function _isBaselineDefaultStep(step) {
+    return !!(step && step._baselineDefault === true);
+  }
+
   function _sanitizeMetaForExport(meta) {
     if (!meta || typeof meta !== "object") return null;
     const out = Object.assign({}, meta);
@@ -116,7 +120,9 @@
       lines.push("// WM_JSON:" + JSON.stringify(payload));
     }
 
-    steps.forEach((step) => {
+    const humanSteps = steps.filter((step) => !_isBaselineDefaultStep(step));
+
+    humanSteps.forEach((step) => {
       // ── Standard IIM instructions (human-readable) ──────────────────────
       if (step.type === "click") {
         lines.push(`CLICK SELECTOR=${_quote(step.selector)}`);

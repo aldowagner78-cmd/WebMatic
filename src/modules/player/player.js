@@ -1657,6 +1657,10 @@
     return !!(step && step._fast === true && (step.type === "capture_defaults" || step._baselineDefault === true));
   }
 
+  function _isBaselineDefaultStep(step) {
+    return !!(step && step._baselineDefault === true);
+  }
+
   function _collectDefaultStepsFromPage(opts) {
     const preserveSelectors = opts?.preserveSelectors || new Set();
     const explicitExcludes = opts?.explicitExcludes || [];
@@ -2099,6 +2103,9 @@
         for (let i = startIndex; i < runtimeSteps.length; i++) {
           if (this._abort) break;
           const step = runtimeSteps[i];
+          if (_isBaselineDefaultStep(step)) {
+            continue;
+          }
 
           const capturePreserve = step.type === "capture_defaults"
             ? Array.from(_collectModifiedSelectors(runtimeSteps, i + 1))
@@ -2522,6 +2529,9 @@
       for (let _j = 0; _j < subSteps.length; _j++) {
         if (this._abort) break;
         const subStep = subSteps[_j];
+        if (_isBaselineDefaultStep(subStep)) {
+          continue;
+        }
         const capturePreserve = subStep && subStep.type === "capture_defaults"
           ? Array.from(_collectModifiedSelectors(subSteps, _j + 1))
           : null;
