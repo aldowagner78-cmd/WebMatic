@@ -541,6 +541,79 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message?.type === "PLAYBACK_NAVIGATE") {
+    const currentTabId = sender && sender.tab && sender.tab.id ? Number(sender.tab.id) : 0;
+    if (!currentTabId) {
+      sendResponse({ ok: false, error: "missing_sender_tab" });
+      return true;
+    }
+
+    const rawUrl = String(message.url || "").trim();
+    if (!rawUrl) {
+      sendResponse({ ok: false, error: "navigate_missing_url" });
+      return true;
+    }
+
+    let targetUrl = rawUrl;
+    try {
+      targetUrl = new URL(rawUrl, String(sender.tab.url || "about:blank")).href;
+    } catch (_e) {
+      sendResponse({ ok: false, error: "navigate_invalid_url" });
+      return true;
+    }
+
+    const _pendingState = Array.isArray(message.steps) ? {
+      tabId: currentTabId,
+      steps: message.steps,
+      index: Number.isFinite(Number(message.index)) ? Number(message.index) : 0,
+      vars: message.vars || {},
+      speed: message.speed || 1,
+      macroId: message.macroId || null
+    } : null;
+
+    if (_pendingState) {
+      pendingPlaybackByTab.set(currentTabId, _pendingState);
+    }
+
+    const _isFileUrl = targetUrl.startsWith("file:");
+
+    chrome.tabs.update(currentTabId, { url: targetUrl }, () => {
+      if (!chrome.runtime.lastError) {
+        sendResponse({ ok: true, handoff: true, tabId: currentTabId });
+        return;
+      }
+
+      // tabs.update failed — save the real error and try tabs.create as fallback.
+      const updateErrorMsg = chrome.runtime.lastError.message || "unknown";
+      if (_pendingState) pendingPlaybackByTab.delete(currentTabId);
+
+      chrome.tabs.create({ url: targetUrl, active: true }, (newTab) => {
+        if (chrome.runtime.lastError || !newTab || !newTab.id) {
+          const createErrorMsg = (chrome.runtime.lastError && chrome.runtime.lastError.message) || "unknown";
+          let hint = "";
+          if (_isFileUrl) {
+            hint = " | SOLUCIÓN: En Firefox ve a about:addons → WebMatic → habilitar 'Permitir acceso a URLs de archivo'. Alternativa: sirve el archivo con 'python -m http.server 8787' y usa http://127.0.0.1:8787/testindex.html";
+          }
+          sendResponse({
+            ok: false,
+            error: "navigate_tab_update_failed",
+            detail: `tabs.update: ${updateErrorMsg}; tabs.create: ${createErrorMsg}${hint}`,
+            url: targetUrl,
+            tabId: currentTabId
+          });
+          return;
+        }
+
+        // tabs.create succeeded — remap pending to the new tab.
+        if (_pendingState) {
+          pendingPlaybackByTab.set(newTab.id, { ..._pendingState, tabId: newTab.id });
+        }
+        sendResponse({ ok: true, handoff: true, tabId: newTab.id, usedCreate: true });
+      });
+    });
+    return true;
+  }
+
   if (message?.type === "PLAYBACK_TAB_ACTION") {
     const action = String(message.action || "");
     const step = message.step || {};

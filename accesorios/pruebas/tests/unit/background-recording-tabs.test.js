@@ -64,6 +64,9 @@ function createChromeMock(initialTabs = []) {
         cb(Array.from(tabsMap.values()));
       },
       create(createProperties, cb) {
+        // Simula comportamiento real del navegador: cada operación asíncrona
+        // resetea lastError para su propio callback.
+        chrome.runtime.lastError = null;
         const id = Math.max(0, ...Array.from(tabsMap.keys())) + 1;
         const tab = {
           id,
@@ -255,4 +258,125 @@ test("background: CLEAR_PENDING_PLAYBACK limpia por tab y tabs.onRemoved tambié
 
   const afterRemove = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 9 } });
   assert.equal(afterRemove && afterRemove.pending, null, "tabs.onRemoved debe limpiar pending de la tab cerrada");
+});
+
+test("background: PLAYBACK_NAVIGATE usa tabs.update y preserva pending para resume", () => {
+  const h = bootBackground([
+    { id: 31, url: "https://site-a.test/home", active: true }
+  ]);
+
+  const resp = h.sendRuntimeMessage({
+    type: "PLAYBACK_NAVIGATE",
+    url: "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html",
+    steps: [{ type: "wait", ms: 1 }],
+    index: 1,
+    vars: { A: "1" },
+    speed: 1,
+    macroId: "m-file"
+  }, { tab: { id: 31, url: "https://site-a.test/home" } });
+
+  assert.equal(resp && resp.ok, true, "PLAYBACK_NAVIGATE debe responder ok");
+  assert.equal((h.tabsMap.get(31) || {}).url, "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html");
+
+  const pending = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 31 } });
+  assert.ok(pending && pending.pending, "debe persistir pending en la misma tab tras navegar");
+  assert.equal(pending.pending.index, 1);
+});
+
+test("background: PLAYBACK_NAVIGATE fallback a tabs.create cuando tabs.update falla", () => {
+  const h = bootBackground([
+    { id: 42, url: "https://site-a.test/home", active: true }
+  ]);
+
+  // tabs.update falla (simulando permiso denegado a file://)
+  h.chrome.tabs.update = (_tabId, _props, cb) => {
+    h.chrome.runtime.lastError = { message: "Missing host permission for the tab" };
+    if (typeof cb === "function") cb();
+    h.chrome.runtime.lastError = null;
+  };
+
+  const resp = h.sendRuntimeMessage({
+    type: "PLAYBACK_NAVIGATE",
+    url: "file:///C:/testindex.html",
+    steps: [{ type: "wait", ms: 1 }],
+    index: 1,
+    vars: { A: "1" }
+  }, { tab: { id: 42, url: "https://site-a.test/home" } });
+
+  // tabs.create debería haberse invocado y creado una nueva tab (id 43)
+  assert.equal(resp && resp.ok, true, "debe responder ok via fallback tabs.create");
+  assert.equal(resp && resp.usedCreate, true, "debe marcar usedCreate=true");
+  const newTabId = resp && resp.tabId;
+  assert.ok(newTabId && newTabId !== 42, "debe devolver id de la nueva tab");
+
+  // pending debe estar en la nueva tab, no en la original
+  const pendingOld = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 42 } });
+  assert.equal(pendingOld && pendingOld.pending, null, "tab original no debe tener pending");
+
+  const pendingNew = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: newTabId } });
+  assert.ok(pendingNew && pendingNew.pending, "nueva tab debe tener pending");
+  assert.equal(pendingNew.pending.index, 1);
+});
+
+test("background: PLAYBACK_NAVIGATE propaga detail real cuando ambos tabs.update y tabs.create fallan", () => {
+  const h = bootBackground([
+    { id: 43, url: "https://site-a.test/home", active: true }
+  ]);
+
+  h.chrome.tabs.update = (_tabId, _props, cb) => {
+    h.chrome.runtime.lastError = { message: "Missing host permission for the tab" };
+    if (typeof cb === "function") cb();
+    h.chrome.runtime.lastError = null;
+  };
+  h.chrome.tabs.create = (_props, cb) => {
+    h.chrome.runtime.lastError = { message: "Cannot access file URL" };
+    if (typeof cb === "function") cb(null);
+    h.chrome.runtime.lastError = null;
+  };
+
+  const resp = h.sendRuntimeMessage({
+    type: "PLAYBACK_NAVIGATE",
+    url: "file:///C:/testindex.html",
+    steps: [{ type: "click", selector: "#x" }],
+    index: 1
+  }, { tab: { id: 43, url: "https://site-a.test/home" } });
+
+  assert.equal(resp && resp.ok, false, "si ambos fallan debe responder error");
+  assert.equal(resp && resp.error, "navigate_tab_update_failed");
+  assert.ok(resp && resp.detail && resp.detail.includes("Missing host permission"), `detail debe incluir error real de tabs.update: ${resp && resp.detail}`);
+  assert.ok(resp && resp.detail && resp.detail.includes("SOLUCIÓN"), `detail debe incluir hint accionable: ${resp && resp.detail}`);
+
+  const pending = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 43 } });
+  assert.equal(pending && pending.pending, null, "no debe dejar pending colgado ante fallo total");
+});
+
+test("background: PLAYBACK_NAVIGATE informa error claro y limpia pending si tabs.update falla (sin fallback create)", () => {
+  const h = bootBackground([
+    { id: 41, url: "https://site-a.test/home", active: true }
+  ]);
+
+  h.chrome.tabs.update = (_tabId, _props, cb) => {
+    h.chrome.runtime.lastError = { message: "blocked" };
+    if (typeof cb === "function") cb();
+    h.chrome.runtime.lastError = null;
+  };
+  h.chrome.tabs.create = (_props, cb) => {
+    h.chrome.runtime.lastError = { message: "also blocked" };
+    if (typeof cb === "function") cb(null);
+    h.chrome.runtime.lastError = null;
+  };
+
+  const resp = h.sendRuntimeMessage({
+    type: "PLAYBACK_NAVIGATE",
+    url: "file:///C:/Users/usuario/Desktop/Ejercicios/testindex.html",
+    steps: [{ type: "click", selector: "#x" }],
+    index: 1
+  }, { tab: { id: 41, url: "https://site-a.test/home" } });
+
+  assert.equal(resp && resp.ok, false, "si tabs.update falla debe responder error");
+  assert.equal(resp && resp.error, "navigate_tab_update_failed");
+  assert.ok(resp && resp.detail && resp.detail.includes("blocked"), `detail debe incluir el mensaje real: ${resp && resp.detail}`);
+
+  const pending = h.sendRuntimeMessage({ type: "QUERY_PENDING_PLAYBACK" }, { tab: { id: 41 } });
+  assert.equal(pending && pending.pending, null, "no debe dejar pending colgado ante fallo");
 });

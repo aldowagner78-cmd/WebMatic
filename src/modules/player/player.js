@@ -748,6 +748,58 @@
     return str;
   }
 
+  function _analyzeNavigation(currentHref, rawTargetUrl) {
+    const targetRaw = String(rawTargetUrl || "").trim();
+    if (!targetRaw) {
+      return { targetUrl: "", sameDocument: false, mustUseBackground: false };
+    }
+
+    let currentUrl;
+    let targetUrl;
+    try {
+      currentUrl = new URL(String(currentHref || ""));
+      targetUrl = new URL(targetRaw, currentUrl.href);
+    } catch (_e) {
+      return { targetUrl: targetRaw, sameDocument: false, mustUseBackground: false };
+    }
+
+    const sameDocument =
+      currentUrl.origin === targetUrl.origin &&
+      currentUrl.pathname === targetUrl.pathname &&
+      currentUrl.search === targetUrl.search;
+
+    // Content scripts cannot reliably force some cross-scheme jumps (notably to file://).
+    const mustUseBackground = targetUrl.protocol === "file:" || currentUrl.protocol !== targetUrl.protocol;
+
+    return {
+      targetUrl: targetUrl.href,
+      sameDocument,
+      mustUseBackground,
+      currentUrl,
+      targetUrlObject: targetUrl
+    };
+  }
+
+  function _requestBackgroundNavigate(url, playbackState) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({
+        type: "PLAYBACK_NAVIGATE",
+        url,
+        steps: Array.isArray(playbackState && playbackState.steps) ? playbackState.steps : undefined,
+        index: Number.isFinite(Number(playbackState && playbackState.index)) ? Number(playbackState.index) : undefined,
+        vars: playbackState && playbackState.vars ? playbackState.vars : undefined,
+        speed: playbackState && playbackState.speed ? playbackState.speed : undefined,
+        macroId: playbackState && playbackState.macroId ? playbackState.macroId : null
+      }, (resp) => {
+        if (chrome.runtime.lastError) {
+          resolve({ ok: false, error: chrome.runtime.lastError.message || "playback_navigate_runtime_error" });
+          return;
+        }
+        resolve(resp || { ok: false, error: "playback_navigate_no_response" });
+      });
+    });
+  }
+
   /**
    * Executes a single step. Returns a promise.
    * step: { type: "click"|"dblclick"|"input"|"key"|"text"|"wait"|"extract"|"navigate", selector?, value?, key?, ms?, variable?, url? }
@@ -787,24 +839,30 @@
 
           // Same-document navigations (typically hash-only changes) do not unload
           // the page, so this step must resolve to avoid freezing playback.
-          try {
-            const currentUrl = new URL(window.location.href);
-            const targetUrl = new URL(url, window.location.href);
-            const sameDocument =
-              currentUrl.origin === targetUrl.origin &&
-              currentUrl.pathname === targetUrl.pathname &&
-              currentUrl.search === targetUrl.search;
-
-            if (sameDocument) {
-              if (currentUrl.hash !== targetUrl.hash) {
-                window.location.hash = targetUrl.hash || "";
-              }
-              resolve();
-              return;
+          const navInfo = _analyzeNavigation(window.location.href, url);
+          if (navInfo.sameDocument) {
+            if (navInfo.currentUrl && navInfo.targetUrlObject && navInfo.currentUrl.hash !== navInfo.targetUrlObject.hash) {
+              window.location.hash = navInfo.targetUrlObject.hash || "";
             }
-          } catch (_e) { /* ignore parse issues */ }
+            resolve();
+            return;
+          }
 
-          window.location.href = url;
+          if (navInfo.mustUseBackground) {
+            _requestBackgroundNavigate(navInfo.targetUrl || url, null)
+              .then((resp) => {
+                if (!resp || resp.ok !== true) {
+                  const _errBase = (resp && resp.error) || "background_navigate_failed";
+                  const _errDetail = (resp && resp.detail) ? `: ${resp.detail}` : "";
+                  reject(new Error(`navigate failed: ${_errBase}${_errDetail}`));
+                  return;
+                }
+              })
+              .catch((err) => reject(err));
+            return;
+          }
+
+          window.location.href = navInfo.targetUrl || url;
           // Navigation will unload the page; the promise intentionally never resolves
           // — the player saves state to background before calling this step.
           return;
@@ -2009,13 +2067,29 @@
         if (firstStep && firstStep.type !== "navigate" && firstNav && firstNav.url) {
           const bootstrapUrl = expandVariables(firstNav.url, vars);
           if (bootstrapUrl && window.location.href !== bootstrapUrl) {
-            await new Promise((res) => {
-              chrome.runtime.sendMessage({
-                type: "SAVE_PLAYBACK_STATE",
-                steps: runtimeSteps, index: 0, vars, speed, macroId
-              }, () => { void chrome.runtime.lastError; res(); });
-            });
-            window.location.href = bootstrapUrl;
+            const navInfo = _analyzeNavigation(window.location.href, bootstrapUrl);
+            if (navInfo.mustUseBackground) {
+              const resp = await _requestBackgroundNavigate(navInfo.targetUrl || bootstrapUrl, {
+                steps: runtimeSteps,
+                index: 0,
+                vars,
+                speed,
+                macroId
+              });
+              if (!resp || resp.ok !== true) {
+                const _errBase = (resp && resp.error) || "background_navigate_failed";
+                const _errDetail = (resp && resp.detail) ? `: ${resp.detail}` : "";
+                throw new Error(`bootstrap navigate failed: ${_errBase}${_errDetail}`);
+              }
+            } else {
+              await new Promise((res) => {
+                chrome.runtime.sendMessage({
+                  type: "SAVE_PLAYBACK_STATE",
+                  steps: runtimeSteps, index: 0, vars, speed, macroId
+                }, () => { void chrome.runtime.lastError; res(); });
+              });
+              window.location.href = navInfo.targetUrl || bootstrapUrl;
+            }
             return true;
           }
         }
@@ -2190,20 +2264,30 @@
           if (step.type === "navigate") {
             const _navUrl = expandVariables(step.url || "", vars);
             if (_navUrl && window.location.href !== _navUrl) {
-              let _sameDocument = false;
-              try {
-                const _cur = new URL(window.location.href);
-                const _dst = new URL(_navUrl, window.location.href);
-                _sameDocument =
-                  _cur.origin === _dst.origin &&
-                  _cur.pathname === _dst.pathname &&
-                  _cur.search === _dst.search;
-                if (_sameDocument) {
-                  if (_cur.hash !== _dst.hash) window.location.hash = _dst.hash || "";
+              const navInfo = _analyzeNavigation(window.location.href, _navUrl);
+              if (navInfo.sameDocument) {
+                if (navInfo.currentUrl && navInfo.targetUrlObject && navInfo.currentUrl.hash !== navInfo.targetUrlObject.hash) {
+                  window.location.hash = navInfo.targetUrlObject.hash || "";
                 }
-              } catch (_) { /* ignore parse issues */ }
+              }
 
-              if (!_sameDocument) {
+              if (!navInfo.sameDocument && navInfo.mustUseBackground) {
+                const handoff = await _requestBackgroundNavigate(navInfo.targetUrl || _navUrl, {
+                  steps: runtimeSteps,
+                  index: i + 1,
+                  vars,
+                  speed,
+                  macroId
+                });
+                if (!handoff || handoff.ok !== true) {
+                  const _errBase = (handoff && handoff.error) || "background_navigate_failed";
+                  const _errDetail = (handoff && handoff.detail) ? `: ${handoff.detail}` : "";
+                  throw new Error(`navigate failed: ${_errBase}${_errDetail}`);
+                }
+                return true;
+              }
+
+              if (!navInfo.sameDocument) {
                 // Real page unload navigation: persist and hand off to next page.
                 await new Promise((res) => {
                   chrome.runtime.sendMessage({
@@ -2211,7 +2295,7 @@
                     steps: runtimeSteps, index: i + 1, vars, speed, macroId
                   }, () => { void chrome.runtime.lastError; res(); });
                 });
-                window.location.href = _navUrl;
+                window.location.href = navInfo.targetUrl || _navUrl;
                 // Page is unloading — this promise never continues; exit play()
                 return true;
               }
