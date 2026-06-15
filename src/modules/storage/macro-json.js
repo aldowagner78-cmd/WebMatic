@@ -1,5 +1,5 @@
 (function initMacroJson(globalScope) {
-  const SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security)/i;
+  const SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
 
   function _isSensitiveControl(ctrl) {
     if (!ctrl || typeof ctrl !== "object") return false;
@@ -45,11 +45,36 @@
     return out;
   }
 
+  function _isSensitiveStep(step) {
+    if (!step || typeof step !== "object") return false;
+    if (step.sensitive === true) return true;
+    const t = String(step.type || "").toLowerCase();
+    if (t !== "input" && t !== "text") return false;
+    const selector = String(step.selector || "");
+    const id = String(step.id || "");
+    const name = String(step.name || "");
+    const label = String(step.label || "");
+    const inputType = String(step.inputType || step.typeAttr || "").toLowerCase();
+    return inputType === "password" ||
+      SENSITIVE_RE.test(selector) ||
+      SENSITIVE_RE.test(id) ||
+      SENSITIVE_RE.test(name) ||
+      SENSITIVE_RE.test(label);
+  }
+
   function _cleanSteps(steps) {
     const arr = Array.isArray(steps) ? steps : [];
     return arr.map((s) => {
       const c = Object.assign({}, s);
       delete c._ts;
+      if (_isSensitiveStep(c)) {
+        c.sensitive = true;
+        c.value = "";
+      }
+      if (Array.isArray(c.steps)) c.steps = _cleanSteps(c.steps);
+      if (Array.isArray(c.then)) c.then = _cleanSteps(c.then);
+      if (Array.isArray(c.else)) c.else = _cleanSteps(c.else);
+      if (Array.isArray(c.fallback)) c.fallback = _cleanSteps(c.fallback);
       return c;
     });
   }
