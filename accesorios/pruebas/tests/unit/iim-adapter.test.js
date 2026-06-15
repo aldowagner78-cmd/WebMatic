@@ -576,6 +576,56 @@ test("H-09: exportToIim no filtra secretos sentinela en WM_JSON ni texto final",
   assert.ok(!script.includes("SECRET_SHOULD_NOT_LEAK"));
 });
 
+test("exportToIim: input password no filtra valor real en lineas humanas ni WM_JSON", () => {
+  const macro = {
+    steps: [
+      { type: "input", selector: "#password", value: "SECRET_SHOULD_NOT_LEAK_2026" },
+      { type: "input", selector: "#usuario", value: "awagner" }
+    ]
+  };
+
+  const script = adapter.exportToIim(macro);
+  assert.ok(!script.includes("SECRET_SHOULD_NOT_LEAK_2026"), "el secreto no debe aparecer en el script exportado");
+  assert.ok(script.includes("SENSITIVE_INPUT"), "debe dejar traza redactada para el campo sensible");
+  assert.ok(script.includes('TYPE SELECTOR="#usuario" CONTENT="awagner"'), "campos normales deben seguir exportando valor");
+
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  assert.equal(parsed.steps[0].value, "", "WM_JSON debe vaciar el valor sensible");
+  assert.equal(parsed.steps[0].sensitive, true, "WM_JSON debe marcar paso sensible");
+});
+
+test("exportToIim: selector sensible token tampoco filtra valor real", () => {
+  const macro = {
+    steps: [
+      { type: "input", selector: "#api_token", value: "SECRET_SHOULD_NOT_LEAK_2026" },
+      { type: "input", selector: "#nombre", value: "Juan" }
+    ]
+  };
+
+  const script = adapter.exportToIim(macro);
+  assert.ok(!script.includes("SECRET_SHOULD_NOT_LEAK_2026"));
+  assert.ok(script.includes('TYPE SELECTOR="#nombre" CONTENT="Juan"'));
+});
+
+test("exportToIim: omite _baselineDefault en lineas humanas pero lo conserva en WM_JSON", () => {
+  const macro = {
+    steps: [
+      { type: "check", selector: '#chk-tecnologia input[name="generos"]', checked: false, _baselineDefault: true },
+      { type: "input", selector: "#nombre", value: "Juan" }
+    ]
+  };
+
+  const script = adapter.exportToIim(macro);
+  assert.ok(!script.includes('CHECK SELECTOR="#chk-tecnologia input[name=\\"generos\\\"]" CHECKED="false"'));
+  assert.ok(script.includes('TYPE SELECTOR="#nombre" CONTENT="Juan"'));
+
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  assert.equal(parsed.steps.length, 2, "WM_JSON debe conservar todos los pasos");
+  assert.equal(parsed.steps[0]._baselineDefault, true, "WM_JSON conserva marca de baseline");
+});
+
 // ── Round-trip con meta.preRunReset ─────────────────────────────────────────
 
 test("round-trip IIM: conserva meta.preRunReset con controles no sensibles", () => {

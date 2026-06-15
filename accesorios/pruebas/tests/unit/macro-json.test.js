@@ -55,3 +55,21 @@ test("macro-json: soporta JSON plano de macro por compat", () => {
 test("macro-json: falla con JSON sin steps", () => {
   assert.throws(() => macroJson.parseMacroJson('{"foo":1}'));
 });
+
+test("macro-json: no exporta valores sensibles en steps", () => {
+  const payload = macroJson.createMacroPayload({
+    name: "Macro segura",
+    steps: [
+      { type: "input", selector: "#password", value: "SECRET_SHOULD_NOT_LEAK_2026" },
+      { type: "input", selector: "#csrf_token", value: "SECRET_SHOULD_NOT_LEAK_2026" },
+      { type: "input", selector: "#usuario", value: "normal" }
+    ]
+  });
+
+  const asText = JSON.stringify(payload);
+  assert.ok(!asText.includes("SECRET_SHOULD_NOT_LEAK_2026"), "el secreto no debe aparecer en JSON exportado");
+  assert.equal(payload.macro.steps[0].value, "");
+  assert.equal(payload.macro.steps[0].sensitive, true);
+  assert.equal(payload.macro.steps[1].value, "");
+  assert.equal(payload.macro.steps[2].value, "normal");
+});

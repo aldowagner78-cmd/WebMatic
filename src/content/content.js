@@ -52,6 +52,36 @@
     } catch (_) {}
   }
 
+  const SENSITIVE_INPUT_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
+
+  function _isSensitiveSelectorText(raw) {
+    return SENSITIVE_INPUT_RE.test(String(raw || ""));
+  }
+
+  function _isSensitiveInputTarget(target, selector) {
+    if (!(target instanceof Element)) return false;
+    const type = String(target.getAttribute("type") || "").toLowerCase();
+    if (type === "password") return true;
+
+    const attrs = [
+      String(selector || ""),
+      String(target.id || ""),
+      String(target.getAttribute("name") || ""),
+      String(target.getAttribute("aria-label") || ""),
+      String(target.getAttribute("placeholder") || "")
+    ];
+
+    if (target instanceof HTMLInputElement) {
+      try {
+        if (target.labels && target.labels.length > 0) {
+          target.labels.forEach((lbl) => attrs.push(String((lbl && lbl.textContent) || "")));
+        }
+      } catch (_e) { /* ignore */ }
+    }
+
+    return attrs.some((entry) => _isSensitiveSelectorText(entry));
+  }
+
   // ── Sub-frame mode: only attach a lightweight recorder ──────────────────
   // When all_frames:true, this script runs inside every iframe too.
   // We do NOT mount the UI in sub-frames; we just capture events and relay
@@ -129,6 +159,7 @@
         _send({ type: "choose_option", selector: _sel(t), value: t.value });
         return;
       }
+      if (_isSensitiveInputTarget(t, _sel(t))) return;
       _send({ type: "input", selector: _sel(t), value: t.value });
     }, true);
     document.addEventListener("keydown", (e) => {
@@ -178,6 +209,7 @@
       const t = e.target;
       if (!(t instanceof HTMLInputElement) && !(t instanceof HTMLTextAreaElement) && !(t instanceof HTMLSelectElement)) return;
       if (t.readOnly || t.disabled) return;
+      if (_isSensitiveInputTarget(t, _sel(t))) return;
       if (_isRecording && _lastCopiedText !== null && _lastCopiedVar !== null && t.value.trim() === _lastCopiedText) {
         _send({ type: "input", selector: _sel(t), value: `{{!${_lastCopiedVar}}}` });
       }
@@ -191,6 +223,7 @@
       clearTimeout(_sfCeTimer);
       _sfCeTimer = setTimeout(() => {
         const val = (t.innerText || t.textContent || "").trim();
+        if (_isSensitiveInputTarget(t, _sel(t))) return;
         flashElement(t);
         _send({ type: "input", selector: _sel(t), value: val });
       }, 400);
@@ -277,6 +310,7 @@
   const settingsApi = globalScope.WebMaticSettings;
   const fullBackupApi = globalScope.WebMaticFullBackup;
   const macroJsonApi = globalScope.WebMaticMacroJson;
+  const macrosGlobalApi = globalScope.WebMaticMacrosGlobal;
 
   if (!contracts || !storeFactory || !uiShell || !geometry || !settingsApi) {
     console.error("[WebMatic] Modulos base incompletos.");
@@ -298,7 +332,9 @@
   }
 
   const PAGE_META_STORAGE_KEY = "webmaticPageMetadataProfiles";
-  const MACROS_STORAGE_KEY = "webmaticMacros";
+  const MACROS_STORAGE_KEY = (macrosGlobalApi && typeof macrosGlobalApi.getMacrosStorageKey === "function")
+    ? String(macrosGlobalApi.getMacrosStorageKey() || "webmaticMacros")
+    : "webmaticMacros";
   const MACROS_SYNC_META_KEY = "webmaticMacrosSyncMeta";
   const MACROS_SYNC_CHUNK_PREFIX = "webmaticMacrosSyncChunk_";
   const MACROS_SYNC_CHUNK_SIZE = 7000;
@@ -3987,7 +4023,7 @@
     } catch (e) { /* nunca interrumpir la grabación por el inventario */ }
   }
 
-  const PRE_RUN_RESET_SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security)/i;
+  const PRE_RUN_RESET_SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
 
   function _isSensitivePreRunField(el) {
     if (!(el instanceof Element)) return false;
@@ -5825,6 +5861,7 @@
         recordedValue = `{{!${recorderRuntime.lastCopiedVar}}}`;
       }
       const inpSel = buildSelector(target);
+      if (_isSensitiveInputTarget(target, inpSel)) return;
       _checkAndInjectWaitFor(target.id ? `#${target.id}` : inpSel);
       captureStep({ type: "input", selector: inpSel, value: recordedValue });
     };
@@ -5939,6 +5976,7 @@
       clearTimeout(recorderRuntime._ceTimer);
       recorderRuntime._ceTimer = setTimeout(() => {
         const val = (target.innerText || target.textContent || "").trim();
+        if (_isSensitiveInputTarget(target, buildSelector(target))) return;
         flashElement(target);
         captureStep({ type: "input", selector: buildSelector(target), value: val });
       }, 400);
@@ -6292,6 +6330,7 @@
       const val = (lastCopiedText !== null && lastCopiedVar !== null && raw.trim() === lastCopiedText)
         ? `{{!${lastCopiedVar}}}` : raw;
       const sel = buildSelector(t);
+      if (_isSensitiveInputTarget(t, sel)) return;
       _checkAndInjectWaitFor(t.id ? `#${t.id}` : sel, addStep);
       addStep({ type: "input", selector: sel, value: val });
     };
@@ -6390,6 +6429,7 @@
       clearTimeout(_ceTimer);
       _ceTimer = setTimeout(() => {
         const val = (t.innerText || t.textContent || "").trim();
+        if (_isSensitiveInputTarget(t, buildSelector(t))) return;
         flashElement(t); addStep({ type: "input", selector: buildSelector(t), value: val });
       }, 400);
     };
@@ -7042,6 +7082,7 @@
       const sel = RecorderClass ? RecorderClass.buildSelector(el) : (el.id ? `#${el.id}` : "");
       if (!sel || seen.has(sel)) continue;
       seen.add(sel);
+      if (_isSensitiveInputTarget(el, sel)) continue;
 
       if (tag === "select") {
         extraSteps.push({ type: "input", selector: sel, value: el.value, _fast: true, _baselineDefault: true });
@@ -9035,9 +9076,21 @@
   _resumePendingPlaybackIfAny();
 
   const onStorageChanged = (changes, areaName) => {
-    if (areaName !== "local" || !changes.webmaticSettings) {
-      return;
+    const incomingMacros = (macrosGlobalApi && typeof macrosGlobalApi.extractMacrosFromStorageChange === "function")
+      ? macrosGlobalApi.extractMacrosFromStorageChange(changes, areaName)
+      : (areaName === "local" && changes && changes[MACROS_STORAGE_KEY] ? (Array.isArray(changes[MACROS_STORAGE_KEY].newValue) ? changes[MACROS_STORAGE_KEY].newValue : []) : null);
+
+    if (Array.isArray(incomingMacros)) {
+      const currentMacros = Array.isArray(store.getState().library.macros) ? store.getState().library.macros : [];
+      const nextHash = _simpleStableHash(JSON.stringify(incomingMacros));
+      const currentHash = _simpleStableHash(JSON.stringify(currentMacros));
+      if (nextHash !== currentHash) {
+        lastMacrosPersistHash = nextHash;
+        store.dispatch({ type: contracts.ActionTypes.LIBRARY_LOADED, payload: incomingMacros });
+      }
     }
+
+    if (areaName !== "local" || !changes.webmaticSettings) return;
 
     const nextSettings = changes.webmaticSettings.newValue || {};
     const runtimeDataTemplates = normalizeRuntimeDataTemplates(nextSettings.runtimeDataTemplates);

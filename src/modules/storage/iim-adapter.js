@@ -1,5 +1,5 @@
 (function initIimAdapter(globalScope) {
-  const SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security)/i;
+  const SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
 
   // Quotes a value for iim format, escaping backslashes and double quotes
   function _quote(val) {
@@ -18,6 +18,45 @@
       SENSITIVE_RE.test(name) ||
       SENSITIVE_RE.test(label) ||
       SENSITIVE_RE.test(role);
+  }
+
+  function _isSensitiveStep(step) {
+    if (!step || typeof step !== "object") return false;
+    if (step.sensitive === true) return true;
+    const t = String(step.type || "").toLowerCase();
+    if (t !== "input" && t !== "text") return false;
+    const selector = String(step.selector || "");
+    const id = String(step.id || "");
+    const name = String(step.name || "");
+    const label = String(step.label || "");
+    const inputType = String(step.inputType || step.typeAttr || "").toLowerCase();
+    return inputType === "password" ||
+      SENSITIVE_RE.test(selector) ||
+      SENSITIVE_RE.test(id) ||
+      SENSITIVE_RE.test(name) ||
+      SENSITIVE_RE.test(label);
+  }
+
+  function _sanitizeStepForExport(step) {
+    if (!step || typeof step !== "object") return step;
+    const out = Object.assign({}, step);
+    delete out._ts;
+
+    if (_isSensitiveStep(out)) {
+      out.sensitive = true;
+      out.value = "";
+    }
+
+    if (Array.isArray(out.steps)) out.steps = out.steps.map(_sanitizeStepForExport);
+    if (Array.isArray(out.then)) out.then = out.then.map(_sanitizeStepForExport);
+    if (Array.isArray(out.else)) out.else = out.else.map(_sanitizeStepForExport);
+    if (Array.isArray(out.fallback)) out.fallback = out.fallback.map(_sanitizeStepForExport);
+
+    return out;
+  }
+
+  function _isBaselineDefaultStep(step) {
+    return !!(step && step._baselineDefault === true);
   }
 
   function _sanitizeMetaForExport(meta) {
@@ -69,30 +108,31 @@
    *   "// TYPE ..." comments for visual reference.
    */
   function exportToIim(macro) {
-    const steps = macro?.steps || [];
+    const steps = Array.isArray(macro?.steps) ? macro.steps.map(_sanitizeStepForExport) : [];
     const meta = _sanitizeMetaForExport(macro?.meta || null);
     const lines = ["VERSION BUILD=1000", "TAB T=1"];
 
     // Embed full steps JSON for lossless round-trip (importFromIim uses this first)
     if (steps.length > 0 || meta) {
       // Strip internal runtime-only keys before serialising
-      const clean = steps.map((s) => {
-        const c = Object.assign({}, s);
-        delete c._ts;
-        return c;
-      });
-      const payload = { version: 2, steps: clean };
+      const payload = { version: 2, steps };
       if (meta) payload.meta = meta;
       lines.push("// WM_JSON:" + JSON.stringify(payload));
     }
 
-    steps.forEach((step) => {
+    const humanSteps = steps.filter((step) => !_isBaselineDefaultStep(step));
+
+    humanSteps.forEach((step) => {
       // ── Standard IIM instructions (human-readable) ──────────────────────
       if (step.type === "click") {
         lines.push(`CLICK SELECTOR=${_quote(step.selector)}`);
         return;
       }
       if (step.type === "input" || step.type === "text") {
+        if (step.sensitive === true) {
+          lines.push(`// SENSITIVE_INPUT SELECTOR=${_quote(step.selector)} CONTENT=${_quote("[REDACTED]")}`);
+          return;
+        }
         lines.push(`TYPE SELECTOR=${_quote(step.selector)} CONTENT=${_quote(step.value)}`);
         return;
       }

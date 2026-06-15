@@ -1841,3 +1841,97 @@ test("preRunReset: restauracion silenciosa sin interacciones visibles", async ()
     assert.deepEqual(counts, { click: 0, mousedown: 0, mouseup: 0, focus: 0 });
   });
 });
+
+test("player: ignora _baselineDefault faltante y continua con pasos reales", async () => {
+  resetBody('<input id="ok" type="text" value="">');
+
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  let failed = null;
+  await new Promise((resolve) => {
+    p.play([
+      { type: "check", selector: '#chk-tecnologia input[name="generos"]', checked: false, _baselineDefault: true },
+      { type: "input", selector: "#ok", value: "real" }
+    ], {
+      vars: {},
+      speed: 1,
+      onDone: resolve,
+      onError: (err) => { failed = err; resolve(); }
+    });
+  });
+
+  assert.equal(failed, null, failed && failed.message);
+  assert.equal(win.document.getElementById("ok").value, "real");
+});
+
+test("player: _baselineDefault en subflujo if_exists tambien se ignora", async () => {
+  resetBody('<div id="gate"></div><input id="ok2" type="text" value="">');
+
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  let failed = null;
+  await new Promise((resolve) => {
+    p.play([
+      {
+        type: "if_exists",
+        selector: "#gate",
+        then: [
+          { type: "check", selector: '#chk-tecnologia input[name="generos"]', checked: false, _baselineDefault: true },
+          { type: "input", selector: "#ok2", value: "sub-real" }
+        ]
+      }
+    ], {
+      vars: {},
+      speed: 1,
+      onDone: resolve,
+      onError: (err) => { failed = err; resolve(); }
+    });
+  });
+
+  assert.equal(failed, null, failed && failed.message);
+  assert.equal(win.document.getElementById("ok2").value, "sub-real");
+});
+
+test("player: mantiene preRunReset al inicio y luego ignora _baselineDefault", async () => {
+  resetBody('<input id="campo" type="text" value="SUCIO"><input id="ok3" type="text" value="">');
+
+  const baseline = {
+    version: 1,
+    controls: [{ selector: "#campo", tag: "input", type: "text", value: "LIMPIO" }]
+  };
+
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  let failed = null;
+  await new Promise((resolve) => {
+    p.play([
+      { type: "check", selector: '#chk-tecnologia input[name="generos"]', checked: false, _baselineDefault: true },
+      { type: "input", selector: "#ok3", value: "post" }
+    ], {
+      vars: {},
+      speed: 1,
+      preRunReset: baseline,
+      onDone: resolve,
+      onError: (err) => { failed = err; resolve(); }
+    });
+  });
+
+  assert.equal(failed, null, failed && failed.message);
+  assert.equal(win.document.getElementById("campo").value, "LIMPIO");
+  assert.equal(win.document.getElementById("ok3").value, "post");
+});
+
+test("player: check real del usuario (sin _baselineDefault) si se ejecuta", async () => {
+  resetBody('<input id="c-real" type="checkbox">');
+
+  const p = new Player({ retryMs: 20, timeoutMs: 120 });
+  let failed = null;
+  await new Promise((resolve) => {
+    p.play([{ type: "check", selector: "#c-real", checked: true }], {
+      vars: {},
+      speed: 1,
+      onDone: resolve,
+      onError: (err) => { failed = err; resolve(); }
+    });
+  });
+
+  assert.equal(failed, null, failed && failed.message);
+  assert.equal(win.document.getElementById("c-real").checked, true);
+});
