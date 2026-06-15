@@ -852,7 +852,9 @@
             _requestBackgroundNavigate(navInfo.targetUrl || url, null)
               .then((resp) => {
                 if (!resp || resp.ok !== true) {
-                  reject(new Error(`navigate failed: ${(resp && resp.error) || "background_navigate_failed"}`));
+                  const _errBase = (resp && resp.error) || "background_navigate_failed";
+                  const _errDetail = (resp && resp.detail) ? `: ${resp.detail}` : "";
+                  reject(new Error(`navigate failed: ${_errBase}${_errDetail}`));
                   return;
                 }
               })
@@ -2075,7 +2077,9 @@
                 macroId
               });
               if (!resp || resp.ok !== true) {
-                throw new Error(`bootstrap navigate failed: ${(resp && resp.error) || "background_navigate_failed"}`);
+                const _errBase = (resp && resp.error) || "background_navigate_failed";
+                const _errDetail = (resp && resp.detail) ? `: ${resp.detail}` : "";
+                throw new Error(`bootstrap navigate failed: ${_errBase}${_errDetail}`);
               }
             } else {
               await new Promise((res) => {
@@ -2276,7 +2280,9 @@
                   macroId
                 });
                 if (!handoff || handoff.ok !== true) {
-                  throw new Error(`navigate failed: ${(handoff && handoff.error) || "background_navigate_failed"}`);
+                  const _errBase = (handoff && handoff.error) || "background_navigate_failed";
+                  const _errDetail = (handoff && handoff.detail) ? `: ${handoff.detail}` : "";
+                  throw new Error(`navigate failed: ${_errBase}${_errDetail}`);
                 }
                 return true;
               }

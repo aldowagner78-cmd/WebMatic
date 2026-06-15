@@ -761,11 +761,15 @@ test("navigate: hacia file:// delega en background y evita location.href directo
   assert.equal(vars.AFTER_FILE_NAV, undefined, "la continuación debe retomarse tras la navegación");
 });
 
-test("navigate: error del background en file:// dispara onError claro", async () => {
+test("navigate: error del background en file:// dispara onError con detail propagado", async () => {
   const prevSendMessage = globalThis.chrome.runtime.sendMessage;
   globalThis.chrome.runtime.sendMessage = (msg, cb) => {
     if (msg && msg.type === "PLAYBACK_NAVIGATE") {
-      if (typeof cb === "function") cb({ ok: false, error: "navigate_tab_update_failed" });
+      if (typeof cb === "function") cb({
+        ok: false,
+        error: "navigate_tab_update_failed",
+        detail: "tabs.update: Missing host permission for the tab; tabs.create: Cannot access file URL | SOLUCIÓN: En Firefox ve a about:addons → WebMatic"
+      });
       return;
     }
     if (typeof cb === "function") cb({ ok: true });
@@ -784,7 +788,9 @@ test("navigate: error del background en file:// dispara onError claro", async ()
   });
 
   globalThis.chrome.runtime.sendMessage = prevSendMessage;
-  assert.ok(gotError.includes("navigate failed"), `Error inesperado: ${gotError}`);
+  assert.ok(gotError.includes("navigate failed"), `Error debe contener 'navigate failed': ${gotError}`);
+  assert.ok(gotError.includes("Missing host permission"), `Error debe incluir detail real: ${gotError}`);
+  assert.ok(gotError.includes("SOLUCIÓN"), `Error debe incluir hint accionable: ${gotError}`);
 });
 
 test("navigate: http/https mantiene flujo existente sin PLAYBACK_NAVIGATE", async () => {
