@@ -6518,10 +6518,11 @@
       // Contenteditable is handled by _onCeInput below.
       if (t.isContentEditable) return;
 
-      // General text/search/tel/email/number/url inputs and textarea must be captured
-      // while the user is typing, not only on change/blur. This is necessary for
-      // filter boxes, live-search fields, GeneXus grids, SPA inputs and fields whose
-      // value is changed and then cleared before losing focus.
+      // Capture the real input stream, not only the final field state.
+      // This is critical for live filters/search boxes/GeneXus grids: a user may
+      // type a value, wait for AJAX/table filtering, then clear the same field
+      // without ever blurring it. Debouncing alone collapses that history into
+      // the final value and loses meaningful intermediate UI states.
       if (!_isTextEntryCaptureTarget(t)) return;
       if (t.readOnly || t.disabled) return;
 
@@ -6530,14 +6531,33 @@
       if (_isSensitiveInputTarget(t, selector)) return;
 
       const prevTimer = _inlineTextInputTimers.get(t);
-      if (prevTimer) clearTimeout(prevTimer);
-
-      const timer = setTimeout(() => {
+      if (prevTimer) {
+        clearTimeout(prevTimer);
         _inlineTextInputTimers.delete(t);
-        _captureCurrentTextValueForRecording(t, addStep, lastCopiedText, lastCopiedVar);
-      }, 650);
+      }
 
-      _inlineTextInputTimers.set(t, timer);
+      _captureCurrentTextValueForRecording(t, addStep, lastCopiedText, lastCopiedVar);
+    };
+
+    const _onTextKeyup = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
+          t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      if (t.isContentEditable) return;
+      if (!_isTextEntryCaptureTarget(t)) return;
+      if (t.readOnly || t.disabled) return;
+
+      // Fallback for legacy/enterprise pages that do not reliably dispatch
+      // input after editing keys, or when the value changes through key combos
+      // such as Ctrl+A + Backspace. The cleanup pass collapses duplicates while
+      // preserving same-field states separated by a real pause.
+      const selector = buildSelector(t);
+      if (!selector) return;
+      if (_isSensitiveInputTarget(t, selector)) return;
+      setTimeout(() => {
+        try { _captureCurrentTextValueForRecording(t, addStep, lastCopiedText, lastCopiedVar); } catch (_e) { /* ignore */ }
+      }, 0);
     };
 
     const _onCeInput = (e) => {
@@ -6597,6 +6617,7 @@
     document.addEventListener("click",     _onClick,    true);
     document.addEventListener("change",    _onChange,   true);
     document.addEventListener("keydown",   _onKeydown,  true);
+    document.addEventListener("keyup",     _onTextKeyup,true);
     document.addEventListener("dblclick",  _onDblClick, true);
     document.addEventListener("copy",      _onCopy,     true);
     document.addEventListener("input",     _onTextInput,true);
@@ -6615,8 +6636,10 @@
         frameDoc.addEventListener("click",    _onClick,    true);
         frameDoc.addEventListener("change",   _onChange,   true);
         frameDoc.addEventListener("keydown",  _onKeydown,  true);
+        frameDoc.addEventListener("keyup",    _onTextKeyup,true);
         frameDoc.addEventListener("dblclick", _onDblClick, true);
         frameDoc.addEventListener("copy",     _onCopy,     true);
+        frameDoc.addEventListener("input",    _onTextInput,true);
         frameDoc.addEventListener("input",    _onCeInput,  true);
         frameDoc.addEventListener("dragstart", _onDragStart, true);
         frameDoc.addEventListener("drop", _onDrop, true);
@@ -6630,8 +6653,10 @@
         frameDoc.removeEventListener("click",    _onClick,    true);
         frameDoc.removeEventListener("change",   _onChange,   true);
         frameDoc.removeEventListener("keydown",  _onKeydown,  true);
+        frameDoc.removeEventListener("keyup",    _onTextKeyup,true);
         frameDoc.removeEventListener("dblclick", _onDblClick, true);
         frameDoc.removeEventListener("copy",     _onCopy,     true);
+        frameDoc.removeEventListener("input",    _onTextInput,true);
         frameDoc.removeEventListener("input",    _onCeInput,  true);
         frameDoc.removeEventListener("dragstart", _onDragStart, true);
         frameDoc.removeEventListener("drop", _onDrop, true);
@@ -6660,8 +6685,10 @@
       document.removeEventListener("click",     _onClick,    true);
       document.removeEventListener("change",    _onChange,   true);
       document.removeEventListener("keydown",   _onKeydown,  true);
+      document.removeEventListener("keyup",     _onTextKeyup,true);
       document.removeEventListener("dblclick",  _onDblClick, true);
       document.removeEventListener("copy",      _onCopy,     true);
+      document.removeEventListener("input",     _onTextInput,true);
       document.removeEventListener("input",     _onCeInput,  true);
       document.removeEventListener("mouseover", _onMouseOver,true);
       document.removeEventListener("scroll",    _onScroll,   true);
@@ -6675,6 +6702,9 @@
         });
       } catch (_e) {}
       clearTimeout(_ceTimer); clearTimeout(_hoverTimer); clearTimeout(_scrollTimer);
+      // _inlineTextInputTimers is a WeakMap; individual timers are cancelled on
+      // each input event. No iteration is possible, but removing the listeners
+      // above prevents new captures after stop.
       if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
       _inlineDragSource = "";
       const p = document.getElementById(INLINE_REC_PANEL_ID);

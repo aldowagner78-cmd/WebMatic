@@ -914,32 +914,34 @@ async function main() {
     }
 
     // 2) Interactuar con input real de fixture para validar captura de escritura.
+    // No disparamos change/blur: el caso crítico real es escribir, esperar y borrar
+    // dentro del mismo campo antes de detener la grabación.
     const inputTyped = await execSync(sessionId, `
       const input = document.getElementById("filtro-tabla");
       if (!input) return { ok: false, reason: "fixture_input_missing" };
       input.focus();
       input.dispatchEvent(new MouseEvent("click", { bubbles: true }));
       input.value = "ana";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      return { ok: true, value: input.value };
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertText", data: "ana" }));
+      return { ok: true, value: input.value, active: document.activeElement === input };
     `);
     if (!inputTyped || !inputTyped.ok) {
       throw new Error(`No se pudo escribir en #filtro-tabla: ${JSON.stringify(inputTyped)}`);
     }
 
-    await sleep(500);
+    await sleep(1500);
 
     const inputCleared = await execSync(sessionId, `
       const input = document.getElementById("filtro-tabla");
       if (!input) return { ok: false, reason: "fixture_input_missing_on_clear" };
       input.focus();
       input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ctrlKey: true, key: "a", code: "KeyA" }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, ctrlKey: true, key: "a", code: "KeyA" }));
       input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Backspace", code: "Backspace" }));
       input.value = "";
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-      input.dispatchEvent(new Event("change", { bubbles: true }));
-      return { ok: true, value: input.value };
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "deleteContentBackward", data: null }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Backspace", code: "Backspace" }));
+      return { ok: true, value: input.value, active: document.activeElement === input };
     `);
     if (!inputCleared || !inputCleared.ok) {
       throw new Error(`No se pudo limpiar #filtro-tabla: ${JSON.stringify(inputCleared)}`);

@@ -153,6 +153,25 @@ test("dedupeFieldRuns: deduplica rafaga local input/change y conserva ultimo val
   assert.equal(fieldSteps[0].value, "111111");
 });
 
+
+
+test("dedupeFieldRuns: conserva filtro escrito y luego borrado tras pausa aunque haya rafaga de teclas", () => {
+  const steps = [
+    { type: "input", selector: "#filtro-tabla", value: "a", _ts: 1000 },
+    { type: "input", selector: "#filtro-tabla", value: "an", _ts: 1050 },
+    { type: "input", selector: "#filtro-tabla", value: "ana", _ts: 1100 },
+    { type: "input", selector: "#filtro-tabla", value: "", _ts: 3300 }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
+  assert.equal(out[0].selector, "#filtro-tabla");
+  assert.equal(out[0].value, "ana");
+  assert.equal(out[1].seconds, 3);
+  assert.equal(out[2].selector, "#filtro-tabla");
+  assert.equal(out[2].value, "");
+});
+
 test("dedupeFieldRuns: conserva estados intermedios de un filtro separados por pausa real", () => {
   const steps = [
     { type: "input", selector: "#filtro-tabla", value: "ana", _ts: 1000 },
