@@ -342,15 +342,44 @@ test("normalizeRecordedSteps: elimina flush redundante despues de Enter", () => 
   assert.equal(out[2].key, "Enter");
 });
 
-test("normalizeRecordedSteps: no elimina cambios reales del mismo campo", () => {
+test("normalizeRecordedSteps: compacta escritura progresiva del mismo campo", () => {
   const steps = [
-    { type: "input", selector: "#diagnostico", value: "DI" },
-    { type: "wait", seconds: 2 },
-    { type: "input", selector: "#diagnostico", value: "DIA" },
-    { type: "wait", seconds: 1 },
-    { type: "input", selector: "#diagnostico", value: "DIAGNOSTICO" }
+    { type: "input", selector: "#diagnostico", value: "D" },
+    { type: "wait", seconds: 10 },
+    { type: "input", selector: "#diagnostico", value: "DIAGNOSTICO EJ12 FINAL" }
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
-  assert.deepEqual(out.map((s) => s.value).filter((v) => v != null), ["DI", "DIA", "DIAGNOSTICO"]);
+  assert.deepEqual(out.map((s) => s.type), ["input"]);
+  assert.equal(out[0].selector, "#diagnostico");
+  assert.equal(out[0].value, "DIAGNOSTICO EJ12 FINAL");
+});
+
+test("normalizeRecordedSteps: compacta multiples parciales progresivos y conserva ultimo", () => {
+  const steps = [
+    { type: "input", selector: "#observaciones", value: "O" },
+    { type: "wait", seconds: 4 },
+    { type: "input", selector: "#observaciones", value: "OBSERVACIONES" },
+    { type: "wait", seconds: 4 },
+    { type: "input", selector: "#observaciones", value: "OBSERVACIONES EJ" },
+    { type: "wait", seconds: 9 },
+    { type: "input", selector: "#observaciones", value: "OBSERVACIONES EJ12 FINAL" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input"]);
+  assert.equal(out[0].selector, "#observaciones");
+  assert.equal(out[0].value, "OBSERVACIONES EJ12 FINAL");
+});
+
+test("normalizeRecordedSteps: conserva cambio real no progresivo", () => {
+  const steps = [
+    { type: "input", selector: "#campo", value: "ABC" },
+    { type: "wait", seconds: 2 },
+    { type: "input", selector: "#campo", value: "XYZ" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
+  assert.deepEqual(out.map((s) => s.value).filter((v) => v != null), ["ABC", "XYZ"]);
 });
