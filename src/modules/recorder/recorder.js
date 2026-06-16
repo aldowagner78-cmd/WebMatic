@@ -311,7 +311,12 @@
           const nx = list[j];
           if (nx && nx.type === "wait") continue;
           if (isFieldLike(nx) && nx.selector === step.selector) {
-            dropCurrent = true;
+            const prevTs = Number(step._ts);
+            const nextTs = Number(nx._ts);
+            const separatedByRealPause = Number.isFinite(prevTs) && Number.isFinite(nextTs) && Math.max(0, nextTs - prevTs) >= 1200;
+            // Same-field edits separated by a real pause are meaningful states
+            // (example: live-filter "ana" -> wait -> clear). Preserve both.
+            dropCurrent = !separatedByRealPause;
           }
           break;
         }
@@ -329,7 +334,9 @@
       for (const step of out) {
         if (isExplicitWait(step)) {
           withRealWaits.push(step);
-          if (lastRealStep && lastRealStep.type === "click") hasExplicitWaitAfterLastClick = true;
+          if (lastRealStep && (lastRealStep.type === "click" || isFieldLike(lastRealStep))) {
+            hasExplicitWaitAfterLastClick = true;
+          }
           continue;
         }
 
@@ -338,13 +345,19 @@
           continue;
         }
 
-        if (lastRealStep && lastRealStep.type === "click" && !hasExplicitWaitAfterLastClick) {
-          const prevTs = Number(lastRealStep._ts);
-          const curTs = Number(step._ts);
-          if (Number.isFinite(prevTs) && Number.isFinite(curTs)) {
-            const deltaMs = Math.max(0, curTs - prevTs);
-            if (deltaMs >= 1200) {
-              withRealWaits.push({ type: "wait", seconds: Math.min(10, Math.ceil(deltaMs / 1000)) });
+        if (lastRealStep && !hasExplicitWaitAfterLastClick) {
+          const shouldPreservePause =
+            lastRealStep.type === "click" ||
+            (isFieldLike(lastRealStep) && isFieldLike(step) && lastRealStep.selector === step.selector);
+
+          if (shouldPreservePause) {
+            const prevTs = Number(lastRealStep._ts);
+            const curTs = Number(step._ts);
+            if (Number.isFinite(prevTs) && Number.isFinite(curTs)) {
+              const deltaMs = Math.max(0, curTs - prevTs);
+              if (deltaMs >= 1200) {
+                withRealWaits.push({ type: "wait", seconds: Math.min(10, Math.ceil(deltaMs / 1000)) });
+              }
             }
           }
         }

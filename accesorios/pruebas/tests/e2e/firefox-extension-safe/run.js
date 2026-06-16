@@ -765,6 +765,7 @@ async function main() {
     visualEditorFlowPassed: false,
     valueDropdownVisible: false,
     valueDropdownHasRealOptions: false,
+    recorderInputStreamCaptured: false,
     stepUpdatedFromDropdown: false,
     iimReflectsEditedValue: false,
     playbackAppliedExpectedValue: false,
@@ -912,7 +913,41 @@ async function main() {
       await sleep(200);
     }
 
-    // 2) Interactuar con select real de fixture para generar choose_option.
+    // 2) Interactuar con input real de fixture para validar captura de escritura.
+    // No disparamos change/blur: el caso crítico real es escribir, esperar y borrar
+    // dentro del mismo campo antes de detener la grabación.
+    const inputTyped = await execSync(sessionId, `
+      const input = document.getElementById("filtro-tabla");
+      if (!input) return { ok: false, reason: "fixture_input_missing" };
+      input.focus();
+      input.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      input.value = "ana";
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "insertText", data: "ana" }));
+      return { ok: true, value: input.value, active: document.activeElement === input };
+    `);
+    if (!inputTyped || !inputTyped.ok) {
+      throw new Error(`No se pudo escribir en #filtro-tabla: ${JSON.stringify(inputTyped)}`);
+    }
+
+    await sleep(1500);
+
+    const inputCleared = await execSync(sessionId, `
+      const input = document.getElementById("filtro-tabla");
+      if (!input) return { ok: false, reason: "fixture_input_missing_on_clear" };
+      input.focus();
+      input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, ctrlKey: true, key: "a", code: "KeyA" }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, ctrlKey: true, key: "a", code: "KeyA" }));
+      input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Backspace", code: "Backspace" }));
+      input.value = "";
+      input.dispatchEvent(new InputEvent("input", { bubbles: true, cancelable: true, inputType: "deleteContentBackward", data: null }));
+      input.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, key: "Backspace", code: "Backspace" }));
+      return { ok: true, value: input.value, active: document.activeElement === input };
+    `);
+    if (!inputCleared || !inputCleared.ok) {
+      throw new Error(`No se pudo limpiar #filtro-tabla: ${JSON.stringify(inputCleared)}`);
+    }
+
+    // 3) Interactuar con select real de fixture para generar choose_option.
     const interacted = await execSync(sessionId, `
       const sel = document.getElementById("filtro-modalidad");
       if (!sel) return { ok: false, reason: "fixture_select_missing" };
@@ -926,7 +961,7 @@ async function main() {
       throw new Error(`No se pudo interactuar con select de fixture: ${JSON.stringify(interacted)}`);
     }
 
-    // 3) Detener grabación desde UI.
+    // 4) Detener grabación desde UI.
     const stoppedRecording = await execSync(sessionId, `
       const panel = document.getElementById("webmatic-panel-root");
       const btn = panel && panel.querySelector("[data-action='record-toggle'][data-record-btn]");
@@ -938,7 +973,7 @@ async function main() {
       throw new Error(`No se pudo detener grabación desde UI: ${JSON.stringify(stoppedRecording)}`);
     }
 
-    // 4) Esperar apertura del editor visual.
+    // 5) Esperar apertura del editor visual.
     const seOpenedAt = Date.now();
     let seVisible = false;
     while (Date.now() - seOpenedAt < 15000) {
@@ -952,7 +987,31 @@ async function main() {
     }
     if (!seVisible) throw new Error("No se abrió el editor visual tras detener grabación");
 
-    // 5) Expandir bloques colapsados y abrir el paso del select grabado.
+    const streamInputCheck = await execSync(sessionId, `
+      const panel = document.getElementById("webmatic-panel-root");
+      const scriptTab = panel && panel.querySelector("[data-action='script-editor-tab'][data-script-tab='script']");
+      if (!scriptTab) return { ok: false, reason: "script_tab_missing_for_input_check" };
+      scriptTab.click();
+      const area = panel.querySelector("[data-script-editor-area]");
+      if (!area) return { ok: false, reason: "script_area_missing_for_input_check" };
+      const txt = String(area.value || "");
+      const hasTypeAna = /TYPE\\s+SELECTOR="#filtro-tabla"\\s+CONTENT="ana"/m.test(txt);
+      const hasTypeEmpty = /TYPE\\s+SELECTOR="#filtro-tabla"\\s+CONTENT=""/m.test(txt);
+      const visualTab = panel.querySelector("[data-action='script-editor-tab'][data-script-tab='visual']");
+      if (visualTab) visualTab.click();
+      return {
+        ok: true,
+        hasTypeAna,
+        hasTypeEmpty,
+        snippet: txt.split("\\n").filter((l) => l.includes("#filtro-tabla")).slice(0, 6)
+      };
+    `);
+    if (!streamInputCheck || !streamInputCheck.ok || !streamInputCheck.hasTypeAna || !streamInputCheck.hasTypeEmpty) {
+      throw new Error(`Captura real de input incompleta para #filtro-tabla: ${JSON.stringify(streamInputCheck)}`);
+    }
+    checks.recorderInputStreamCaptured = true;
+
+    // 6) Expandir bloques colapsados y abrir el paso del select grabado.
     const openedChooseStep = await execSync(sessionId, `
       const panel = document.getElementById("webmatic-panel-root");
       if (!panel) return { opened: false, rowCount: 0, reason: "panel_missing" };
@@ -988,7 +1047,7 @@ async function main() {
       throw new Error(`No se encontró/abrió paso choose_option: ${JSON.stringify(openedChooseStep)}`);
     }
 
-    // 6) Verificar dropdown VALUE y opciones reales visibles.
+    // 7) Verificar dropdown VALUE y opciones reales visibles.
     const comboReadyAt = Date.now();
     let comboInfo = null;
     while (Date.now() - comboReadyAt < 10000) {
@@ -1012,7 +1071,7 @@ async function main() {
     }
     checks.valueDropdownHasRealOptions = true;
 
-    // 7) Cambiar VALUE desde dropdown y guardar paso.
+    // 8) Cambiar VALUE desde dropdown y guardar paso.
     const changedValue = await execSync(sessionId, `
       const panel = document.getElementById("webmatic-panel-root");
       const combo = panel && panel.querySelector(".wm-sved-edit-form [data-wm-optcombo]");
@@ -1044,7 +1103,7 @@ async function main() {
     }
     checks.stepUpdatedFromDropdown = true;
 
-    // 8) Guardar macro desde editor (prompt modal).
+    // 9) Guardar macro desde editor (prompt modal).
     const saveClicked = await execSync(sessionId, `
       const panel = document.getElementById("webmatic-panel-root");
       const btn = panel && panel.querySelector("[data-action='script-editor-save']");
@@ -1088,7 +1147,7 @@ async function main() {
     }
     if (!macroSaved) throw new Error("La macro guardada no apareció en biblioteca o el editor no cerró");
 
-    // 9) Reabrir macro, ir a tab Script y verificar IIM actualizado.
+    // 10) Reabrir macro, ir a tab Script y verificar IIM actualizado.
     const openedMacro = await execSync(sessionId, `
       const panel = document.getElementById("webmatic-panel-root");
       const rows = Array.from(panel.querySelectorAll(".webmatic-macro-item"));
@@ -1134,7 +1193,7 @@ async function main() {
       return true;
     `);
 
-    // 10) Reproducir macro y confirmar valor final esperado en fixture.
+    // 11) Reproducir macro y confirmar valor final esperado en fixture.
     const startedPlay = await execSync(sessionId, `
       const panel = document.getElementById("webmatic-panel-root");
       const rows = Array.from(panel.querySelectorAll(".webmatic-macro-item"));
@@ -1177,6 +1236,7 @@ async function main() {
     checks.playbackAppliedExpectedValue = true;
 
     checks.visualEditorFlowPassed =
+      checks.recorderInputStreamCaptured &&
       checks.valueDropdownVisible &&
       checks.valueDropdownHasRealOptions &&
       checks.stepUpdatedFromDropdown &&

@@ -214,19 +214,34 @@
         _send({ type: "input", selector: _sel(t), value: `{{!${_lastCopiedVar}}}` });
       }
     }, true);
-    // contenteditable input (debounced — avoids capturing every keystroke)
+    // Text and contenteditable input (debounced — avoids capturing every keystroke)
     let _sfCeTimer = null;
+    let _sfTextTimer = null;
     document.addEventListener("input", (e) => {
       const t = e.target;
-      if (!(t instanceof Element) || !t.isContentEditable) return;
+      if (!(t instanceof Element)) return;
       if (!_isRecording) return;
-      clearTimeout(_sfCeTimer);
-      _sfCeTimer = setTimeout(() => {
-        const val = (t.innerText || t.textContent || "").trim();
-        if (_isSensitiveInputTarget(t, _sel(t))) return;
+
+      if (t.isContentEditable) {
+        clearTimeout(_sfCeTimer);
+        _sfCeTimer = setTimeout(() => {
+          const val = (t.innerText || t.textContent || "").trim();
+          if (_isSensitiveInputTarget(t, _sel(t))) return;
+          flashElement(t);
+          _send({ type: "input", selector: _sel(t), value: val });
+        }, 400);
+        return;
+      }
+
+      if (!_isTextEntryCaptureTarget(t)) return;
+      if (t.readOnly || t.disabled) return;
+      if (_isSensitiveInputTarget(t, _sel(t))) return;
+
+      clearTimeout(_sfTextTimer);
+      _sfTextTimer = setTimeout(() => {
         flashElement(t);
-        _send({ type: "input", selector: _sel(t), value: val });
-      }, 400);
+        _send({ type: "input", selector: _sel(t), value: String(t.value == null ? "" : t.value) });
+      }, 650);
     }, true);
     // dblclick
     document.addEventListener("dblclick", (e) => {
@@ -5598,6 +5613,67 @@
     return false;
   }
 
+  function _isRequiredSelectorRecordedStep(step) {
+    if (!step || typeof step !== "object") return false;
+    return step.type === "click" ||
+      step.type === "dblclick" ||
+      step.type === "input" ||
+      step.type === "text" ||
+      step.type === "check" ||
+      step.type === "choose_option" ||
+      step.type === "wait_for" ||
+      step.type === "hover" ||
+      step.type === "scroll_to" ||
+      step.type === "extract";
+  }
+
+  function _isInvalidCapturedStep(step) {
+    if (!step || typeof step !== "object") return true;
+    if (_isRequiredSelectorRecordedStep(step)) {
+      return !String(step.selector || "").trim();
+    }
+    if (step.type === "drag_drop") {
+      return !String(step.from || "").trim() || !String(step.to || "").trim();
+    }
+    return false;
+  }
+
+  function _captureCurrentTextValueForRecording(target, emitStep, copiedText, copiedVar) {
+    if (!(target instanceof Element)) return false;
+    if (target.closest("#webmatic-panel-root") ||
+        target.closest("#webmatic-floating-recorder-global") ||
+        target.closest("#webmatic-floating-player-global") ||
+        target.closest("#" + INLINE_REC_PANEL_ID)) {
+      return false;
+    }
+
+    const isContentEditable = !!target.isContentEditable;
+    if (!isContentEditable && !_isTextEntryCaptureTarget(target)) return false;
+    if (target.readOnly || target.disabled) return false;
+
+    const selector = buildSelector(target);
+    if (!selector) return false;
+    if (_isSensitiveInputTarget(target, selector)) return false;
+
+    const rawValue = isContentEditable
+      ? String(target.innerText || target.textContent || "").trim()
+      : String(target.value == null ? "" : target.value);
+    const value = (copiedText !== null && copiedVar !== null && rawValue.trim() === copiedText)
+      ? `{{!${copiedVar}}}`
+      : rawValue;
+
+    _checkAndInjectWaitFor(target.id ? `#${target.id}` : selector, emitStep);
+    emitStep({ type: "input", selector, value });
+    return true;
+  }
+
+  function _flushActiveTextInputForRecording(emitStep, copiedText, copiedVar, nextTarget) {
+    const active = document.activeElement;
+    if (!(active instanceof Element)) return false;
+    if (nextTarget instanceof Element && (active === nextTarget || active.contains(nextTarget))) return false;
+    return _captureCurrentTextValueForRecording(active, emitStep, copiedText, copiedVar);
+  }
+
   function _shouldPreferClickOverCheck(originalTarget, checkTarget) {
     if (!(originalTarget instanceof Element) || !(checkTarget instanceof HTMLInputElement)) return false;
 
@@ -5712,6 +5788,7 @@
   }
 
   function captureStep(step) {
+    if (_isInvalidCapturedStep(step)) return;
     const blockKey = _resolveStepBlockKey(step);
     const stamped = Object.assign({ _ts: Date.now() }, step);
     if (blockKey) {
@@ -5758,6 +5835,7 @@
       if (!(target instanceof Element) || target.closest("#webmatic-panel-root") || target.closest("#webmatic-floating-recorder-global") || target.closest("#webmatic-floating-player-global")) {
         return;
       }
+      _flushActiveTextInputForRecording(captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar, target);
       let checkTarget = target instanceof HTMLInputElement && (target.type === "checkbox" || target.type === "radio")
         ? target
         : target.closest && target.closest('input[type="checkbox"], input[type="radio"]');
@@ -5873,6 +5951,7 @@
       }
       // Special navigation keys → capture as key step
       if (["Enter", "Tab", "Escape"].includes(event.key)) {
+        _flushActiveTextInputForRecording(captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar, null);
         if (target instanceof Element) flashElement(target);
         captureStep({ type: "key", key: event.key });
         return;
@@ -5881,6 +5960,7 @@
       if (event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
         if (_isTextEntryCaptureTarget(target)) return;
         const selector = target instanceof Element ? buildSelector(target) : "";
+        if (!selector) return;
         if (target instanceof Element && target.id) {
           _checkAndInjectWaitFor(`#${target.id}`);
         } else if (selector) {
@@ -5895,6 +5975,54 @@
           captureStep({ type: "text", selector, value: event.key });
         }
       }
+    };
+
+    const onTextInput = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("#webmatic-panel-root") ||
+          target.closest("#webmatic-floating-recorder-global") ||
+          target.closest("#webmatic-floating-player-global")) {
+        return;
+      }
+
+      if (target.isContentEditable) return;
+      if (!_isTextEntryCaptureTarget(target)) return;
+      if (target.readOnly || target.disabled) return;
+
+      const selector = buildSelector(target);
+      if (!selector) return;
+      if (_isSensitiveInputTarget(target, selector)) return;
+
+      // Capture real input stream, not only final state/blur.
+      // Required for live filters, GeneXus searches, autocomplete and AJAX fields
+      // where the user may type, wait for UI updates, and clear without leaving focus.
+      _captureCurrentTextValueForRecording(target, captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar);
+    };
+
+    const onTextKeyup = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("#webmatic-panel-root") ||
+          target.closest("#webmatic-floating-recorder-global") ||
+          target.closest("#webmatic-floating-player-global")) {
+        return;
+      }
+
+      if (target.isContentEditable) return;
+      if (!_isTextEntryCaptureTarget(target)) return;
+      if (target.readOnly || target.disabled) return;
+
+      const selector = buildSelector(target);
+      if (!selector) return;
+      if (_isSensitiveInputTarget(target, selector)) return;
+
+      // Fallback for legacy pages/key combos such as Ctrl+A + Backspace.
+      setTimeout(() => {
+        try {
+          _captureCurrentTextValueForRecording(target, captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar);
+        } catch (_e) { /* ignore */ }
+      }, 0);
     };
 
     const _resolveDropTarget = (el) => {
@@ -5928,6 +6056,8 @@
     document.addEventListener("click", onClick, true);
     document.addEventListener("change", onChange, true);
     document.addEventListener("keydown", onKeydown, true);
+    document.addEventListener("input", onTextInput, true);
+    document.addEventListener("keyup", onTextKeyup, true);
     document.addEventListener("dragstart", onDragStart, true);
     document.addEventListener("drop", onDrop, true);
 
@@ -6066,6 +6196,7 @@
     const _origReplaceState = history.replaceState.bind(history);
     const _captureSpaNav = (rawUrl) => {
       try {
+        _flushActiveTextInputForRecording(captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar, null);
         const url = new URL(String(rawUrl || ""), window.location.href).href;
         const st  = store.getState().draft.steps;
         const last = st[st.length - 1];
@@ -6089,6 +6220,8 @@
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("change", onChange, true);
       document.removeEventListener("keydown", onKeydown, true);
+      document.removeEventListener("input", onTextInput, true);
+      document.removeEventListener("keyup", onTextKeyup, true);
       document.removeEventListener("dragstart", onDragStart, true);
       document.removeEventListener("drop", onDrop, true);
       document.removeEventListener("copy", onCopy, true);
@@ -6113,6 +6246,7 @@
   }
 
   function stopRecorderSession() {
+    _flushActiveTextInputForRecording(captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar, null);
     if (recorderRuntime.cleanup) {
       recorderRuntime.cleanup();
     }
@@ -6219,6 +6353,7 @@
     const buffer = [];
     const _priorCount = (_priorStepCount || 0); // pasos acumulados en páginas anteriores
     let _ceTimer = null;
+    const _inlineTextInputTimers = new WeakMap();
     let _hoverEl = null, _hoverObs = null, _hoverSeen = false, _hoverTimer = null;
     let _scrollTimer = null;
     let _inlineDragSource = "";
@@ -6235,6 +6370,7 @@
     }
 
     function addStep(step) {
+      if (_isInvalidCapturedStep(step)) return;
       const fullStep = Object.assign({ _ts: Date.now() }, step);
       buffer.push(fullStep);
       // Persistir en background para sobrevivir navegaciones
@@ -6248,6 +6384,7 @@
       if (!(t instanceof Element)) return;
       if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
           t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      _flushActiveTextInputForRecording(addStep, lastCopiedText, lastCopiedVar, t);
       let checkTarget = t instanceof HTMLInputElement && (t.type === "checkbox" || t.type === "radio")
         ? t
         : t.closest && t.closest('input[type="checkbox"], input[type="radio"]');
@@ -6339,12 +6476,14 @@
       const t = e.target;
       if (t instanceof Element && (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID))) return;
       if (["Enter", "Tab", "Escape"].includes(e.key)) {
+        _flushActiveTextInputForRecording(addStep, lastCopiedText, lastCopiedVar, null);
         if (t instanceof Element) flashElement(t);
         addStep({ type: "key", key: e.key }); return;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
         if (_isTextEntryCaptureTarget(t)) return;
         const sel = t instanceof Element ? buildSelector(t) : "";
+        if (!sel) return;
         if (t instanceof Element && t.id) {
           _checkAndInjectWaitFor(`#${t.id}`, addStep);
         } else if (sel) {
@@ -6422,6 +6561,57 @@
       flashElement(el); addStep({ type: "extract", selector: buildSelector(el), variable: vn });
     };
 
+    const _onTextInput = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
+          t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+
+      // Contenteditable is handled by _onCeInput below.
+      if (t.isContentEditable) return;
+
+      // Capture the real input stream, not only the final field state.
+      // This is critical for live filters/search boxes/GeneXus grids: a user may
+      // type a value, wait for AJAX/table filtering, then clear the same field
+      // without ever blurring it. Debouncing alone collapses that history into
+      // the final value and loses meaningful intermediate UI states.
+      if (!_isTextEntryCaptureTarget(t)) return;
+      if (t.readOnly || t.disabled) return;
+
+      const selector = buildSelector(t);
+      if (!selector) return;
+      if (_isSensitiveInputTarget(t, selector)) return;
+
+      const prevTimer = _inlineTextInputTimers.get(t);
+      if (prevTimer) {
+        clearTimeout(prevTimer);
+        _inlineTextInputTimers.delete(t);
+      }
+
+      _captureCurrentTextValueForRecording(t, addStep, lastCopiedText, lastCopiedVar);
+    };
+
+    const _onTextKeyup = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
+          t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      if (t.isContentEditable) return;
+      if (!_isTextEntryCaptureTarget(t)) return;
+      if (t.readOnly || t.disabled) return;
+
+      // Fallback for legacy/enterprise pages that do not reliably dispatch
+      // input after editing keys, or when the value changes through key combos
+      // such as Ctrl+A + Backspace. The cleanup pass collapses duplicates while
+      // preserving same-field states separated by a real pause.
+      const selector = buildSelector(t);
+      if (!selector) return;
+      if (_isSensitiveInputTarget(t, selector)) return;
+      setTimeout(() => {
+        try { _captureCurrentTextValueForRecording(t, addStep, lastCopiedText, lastCopiedVar); } catch (_e) { /* ignore */ }
+      }, 0);
+    };
+
     const _onCeInput = (e) => {
       const t = e.target;
       if (!(t instanceof Element) || !t.isContentEditable) return;
@@ -6479,8 +6669,10 @@
     document.addEventListener("click",     _onClick,    true);
     document.addEventListener("change",    _onChange,   true);
     document.addEventListener("keydown",   _onKeydown,  true);
+    document.addEventListener("keyup",     _onTextKeyup,true);
     document.addEventListener("dblclick",  _onDblClick, true);
     document.addEventListener("copy",      _onCopy,     true);
+    document.addEventListener("input",     _onTextInput,true);
     document.addEventListener("input",     _onCeInput,  true);
     document.addEventListener("mouseover", _onMouseOver,true);
     document.addEventListener("scroll",    _onScroll,   true);
@@ -6496,8 +6688,10 @@
         frameDoc.addEventListener("click",    _onClick,    true);
         frameDoc.addEventListener("change",   _onChange,   true);
         frameDoc.addEventListener("keydown",  _onKeydown,  true);
+        frameDoc.addEventListener("keyup",    _onTextKeyup,true);
         frameDoc.addEventListener("dblclick", _onDblClick, true);
         frameDoc.addEventListener("copy",     _onCopy,     true);
+        frameDoc.addEventListener("input",    _onTextInput,true);
         frameDoc.addEventListener("input",    _onCeInput,  true);
         frameDoc.addEventListener("dragstart", _onDragStart, true);
         frameDoc.addEventListener("drop", _onDrop, true);
@@ -6511,8 +6705,10 @@
         frameDoc.removeEventListener("click",    _onClick,    true);
         frameDoc.removeEventListener("change",   _onChange,   true);
         frameDoc.removeEventListener("keydown",  _onKeydown,  true);
+        frameDoc.removeEventListener("keyup",    _onTextKeyup,true);
         frameDoc.removeEventListener("dblclick", _onDblClick, true);
         frameDoc.removeEventListener("copy",     _onCopy,     true);
+        frameDoc.removeEventListener("input",    _onTextInput,true);
         frameDoc.removeEventListener("input",    _onCeInput,  true);
         frameDoc.removeEventListener("dragstart", _onDragStart, true);
         frameDoc.removeEventListener("drop", _onDrop, true);
@@ -6541,8 +6737,10 @@
       document.removeEventListener("click",     _onClick,    true);
       document.removeEventListener("change",    _onChange,   true);
       document.removeEventListener("keydown",   _onKeydown,  true);
+      document.removeEventListener("keyup",     _onTextKeyup,true);
       document.removeEventListener("dblclick",  _onDblClick, true);
       document.removeEventListener("copy",      _onCopy,     true);
+      document.removeEventListener("input",     _onTextInput,true);
       document.removeEventListener("input",     _onCeInput,  true);
       document.removeEventListener("mouseover", _onMouseOver,true);
       document.removeEventListener("scroll",    _onScroll,   true);
@@ -6556,6 +6754,9 @@
         });
       } catch (_e) {}
       clearTimeout(_ceTimer); clearTimeout(_hoverTimer); clearTimeout(_scrollTimer);
+      // _inlineTextInputTimers is a WeakMap; individual timers are cancelled on
+      // each input event. No iteration is possible, but removing the listeners
+      // above prevents new captures after stop.
       if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
       _inlineDragSource = "";
       const p = document.getElementById(INLINE_REC_PANEL_ID);
@@ -6563,6 +6764,7 @@
     }
 
     function _stop() {
+      _flushActiveTextInputForRecording(addStep, lastCopiedText, lastCopiedVar, null);
       _activeInlineStop = null;
       _cleanup();
       // Restaurar el panel si estaba visible antes de grabar
@@ -6693,17 +6895,21 @@
       .trim()
       .toLowerCase();
 
-    // Pass 0: remove single click steps that are precursors of a dblclick
+    // Pass 0: discard malformed selector-bearing steps.
+    // A step like CLICK SELECTOR="" is never replayable and must not be saved.
+    const pass0safe = (Array.isArray(steps) ? steps : []).filter((step) => !_isInvalidCapturedStep(step));
+
+    // Pass 0a: remove single click steps that are precursors of a dblclick
     // (double-click fires: click → click → dblclick; keep only the dblclick)
-    const hasDblClick = steps.some((s) => s.type === "dblclick");
+    const hasDblClick = pass0safe.some((s) => s.type === "dblclick");
     const pass0 = hasDblClick ? (() => {
       const out = [];
-      for (let i = 0; i < steps.length; i++) {
-        const s = steps[i];
+      for (let i = 0; i < pass0safe.length; i++) {
+        const s = pass0safe[i];
         if (s.type === "click" && s.selector) {
           let isDblPrecursor = false;
-          for (let k = i + 1; k <= Math.min(i + 2, steps.length - 1); k++) {
-            if (steps[k].type === "dblclick" && steps[k].selector === s.selector) {
+          for (let k = i + 1; k <= Math.min(i + 2, pass0safe.length - 1); k++) {
+            if (pass0safe[k].type === "dblclick" && pass0safe[k].selector === s.selector) {
               isDblPrecursor = true;
               break;
             }
@@ -6713,7 +6919,7 @@
         out.push(s);
       }
       return out;
-    })() : steps;
+    })() : pass0safe;
 
     // Pass 0b: remove Tab navigation noise.
     // Tab is useful for manual navigation, but as recorded macro steps it is
