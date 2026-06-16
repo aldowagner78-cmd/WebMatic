@@ -308,3 +308,49 @@ test("preRunReset: captura selectores canónicos #id para checkbox/radio/select/
     assert.equal(/#\w[\w-]*\s+(input|select|textarea)\[/.test(s), false);
   });
 });
+
+test("normalizeRecordedSteps: elimina TYPE duplicado identico y conserva borrado real", () => {
+  const steps = [
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "wait", seconds: 5 },
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "wait", seconds: 2 },
+    { type: "input", selector: "#filtro-tabla", value: "" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
+  assert.equal(out[0].value, "ana");
+  assert.equal(out[1].seconds, 7);
+  assert.equal(out[2].value, "");
+});
+
+test("normalizeRecordedSteps: elimina flush redundante despues de Enter", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "test enter" },
+    { type: "wait", seconds: 4 },
+    { type: "input", selector: "#busqueda", value: "test enter" },
+    { type: "key", key: "Enter" },
+    { type: "input", selector: "#busqueda", value: "test enter" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "key"]);
+  assert.equal(out[0].selector, "#busqueda");
+  assert.equal(out[0].value, "test enter");
+  assert.equal(out[1].seconds, 4);
+  assert.equal(out[2].key, "Enter");
+});
+
+test("normalizeRecordedSteps: no elimina cambios reales del mismo campo", () => {
+  const steps = [
+    { type: "input", selector: "#diagnostico", value: "DI" },
+    { type: "wait", seconds: 2 },
+    { type: "input", selector: "#diagnostico", value: "DIA" },
+    { type: "wait", seconds: 1 },
+    { type: "input", selector: "#diagnostico", value: "DIAGNOSTICO" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.value).filter((v) => v != null), ["DI", "DIA", "DIAGNOSTICO"]);
+});

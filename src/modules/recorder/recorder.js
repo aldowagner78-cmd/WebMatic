@@ -294,6 +294,67 @@
      * Deduplica solo rafagas locales de cambios sobre el mismo selector,
      * preservando ediciones del mismo campo en momentos distintos del flujo.
      */
+    /**
+     * Limpieza posgrabacion conservadora.
+     * Elimina solo snapshots redundantes del mismo campo con el mismo valor,
+     * preservando cambios reales como TYPE "ana" -> WAIT -> TYPE "".
+     */
+    static normalizeRecordedSteps(steps) {
+      const list = Array.isArray(steps) ? steps : [];
+      const isInputLike = (s) => !!(s && (s.type === "input" || s.type === "text") && s.selector);
+      const isWait = (s) => !!(s && s.type === "wait");
+      const sameInputSnapshot = (a, b) => !!(
+        isInputLike(a) &&
+        isInputLike(b) &&
+        a.selector === b.selector &&
+        String(a.value == null ? "" : a.value) === String(b.value == null ? "" : b.value)
+      );
+
+      const findPrevNonWaitIndex = (arr, fromIndex) => {
+        for (let i = fromIndex; i >= 0; i -= 1) {
+          if (!isWait(arr[i])) return i;
+        }
+        return -1;
+      };
+
+      const compacted = [];
+      for (const step of list) {
+        if (isInputLike(step)) {
+          const prevIdx = findPrevNonWaitIndex(compacted, compacted.length - 1);
+          const prev = prevIdx >= 0 ? compacted[prevIdx] : null;
+
+          // Caso seguro: TYPE mismo selector + mismo valor, y entre ambos solo hay WAIT.
+          // Quita el snapshot repetido, pero deja los WAIT para conservar el ritmo.
+          if (sameInputSnapshot(prev, step)) {
+            continue;
+          }
+
+          // Caso seguro: TYPE X -> KEY Enter -> TYPE X inmediato.
+          // Ese TYPE posterior suele ser un flush tardio del mismo valor.
+          if (prev && prev.type === "key" && String(prev.key || "").toLowerCase() === "enter") {
+            const hasWaitAfterEnter = compacted.slice(prevIdx + 1).some((s) => isWait(s));
+            const beforeKeyIdx = findPrevNonWaitIndex(compacted, prevIdx - 1);
+            const beforeKey = beforeKeyIdx >= 0 ? compacted[beforeKeyIdx] : null;
+            if (!hasWaitAfterEnter && sameInputSnapshot(beforeKey, step)) {
+              continue;
+            }
+          }
+        }
+
+        if (isWait(step) && compacted.length > 0 && isWait(compacted[compacted.length - 1])) {
+          const prev = compacted[compacted.length - 1];
+          const a = Number(prev.seconds);
+          const b = Number(step.seconds);
+          prev.seconds = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
+          continue;
+        }
+
+        compacted.push(step);
+      }
+
+      return compacted;
+    }
+
     static dedupeFieldRuns(steps) {
       const isFieldLike = (s) => !!(s && (s.type === "input" || s.type === "text" || s.type === "check") && s.selector);
       const out = [];
@@ -367,7 +428,7 @@
         hasExplicitWaitAfterLastClick = false;
       }
 
-      return withRealWaits;
+      return Recorder.normalizeRecordedSteps(withRealWaits);
     }
 
     static _PRE_RUN_RESET_SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
