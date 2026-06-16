@@ -1,8 +1,36 @@
 (function bootstrapWebMatic(globalScope) {
   // ── Shared: flash visual feedback on recorded element ───────────────────
+  // Visual-only guard: when the user is typing/editing the same field,
+  // flash it once and do not flash again until focus moves away or another
+  // element is recorded. This does not affect recorded steps or playback.
+  let _wmLastFlashedTextTarget = null;
+  function _isWmTextFlashTarget(el) {
+    if (!(el instanceof Element)) return false;
+    if (el.isContentEditable) return true;
+    if (el instanceof HTMLTextAreaElement) return true;
+    if (!(el instanceof HTMLInputElement)) return false;
+    const type = String(el.getAttribute("type") || "text").toLowerCase();
+    return !["button", "submit", "reset", "checkbox", "radio", "image", "file", "hidden", "range", "color"].includes(type);
+  }
+  function _shouldSuppressRepeatedTextFlash(el) {
+    if (!_isWmTextFlashTarget(el)) {
+      _wmLastFlashedTextTarget = null;
+      return false;
+    }
+    if (_wmLastFlashedTextTarget === el) return true;
+    _wmLastFlashedTextTarget = el;
+    try {
+      el.addEventListener("blur", () => {
+        if (_wmLastFlashedTextTarget === el) _wmLastFlashedTextTarget = null;
+      }, { once: true, capture: true });
+    } catch (_) { /* ignore */ }
+    return false;
+  }
+
   function flashElement(el) {
     if (!(el instanceof Element)) return;
     try {
+      if (_shouldSuppressRepeatedTextFlash(el)) return;
       const doc = el.ownerDocument;
       const win = doc && doc.defaultView;
       if (!doc || !win) return;
@@ -5787,6 +5815,59 @@
     }, 15000);
   }
 
+  function _isVisualCoalescibleTextStep(step) {
+    if (!step || typeof step !== "object") return false;
+    if (step._baselineDefault) return false;
+    if (step.type !== "input" && step.type !== "text") return false;
+    const selector = String(step.selector || "");
+    if (!selector) return false;
+    if (step.type === "input" && !("value" in step)) return false;
+    if (step.type === "text" && !("value" in step)) return false;
+    return true;
+  }
+
+  function _visualCoalesceRecordingSteps(steps) {
+    const list = Array.isArray(steps) ? steps : [];
+    if (list.length < 2) return list.slice();
+    const out = [];
+    for (const step of list) {
+      if (_isVisualCoalescibleTextStep(step)) {
+        const selector = String(step.selector || "");
+        let prevIdx = -1;
+        for (let i = out.length - 1; i >= 0; i -= 1) {
+          const prev = out[i];
+          if (_isVisualCoalescibleTextStep(prev) && String(prev.selector || "") === selector) {
+            prevIdx = i;
+            break;
+          }
+          if (!prev || prev.type !== "wait") break;
+        }
+        if (prevIdx >= 0) {
+          out.splice(prevIdx, out.length - prevIdx, { ...step, _wmVisualCoalesced: true });
+          continue;
+        }
+      }
+      out.push(step);
+    }
+    return out;
+  }
+
+  function _withVisualCoalescedRecordingState(state) {
+    try {
+      if (!state || !state.recorder || state.recorder.isRecording !== true) return state;
+      if (!state.draft || !Array.isArray(state.draft.steps)) return state;
+      const visualSteps = _visualCoalesceRecordingSteps(state.draft.steps);
+      if (visualSteps.length === state.draft.steps.length) return state;
+      return {
+        ...state,
+        draft: { ...state.draft, steps: visualSteps },
+        _wmVisualCoalescedRecording: true
+      };
+    } catch (_e) {
+      return state;
+    }
+  }
+
   function captureStep(step) {
     if (_isInvalidCapturedStep(step)) return;
     const blockKey = _resolveStepBlockKey(step);
@@ -8866,7 +8947,8 @@
   let _prevPanelVisible = false;
 
   const unsubscribeRender = store.subscribe((state) => {
-    uiShell.render(state);
+    const visualState = _withVisualCoalescedRecordingState(state);
+    uiShell.render(visualState);
 
     // Mount / unmount visual step editor when script editor opens or closes
     const seOpen = state.ui.scriptEditor.open;
@@ -8941,7 +9023,8 @@
     if (floatingBtn && state.recorder.isRecording) {
       const label = floatingBtn.querySelector("span:last-child");
       if (label) {
-        const count = state.draft.steps.length;
+        const visualDraft = visualState && visualState.draft && Array.isArray(visualState.draft.steps) ? visualState.draft.steps : state.draft.steps;
+        const count = visualDraft.length;
         label.textContent = count > 0
           ? `Grabando (${count} paso${count !== 1 ? "s" : ""}) — Clic para detener`
           : "Grabando — Clic para detener";

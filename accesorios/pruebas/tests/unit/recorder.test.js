@@ -308,3 +308,78 @@ test("preRunReset: captura selectores canónicos #id para checkbox/radio/select/
     assert.equal(/#\w[\w-]*\s+(input|select|textarea)\[/.test(s), false);
   });
 });
+
+test("normalizeRecordedSteps: elimina TYPE duplicado identico y conserva borrado real", () => {
+  const steps = [
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "wait", seconds: 5 },
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "wait", seconds: 2 },
+    { type: "input", selector: "#filtro-tabla", value: "" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
+  assert.equal(out[0].value, "ana");
+  assert.equal(out[1].seconds, 7);
+  assert.equal(out[2].value, "");
+});
+
+test("normalizeRecordedSteps: elimina flush redundante despues de Enter", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "test enter" },
+    { type: "wait", seconds: 4 },
+    { type: "input", selector: "#busqueda", value: "test enter" },
+    { type: "key", key: "Enter" },
+    { type: "input", selector: "#busqueda", value: "test enter" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "key"]);
+  assert.equal(out[0].selector, "#busqueda");
+  assert.equal(out[0].value, "test enter");
+  assert.equal(out[1].seconds, 4);
+  assert.equal(out[2].key, "Enter");
+});
+
+test("normalizeRecordedSteps: compacta escritura progresiva del mismo campo", () => {
+  const steps = [
+    { type: "input", selector: "#diagnostico", value: "D" },
+    { type: "wait", seconds: 10 },
+    { type: "input", selector: "#diagnostico", value: "DIAGNOSTICO EJ12 FINAL" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input"]);
+  assert.equal(out[0].selector, "#diagnostico");
+  assert.equal(out[0].value, "DIAGNOSTICO EJ12 FINAL");
+});
+
+test("normalizeRecordedSteps: compacta multiples parciales progresivos y conserva ultimo", () => {
+  const steps = [
+    { type: "input", selector: "#observaciones", value: "O" },
+    { type: "wait", seconds: 4 },
+    { type: "input", selector: "#observaciones", value: "OBSERVACIONES" },
+    { type: "wait", seconds: 4 },
+    { type: "input", selector: "#observaciones", value: "OBSERVACIONES EJ" },
+    { type: "wait", seconds: 9 },
+    { type: "input", selector: "#observaciones", value: "OBSERVACIONES EJ12 FINAL" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input"]);
+  assert.equal(out[0].selector, "#observaciones");
+  assert.equal(out[0].value, "OBSERVACIONES EJ12 FINAL");
+});
+
+test("normalizeRecordedSteps: conserva cambio real no progresivo", () => {
+  const steps = [
+    { type: "input", selector: "#campo", value: "ABC" },
+    { type: "wait", seconds: 2 },
+    { type: "input", selector: "#campo", value: "XYZ" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
+  assert.deepEqual(out.map((s) => s.value).filter((v) => v != null), ["ABC", "XYZ"]);
+});

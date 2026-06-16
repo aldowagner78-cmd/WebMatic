@@ -294,6 +294,134 @@
      * Deduplica solo rafagas locales de cambios sobre el mismo selector,
      * preservando ediciones del mismo campo en momentos distintos del flujo.
      */
+    /**
+     * Limpieza posgrabacion conservadora.
+     * Elimina solo snapshots redundantes del mismo campo con el mismo valor,
+     * preservando cambios reales como TYPE "ana" -> WAIT -> TYPE "".
+     */
+    static normalizeRecordedSteps(steps) {
+      const list = Array.isArray(steps) ? steps : [];
+      const isInputLike = (s) => !!(s && (s.type === "input" || s.type === "text") && s.selector);
+      const isWait = (s) => !!(s && s.type === "wait");
+      const stepValue = (s) => String(s && s.value == null ? "" : s.value);
+      const sameInputSnapshot = (a, b) => !!(
+        isInputLike(a) &&
+        isInputLike(b) &&
+        a.selector === b.selector &&
+        stepValue(a) === stepValue(b)
+      );
+
+      const findPrevNonWaitIndex = (arr, fromIndex) => {
+        for (let i = fromIndex; i >= 0; i -= 1) {
+          if (!isWait(arr[i])) return i;
+        }
+        return -1;
+      };
+
+      const compactConsecutiveWaits = (arr) => {
+        const out = [];
+        for (const step of arr) {
+          if (isWait(step) && out.length > 0 && isWait(out[out.length - 1])) {
+            const prev = out[out.length - 1];
+            const a = Number(prev.seconds);
+            const b = Number(step.seconds);
+            prev.seconds = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
+            continue;
+          }
+          out.push(step);
+        }
+        return out;
+      };
+
+      const compacted = [];
+      for (const step of list) {
+        if (isInputLike(step)) {
+          const prevIdx = findPrevNonWaitIndex(compacted, compacted.length - 1);
+          const prev = prevIdx >= 0 ? compacted[prevIdx] : null;
+
+          // Caso seguro: TYPE mismo selector + mismo valor, y entre ambos solo hay WAIT.
+          // Quita el snapshot repetido, pero deja los WAIT para conservar el ritmo.
+          if (sameInputSnapshot(prev, step)) {
+            continue;
+          }
+
+          // Caso seguro: TYPE X -> KEY Enter -> TYPE X inmediato.
+          // Ese TYPE posterior suele ser un flush tardio del mismo valor.
+          if (prev && prev.type === "key" && String(prev.key || "").toLowerCase() === "enter") {
+            const hasWaitAfterEnter = compacted.slice(prevIdx + 1).some((s) => isWait(s));
+            const beforeKeyIdx = findPrevNonWaitIndex(compacted, prevIdx - 1);
+            const beforeKey = beforeKeyIdx >= 0 ? compacted[beforeKeyIdx] : null;
+            if (!hasWaitAfterEnter && sameInputSnapshot(beforeKey, step)) {
+              continue;
+            }
+          }
+        }
+        compacted.push(step);
+      }
+
+      const withoutDuplicateWaits = compactConsecutiveWaits(compacted);
+      const out = [];
+
+      const isProgressiveRun = (inputSteps) => {
+        if (!Array.isArray(inputSteps) || inputSteps.length < 2) return false;
+        const last = inputSteps[inputSteps.length - 1];
+        const finalValue = stepValue(last);
+
+        // Regla de seguridad: si el ultimo estado es vacio, NO compactar.
+        // Esto preserva filtros/busquedas en vivo: TYPE "ana" -> WAIT -> TYPE "".
+        if (finalValue === "") return false;
+
+        const finalLower = finalValue.toLowerCase();
+        return inputSteps.slice(0, -1).every((s) => {
+          const v = stepValue(s);
+          if (v === "") return false;
+          return finalLower.startsWith(v.toLowerCase());
+        });
+      };
+
+      for (let i = 0; i < withoutDuplicateWaits.length; i += 1) {
+        const step = withoutDuplicateWaits[i];
+        if (!isInputLike(step)) {
+          out.push(step);
+          continue;
+        }
+
+        const selector = step.selector;
+        const runItems = [step];
+        const runInputs = [step];
+        let j = i + 1;
+        while (j < withoutDuplicateWaits.length) {
+          const nx = withoutDuplicateWaits[j];
+          if (isWait(nx)) {
+            runItems.push(nx);
+            j += 1;
+            continue;
+          }
+          if (isInputLike(nx) && nx.selector === selector) {
+            runItems.push(nx);
+            runInputs.push(nx);
+            j += 1;
+            continue;
+          }
+          break;
+        }
+
+        // Escritura progresiva en el mismo campo sin acciones reales entre medio:
+        // conservar solo el ultimo valor para no volver lenta la reproduccion.
+        // No aplica al borrado final ni a cambios no progresivos.
+        if (isProgressiveRun(runInputs)) {
+          out.push(runInputs[runInputs.length - 1]);
+          i = j - 1;
+          continue;
+        }
+
+        out.push(...runItems);
+        i = j - 1;
+      }
+
+      return compactConsecutiveWaits(out);
+    }
+
     static dedupeFieldRuns(steps) {
       const isFieldLike = (s) => !!(s && (s.type === "input" || s.type === "text" || s.type === "check") && s.selector);
       const out = [];
@@ -367,7 +495,7 @@
         hasExplicitWaitAfterLastClick = false;
       }
 
-      return withRealWaits;
+      return Recorder.normalizeRecordedSteps(withRealWaits);
     }
 
     static _PRE_RUN_RESET_SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
