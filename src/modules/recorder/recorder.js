@@ -311,6 +311,66 @@
         stepValue(a) === stepValue(b)
       );
 
+      const normalizeTextForCompare = (value) => String(value == null ? "" : value)
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+      const commonPrefixLength = (a, b) => {
+        const x = normalizeTextForCompare(a);
+        const y = normalizeTextForCompare(b);
+        const max = Math.min(x.length, y.length);
+        let n = 0;
+        while (n < max && x[n] === y[n]) n += 1;
+        return n;
+      };
+
+      const levenshteinDistance = (a, b) => {
+        const x = normalizeTextForCompare(a);
+        const y = normalizeTextForCompare(b);
+        if (x === y) return 0;
+        if (!x) return y.length;
+        if (!y) return x.length;
+        const prev = Array(y.length + 1);
+        const cur = Array(y.length + 1);
+        for (let j = 0; j <= y.length; j += 1) prev[j] = j;
+        for (let i = 1; i <= x.length; i += 1) {
+          cur[0] = i;
+          for (let j = 1; j <= y.length; j += 1) {
+            const cost = x[i - 1] === y[j - 1] ? 0 : 1;
+            cur[j] = Math.min(
+              prev[j] + 1,
+              cur[j - 1] + 1,
+              prev[j - 1] + cost
+            );
+          }
+          for (let j = 0; j <= y.length; j += 1) prev[j] = cur[j];
+        }
+        return prev[y.length];
+      };
+
+      const valuesLookLikeSameTypingRun = (fromValue, toValue) => {
+        const from = normalizeTextForCompare(fromValue);
+        const to = normalizeTextForCompare(toValue);
+        if (!from || !to) return false;
+        if (from === to) return true;
+        if (to.startsWith(from) || from.startsWith(to)) return true;
+
+        const shortest = Math.min(from.length, to.length);
+        const longest = Math.max(from.length, to.length);
+        const prefix = commonPrefixLength(from, to);
+
+        // Correcciones de tipeo dentro de una misma frase/campo, por ejemplo:
+        // "DIAGNOSTICO EJ 12 FIM" -> "DIAGNOSTICO EJ 12 FINAL".
+        if (shortest >= 8 && prefix >= Math.max(5, Math.floor(shortest * 0.65))) return true;
+
+        // Ediciones pequeñas sobre textos parecidos. Evita compactar cambios reales
+        // no relacionados como "uno" -> "dos" o "foo" -> "bar".
+        const distance = levenshteinDistance(from, to);
+        const maxDistance = Math.max(2, Math.ceil(longest * 0.25));
+        return shortest >= 6 && distance <= maxDistance;
+      };
+
       const findPrevNonWaitIndex = (arr, fromIndex) => {
         for (let i = fromIndex; i >= 0; i -= 1) {
           if (!isWait(arr[i])) return i;
@@ -339,8 +399,7 @@
           const prevIdx = findPrevNonWaitIndex(compacted, compacted.length - 1);
           const prev = prevIdx >= 0 ? compacted[prevIdx] : null;
 
-          // Caso seguro: TYPE mismo selector + mismo valor, y entre ambos solo hay WAIT.
-          // Quita el snapshot repetido, pero deja los WAIT para conservar el ritmo.
+          // Caso seguro: TYPE mismo selector + mismo valor, aunque haya WAIT entre ambos.
           if (sameInputSnapshot(prev, step)) {
             continue;
           }
@@ -362,21 +421,31 @@
       const withoutDuplicateWaits = compactConsecutiveWaits(compacted);
       const out = [];
 
-      const isProgressiveRun = (inputSteps) => {
+      const shouldCompactInputRun = (inputSteps) => {
         if (!Array.isArray(inputSteps) || inputSteps.length < 2) return false;
-        const last = inputSteps[inputSteps.length - 1];
-        const finalValue = stepValue(last);
+        const values = inputSteps.map((s) => stepValue(s));
+        const finalValue = values[values.length - 1];
 
-        // Regla de seguridad: si el ultimo estado es vacio, NO compactar.
-        // Esto preserva filtros/busquedas en vivo: TYPE "ana" -> WAIT -> TYPE "".
+        // El borrado final es una accion real: conservar, por ejemplo:
+        // TYPE "ana" -> WAIT -> TYPE "".
         if (finalValue === "") return false;
 
-        const finalLower = finalValue.toLowerCase();
-        return inputSteps.slice(0, -1).every((s) => {
-          const v = stepValue(s);
-          if (v === "") return false;
-          return finalLower.startsWith(v.toLowerCase());
-        });
+        const nonEmptyValues = values.filter((v) => normalizeTextForCompare(v) !== "");
+        if (nonEmptyValues.length < 2) return false;
+
+        // No compactar cambios reales no relacionados, por ejemplo:
+        // "uno" -> WAIT -> "dos".
+        for (let i = 1; i < nonEmptyValues.length; i += 1) {
+          if (!valuesLookLikeSameTypingRun(nonEmptyValues[i - 1], nonEmptyValues[i])) {
+            return false;
+          }
+        }
+
+        // Compacta escritura progresiva y correcciones dentro del mismo campo:
+        // "DIA" -> "DIAGNOSTICO" -> "DIAGNOSTICO EJ 12 FINAL".
+        // Tambien compacta limpiar y reescribir si el valor final pertenece al mismo texto:
+        // "TES" -> "" -> "test enter".
+        return true;
       };
 
       for (let i = 0; i < withoutDuplicateWaits.length; i += 1) {
@@ -393,9 +462,19 @@
         while (j < withoutDuplicateWaits.length) {
           const nx = withoutDuplicateWaits[j];
           if (isWait(nx)) {
-            runItems.push(nx);
-            j += 1;
-            continue;
+            let k = j;
+            while (k < withoutDuplicateWaits.length && isWait(withoutDuplicateWaits[k])) k += 1;
+            const nextReal = withoutDuplicateWaits[k];
+            // Solo absorber WAIT si despues viene otro snapshot del mismo campo.
+            // Si el WAIT separa el ultimo TYPE de otra accion/campo, se conserva fuera del run.
+            if (isInputLike(nextReal) && nextReal.selector === selector) {
+              while (j < k) {
+                runItems.push(withoutDuplicateWaits[j]);
+                j += 1;
+              }
+              continue;
+            }
+            break;
           }
           if (isInputLike(nx) && nx.selector === selector) {
             runItems.push(nx);
@@ -406,10 +485,7 @@
           break;
         }
 
-        // Escritura progresiva en el mismo campo sin acciones reales entre medio:
-        // conservar solo el ultimo valor para no volver lenta la reproduccion.
-        // No aplica al borrado final ni a cambios no progresivos.
-        if (isProgressiveRun(runInputs)) {
+        if (shouldCompactInputRun(runInputs)) {
           out.push(runInputs[runInputs.length - 1]);
           i = j - 1;
           continue;

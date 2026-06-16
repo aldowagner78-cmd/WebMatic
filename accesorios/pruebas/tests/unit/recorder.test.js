@@ -234,6 +234,44 @@ test("dedupeFieldRuns: no duplica WAIT si luego ya existe wait_for o wait", () =
   assert.deepEqual(outWait.map((s) => s.type), ["click", "wait", "input"]);
 });
 
+
+
+test("normalizeRecordedSteps: compacta snapshots del mismo campo separados por WAIT aunque haya correccion de tipeo", () => {
+  const steps = [
+    { type: "wait", seconds: 10 },
+    { type: "input", selector: "#ce-diagnostico", value: "DIA" },
+    { type: "wait", seconds: 3 },
+    { type: "input", selector: "#ce-diagnostico", value: "DIAGNOSTICO" },
+    { type: "wait", seconds: 3 },
+    { type: "input", selector: "#ce-diagnostico", value: "DIAGNOSTICO EJ" },
+    { type: "wait", seconds: 2 },
+    { type: "input", selector: "#ce-diagnostico", value: "DIAGNOSTICO EJ 12 FIM" },
+    { type: "wait", seconds: 4 },
+    { type: "input", selector: "#ce-diagnostico", value: "DIAGNOSTICO EJ 12 FINAL" },
+    { type: "wait", seconds: 1 },
+    { type: "input", selector: "#ce-observaciones", value: "OBSERVACIONES EJ 12 FINAL" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out, [
+    { type: "wait", seconds: 10 },
+    { type: "input", selector: "#ce-diagnostico", value: "DIAGNOSTICO EJ 12 FINAL" },
+    { type: "wait", seconds: 1 },
+    { type: "input", selector: "#ce-observaciones", value: "OBSERVACIONES EJ 12 FINAL" }
+  ]);
+});
+
+test("normalizeRecordedSteps: conserva input escrito y luego borrado aunque haya WAIT", () => {
+  const steps = [
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "wait", seconds: 3 },
+    { type: "input", selector: "#filtro-tabla", value: "" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out, steps);
+});
+
 test("selectorResolvesToElement: rechaza selector que apunta a descendiente inválido", () => {
   resetBody('<input id="chk-tecnologia" name="generos" type="checkbox">');
   const el = win.document.getElementById("chk-tecnologia");
