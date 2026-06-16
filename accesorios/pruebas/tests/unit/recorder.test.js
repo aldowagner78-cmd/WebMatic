@@ -153,6 +153,19 @@ test("dedupeFieldRuns: deduplica rafaga local input/change y conserva ultimo val
   assert.equal(fieldSteps[0].value, "111111");
 });
 
+test("dedupeFieldRuns: conserva estados intermedios de un filtro separados por pausa real", () => {
+  const steps = [
+    { type: "input", selector: "#filtro-tabla", value: "ana", _ts: 1000 },
+    { type: "input", selector: "#filtro-tabla", value: "", _ts: 3200 }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
+  assert.equal(out[0].value, "ana");
+  assert.equal(out[1].seconds, 3);
+  assert.equal(out[2].value, "");
+});
+
 test("dedupeFieldRuns: inserta WAIT=2 tras click si pasan 1500ms antes de input", () => {
   const steps = [
     { type: "click", selector: "#btn-modal-delay", _ts: 1000 },
