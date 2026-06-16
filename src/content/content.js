@@ -5977,6 +5977,54 @@
       }
     };
 
+    const onTextInput = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("#webmatic-panel-root") ||
+          target.closest("#webmatic-floating-recorder-global") ||
+          target.closest("#webmatic-floating-player-global")) {
+        return;
+      }
+
+      if (target.isContentEditable) return;
+      if (!_isTextEntryCaptureTarget(target)) return;
+      if (target.readOnly || target.disabled) return;
+
+      const selector = buildSelector(target);
+      if (!selector) return;
+      if (_isSensitiveInputTarget(target, selector)) return;
+
+      // Capture real input stream, not only final state/blur.
+      // Required for live filters, GeneXus searches, autocomplete and AJAX fields
+      // where the user may type, wait for UI updates, and clear without leaving focus.
+      _captureCurrentTextValueForRecording(target, captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar);
+    };
+
+    const onTextKeyup = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("#webmatic-panel-root") ||
+          target.closest("#webmatic-floating-recorder-global") ||
+          target.closest("#webmatic-floating-player-global")) {
+        return;
+      }
+
+      if (target.isContentEditable) return;
+      if (!_isTextEntryCaptureTarget(target)) return;
+      if (target.readOnly || target.disabled) return;
+
+      const selector = buildSelector(target);
+      if (!selector) return;
+      if (_isSensitiveInputTarget(target, selector)) return;
+
+      // Fallback for legacy pages/key combos such as Ctrl+A + Backspace.
+      setTimeout(() => {
+        try {
+          _captureCurrentTextValueForRecording(target, captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar);
+        } catch (_e) { /* ignore */ }
+      }, 0);
+    };
+
     const _resolveDropTarget = (el) => {
       if (!(el instanceof Element)) return null;
       const dz = el.closest && el.closest(".drag-zone,[ondrop],[data-dropzone],[role='listbox']");
@@ -6008,6 +6056,8 @@
     document.addEventListener("click", onClick, true);
     document.addEventListener("change", onChange, true);
     document.addEventListener("keydown", onKeydown, true);
+    document.addEventListener("input", onTextInput, true);
+    document.addEventListener("keyup", onTextKeyup, true);
     document.addEventListener("dragstart", onDragStart, true);
     document.addEventListener("drop", onDrop, true);
 
@@ -6170,6 +6220,8 @@
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("change", onChange, true);
       document.removeEventListener("keydown", onKeydown, true);
+      document.removeEventListener("input", onTextInput, true);
+      document.removeEventListener("keyup", onTextKeyup, true);
       document.removeEventListener("dragstart", onDragStart, true);
       document.removeEventListener("drop", onDrop, true);
       document.removeEventListener("copy", onCopy, true);
