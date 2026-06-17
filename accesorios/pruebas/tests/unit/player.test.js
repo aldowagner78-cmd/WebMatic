@@ -2119,3 +2119,53 @@ test("player: check real del usuario (sin _baselineDefault) si se ejecuta", asyn
   assert.equal(failed, null, failed && failed.message);
   assert.equal(win.document.getElementById("c-real").checked, true);
 });
+
+test("check idempotente: checked false no hace toggle si ya esta desmarcado", async () => {
+  resetBody('<input id="cb-idem-1" type="checkbox">');
+
+  const input = win.document.getElementById("cb-idem-1");
+  let clickCount = 0;
+  input.addEventListener("click", () => { clickCount++; });
+
+  const result = await runStep({ type: "check", selector: "#cb-idem-1", checked: false });
+
+  assert.equal(result.ok, true, result.error || "check false idempotente fallo");
+  assert.equal(input.checked, false);
+  assert.equal(clickCount, 0, "no debe hacer click si ya esta desmarcado");
+});
+
+test("check idempotente: checked true no hace toggle si ya esta marcado", async () => {
+  resetBody('<input id="cb-idem-2" type="checkbox" checked>');
+
+  const input = win.document.getElementById("cb-idem-2");
+  let clickCount = 0;
+  input.addEventListener("click", () => { clickCount++; });
+
+  const result = await runStep({ type: "check", selector: "#cb-idem-2", checked: true });
+
+  assert.equal(result.ok, true, result.error || "check true idempotente fallo");
+  assert.equal(input.checked, true);
+  assert.equal(clickCount, 0, "no debe hacer click si ya esta marcado");
+});
+
+test("check idempotente: checked false desmarca si estaba marcado", async () => {
+  resetBody('<input id="cb-idem-3" type="checkbox" checked>');
+
+  const input = win.document.getElementById("cb-idem-3");
+
+  const result = await runStep({ type: "check", selector: "#cb-idem-3", checked: false });
+
+  assert.equal(result.ok, true, result.error || "check false desde marcado fallo");
+  assert.equal(input.checked, false);
+});
+
+test("check idempotente: checked true marca si estaba desmarcado", async () => {
+  resetBody('<input id="cb-idem-4" type="checkbox">');
+
+  const input = win.document.getElementById("cb-idem-4");
+
+  const result = await runStep({ type: "check", selector: "#cb-idem-4", checked: true });
+
+  assert.equal(result.ok, true, result.error || "check true desde desmarcado fallo");
+  assert.equal(input.checked, true);
+});
