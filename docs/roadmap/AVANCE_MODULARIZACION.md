@@ -4,20 +4,13 @@
 
 modularizacion-base
 
-## Commits realizados
+## Estado actual
 
-- ad6c0ad docs: registrar linea base de pruebas
-- 1a5c12e chore: preparar estructura modular inicial
-- dfb50e7 refactor(recorder): extraer selector builder
-- 6653c70 refactor(player): extraer diagnostico de selectores
+Último commit: 07e8b29 refactor(player): extraer findInDocument
 
 ## Módulos extraídos
 
-### Selector builder
-
-Nuevo archivo:
-
-src/common/selectors/selector-builder.js
+### src/common/selectors/selector-builder.js
 
 Extraído desde:
 
@@ -25,14 +18,10 @@ src/modules/recorder/recorder.js
 
 Estado:
 
-- Tests pasados: 328/328
-- Comportamiento conservado
+- Validado con npm test completo
+- 328 tests pasados
 
-### Selector diagnostics
-
-Nuevo archivo:
-
-src/common/diagnostics/selector-diagnostics.js
+### src/common/diagnostics/selector-diagnostics.js
 
 Extraído desde:
 
@@ -40,20 +29,47 @@ src/modules/player/player.js
 
 Estado:
 
-- Tests pasados: 328/328
-- Comportamiento conservado
+- Validado con npm test completo
+- 328 tests pasados
 
-## Próximas extracciones candidatas
+### src/common/dom/element-finder.js
 
-1. element-finder desde player.js
-2. action-check desde player.js
-3. pre-run-reset desde player.js
-4. block-engine desde step-editor.js
-5. step-schema desde step-editor.js
+Extraído parcialmente desde:
 
-## Advertencias
+src/modules/player/player.js
 
-- No hacer extracciones grandes.
-- Validar con npm test después de cada cambio.
-- Mantener carga en manifest.json en orden correcto.
-- Evitar reescrituras de archivo que rompan acentos.
+Funciones extraídas:
+
+- findInShadow
+- findInDocument
+
+Estado:
+
+- Validado con npm test completo
+- 328 tests pasados
+
+## Pendiente en element-finder
+
+No extraer todavía findElement completo.
+
+Motivo:
+
+- Depende de _normalizeTextForCompare
+- Depende de _foldTextForCompare
+- Depende de _findKnownGalleryControlFallback
+- El intento amplio rompió 50 tests
+
+## Regla vigente
+
+Después de cada cambio real:
+
+1. npm test completo
+2. commit
+3. push
+
+## Próximos candidatos seguros
+
+1. Extraer helpers de texto comparativo desde player.js
+2. Reintentar findElement recién después de aislar esos helpers
+3. Extraer action-check con tests completos
+4. Extraer preRunReset en pasos pequeños
