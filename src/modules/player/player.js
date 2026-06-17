@@ -210,65 +210,13 @@
     }
   }
 
-  function findElement(selector) {
-    if (!selector) return null;
-
-    // XPath
-    if (selector.startsWith("/") || selector.startsWith("(")) {
-      try {
-        const result = document.evaluate(
-          selector, document, null,
-          XPathResult.FIRST_ORDERED_NODE_TYPE, null
-        );
-        return result.singleNodeValue || null;
-      } catch (e) {
-        return null;
-      }
-    }
-
-    // tag[text="..."] â€” text-based search (also searches iframes)
-    const textMatch = /^(\w+)\[text="([^"]+)"\]$/.exec(selector);
-    if (textMatch) {
-      const [, tagName, text] = textMatch;
-      const expectedText = _normalizeTextForCompare(text);
-      const expectedFold = _foldTextForCompare(text);
-      // Search in main doc + all accessible iframes
-      const docsToSearch = [document];
-      try {
-        const frames = document.querySelectorAll("iframe, frame");
-        for (const frame of frames) {
-          try {
-            const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
-            if (innerDoc) docsToSearch.push(innerDoc);
-          } catch (e) { /* cross-origin */ }
-        }
-      } catch (e) { /* ignore */ }
-      for (const d of docsToSearch) {
-        let foldedEqual = null;
-        let foldedContains = null;
-        try {
-          const candidates = d.querySelectorAll(tagName);
-          for (const el of candidates) {
-            const elText = _normalizeTextForCompare(el.textContent);
-            const elFold = _foldTextForCompare(el.textContent);
-            if (elText === expectedText) return el;
-            if (!foldedEqual && elFold === expectedFold) foldedEqual = el;
-            if (!foldedContains && expectedFold && elFold.includes(expectedFold)) foldedContains = el;
-          }
-          if (foldedEqual) return foldedEqual;
-          if (foldedContains) return foldedContains;
-        } catch (e) { /* ignore */ }
-      }
-      return null;
-    }
-
-    // Standard CSS selector â€” with Shadow DOM + iframe piercing
-    const direct = findInDocument(document, selector);
-    if (direct) return direct;
-
-    // Known volatile gallery controls (Next/Close) vary by locale/attribute.
-    // Apply a semantic fallback to improve cross-site robustness.
-    return _findKnownGalleryControlFallback(selector);
+    function findElement(selector) {
+    return _elementFinder().findElement(selector, {
+      document,
+      normalizeTextForCompare: _normalizeTextForCompare,
+      foldTextForCompare: _foldTextForCompare,
+      knownFallback: _findKnownGalleryControlFallback
+    });
   }
 
   function _selectorDiagnostics() {
