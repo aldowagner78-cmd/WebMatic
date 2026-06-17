@@ -47,6 +47,7 @@
         "src/common/selectors/selector-builder.js",
         "src/modules/recorder/recorder.js",
         "src/modules/inventory/page-inventory.js",
+        "src/common/diagnostics/selector-diagnostics.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",

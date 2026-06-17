@@ -1,4 +1,4 @@
-(function initPlayer(globalScope) {
+﻿(function initPlayer(globalScope) {
   const utils = globalScope.WebMaticUtils;
   const PLAY_START_VAR = "__WEBMATIC_PLAY_START_MS__";
 
@@ -31,9 +31,9 @@
 
   /**
    * Finds an element using a tiered selector strategy:
-   * 1. CSS selector (id, name, aria-label, data-testid, nth-of-type) — with Shadow DOM fallback
+   * 1. CSS selector (id, name, aria-label, data-testid, nth-of-type) â€” with Shadow DOM fallback
    * 2. XPath (if selector starts with /)
-   * 3. tag[text="..."] — searches by visible text content
+   * 3. tag[text="..."] â€” searches by visible text content
    * Returns null if not found.
    */
   /**
@@ -56,7 +56,7 @@
           if (!innerDoc) continue;
           const found = findInDocument(innerDoc, selector);
           if (found) return found;
-        } catch (e) { /* cross-origin — skip */ }
+        } catch (e) { /* cross-origin â€” skip */ }
       }
     } catch (e) { /* ignore */ }
     return null;
@@ -247,7 +247,7 @@
       }
     }
 
-    // tag[text="..."] — text-based search (also searches iframes)
+    // tag[text="..."] â€” text-based search (also searches iframes)
     const textMatch = /^(\w+)\[text="([^"]+)"\]$/.exec(selector);
     if (textMatch) {
       const [, tagName, text] = textMatch;
@@ -283,7 +283,7 @@
       return null;
     }
 
-    // Standard CSS selector — with Shadow DOM + iframe piercing
+    // Standard CSS selector â€” with Shadow DOM + iframe piercing
     const direct = findInDocument(document, selector);
     if (direct) return direct;
 
@@ -292,128 +292,29 @@
     return _findKnownGalleryControlFallback(selector);
   }
 
-  function _isVisibleForDiagnostic(el) {
-    if (!el || !(el instanceof Element)) return false;
-    const htmlEl = /** @type {HTMLElement} */ (el);
-    try {
-      const view = (htmlEl.ownerDocument && htmlEl.ownerDocument.defaultView) || window;
-      const cs = view && typeof view.getComputedStyle === "function"
-        ? view.getComputedStyle(htmlEl)
-        : { display: "", visibility: "", opacity: "", pointerEvents: "" };
-      if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0" || cs.pointerEvents === "none") return false;
-      return !!(htmlEl.getClientRects && htmlEl.getClientRects().length > 0);
-    } catch (_e) {
-      return false;
+  function _selectorDiagnostics() {
+    if (typeof WebMaticSelectorDiagnostics !== "undefined") return WebMaticSelectorDiagnostics;
+    if (globalScope && globalScope.WebMaticSelectorDiagnostics) return globalScope.WebMaticSelectorDiagnostics;
+    if (typeof require === "function") {
+      try { return require("../../common/diagnostics/selector-diagnostics.js"); } catch (_e) { /* ignore */ }
     }
+    throw new Error("WebMaticSelectorDiagnostics no está disponible");
+  }
+
+  function _isVisibleForDiagnostic(el) {
+    return _selectorDiagnostics().isVisibleForDiagnostic(el);
   }
 
   function _summarizeElementForDiagnostic(el) {
-    if (!el || !(el instanceof Element)) return null;
-    const tag = String(el.tagName || "").toLowerCase();
-    const attrs = {
-      id: el.id || "",
-      className: typeof el.className === "string" ? el.className : "",
-      role: el.getAttribute && el.getAttribute("role") || "",
-      title: el.getAttribute && el.getAttribute("title") || "",
-      ariaLabel: el.getAttribute && el.getAttribute("aria-label") || "",
-      dataTestid: el.getAttribute && el.getAttribute("data-testid") || "",
-      name: el.getAttribute && el.getAttribute("name") || "",
-      type: el.getAttribute && el.getAttribute("type") || ""
-    };
-    const text = String(el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
-    return {
-      tag,
-      visible: _isVisibleForDiagnostic(el),
-      attrs,
-      text
-    };
+    return _selectorDiagnostics().summarizeElementForDiagnostic(el);
   }
 
   function _collectSelectorDiagnostics(selector) {
-    const out = {
-      selector,
-      mode: "css",
-      matchedCount: 0,
-      topMatches: [],
-      nearbyGalleryControls: []
-    };
-
-    if (!selector) return out;
-
-    try {
-      if (selector.startsWith("/") || selector.startsWith("(")) {
-        out.mode = "xpath";
-        const xpathResult = document.evaluate(
-          selector,
-          document,
-          null,
-          XPathResult.ORDERED_NODE_SNAPSHOT_TYPE,
-          null
-        );
-        out.matchedCount = xpathResult.snapshotLength;
-        const top = [];
-        for (let i = 0; i < Math.min(5, xpathResult.snapshotLength); i++) {
-          const node = xpathResult.snapshotItem(i);
-          const summary = _summarizeElementForDiagnostic(node);
-          if (summary) top.push(summary);
-        }
-        out.topMatches = top;
-      } else {
-        const nodeList = document.querySelectorAll(selector);
-        out.matchedCount = nodeList.length;
-        out.topMatches = Array.from(nodeList)
-          .slice(0, 5)
-          .map((n) => _summarizeElementForDiagnostic(n))
-          .filter(Boolean);
-      }
-    } catch (e) {
-      out.error = String((e && e.message) || e || "error");
-    }
-
-    try {
-      if (/(next|siguiente|close|cerrar|arrow|flecha|gallery)/i.test(String(selector))) {
-        const probeSelectors = [
-          "[data-testid*='gallery']",
-          "[title*='Next']",
-          "[title*='Siguiente']",
-          "[aria-label*='Next']",
-          "[aria-label*='Siguiente']",
-          "[title*='Close']",
-          "[title*='Cerrar']",
-          "[aria-label*='Close']",
-          "[aria-label*='Cerrar']"
-        ];
-        const probes = [];
-        for (const ps of probeSelectors) {
-          try {
-            const list = document.querySelectorAll(ps);
-            if (list.length === 0) continue;
-            probes.push({
-              probe: ps,
-              count: list.length,
-              top: Array.from(list).slice(0, 3).map((n) => _summarizeElementForDiagnostic(n)).filter(Boolean)
-            });
-          } catch (_e) { /* ignore */ }
-        }
-        out.nearbyGalleryControls = probes;
-      }
-    } catch (_e) { /* ignore */ }
-
-    return out;
+    return _selectorDiagnostics().collectSelectorDiagnostics(selector, document);
   }
 
   function _logSelectorFailure(stepType, selector) {
-    const diag = _collectSelectorDiagnostics(selector);
-    try {
-      console.groupCollapsed(`[WebMatic][selector-diagnostic] ${stepType} -> ${selector}`);
-      console.log(diag);
-      console.groupEnd();
-      globalScope.__WEBMATIC_LAST_SELECTOR_DIAGNOSTIC__ = {
-        at: new Date().toISOString(),
-        stepType,
-        diagnostic: diag
-      };
-    } catch (_e) { /* ignore */ }
+    return _selectorDiagnostics().logSelectorFailure(stepType, selector, { document, globalScope });
   }
 
   function evaluateArithmeticExpression(expression) {
@@ -694,7 +595,7 @@
     const str = String(value == null ? "" : value);
     const canExecCommand = typeof document !== "undefined" && typeof document.execCommand === "function";
 
-    // contenteditable elements do not have a .value — set innerText instead
+    // contenteditable elements do not have a .value â€” set innerText instead
     if (el.isContentEditable) {
       el.focus();
       if (canExecCommand) {
@@ -761,8 +662,8 @@
 
   /**
    * Expands variables in a string:
-   * {{!NOW:fmt}} → formatted date
-   * %VARNAME% or {{!VARNAME}} → looked up in vars map
+   * {{!NOW:fmt}} â†’ formatted date
+   * %VARNAME% or {{!VARNAME}} â†’ looked up in vars map
    */
   function expandVariables(str, vars) {
     if (!str) return str;
@@ -897,7 +798,7 @@
 
           window.location.href = navInfo.targetUrl || url;
           // Navigation will unload the page; the promise intentionally never resolves
-          // — the player saves state to background before calling this step.
+          // â€” the player saves state to background before calling this step.
           return;
         }
 
@@ -924,7 +825,7 @@
         }
 
         if (step.type === "browser_history") {
-          // Evento de historial sin dirección inferida con certeza: no-op seguro.
+          // Evento de historial sin direcciÃ³n inferida con certeza: no-op seguro.
           resolve();
           return;
         }
@@ -968,7 +869,7 @@
               if (pwd) target = pwd;
             }
           }
-          // Foco real para que la lógica del navegador (submit por Enter, etc.)
+          // Foco real para que la lÃ³gica del navegador (submit por Enter, etc.)
           // funcione como cuando un humano usa el teclado.
           try { if (target && typeof target.focus === "function") target.focus(); } catch (_e) { /* ignore */ }
 
@@ -991,8 +892,8 @@
           target.dispatchEvent(_ku);
 
           // Comportamiento nativo del navegador: si Enter no fue preventDefault'd
-          // dentro de un input de un <form>, el form se envía. Replicar eso aquí
-          // hace que login (IAPOS / GeneXus / cualquier form clásico) funcione.
+          // dentro de un input de un <form>, el form se envÃ­a. Replicar eso aquÃ­
+          // hace que login (IAPOS / GeneXus / cualquier form clÃ¡sico) funcione.
           if (
             _keyName === "Enter" &&
             !_kd.defaultPrevented &&
@@ -1034,7 +935,7 @@
           return;
         }
 
-        // set_variable: evalúa expresión numérica o string y guarda en vars
+        // set_variable: evalÃºa expresiÃ³n numÃ©rica o string y guarda en vars
         if (step.type === "set_variable") {
           if (step.variable) {
             const raw = expandVariables(step.value || "", vars);
@@ -1061,7 +962,7 @@
           const toEl = findElement(toSel);
           if (!fromEl || !toEl) {
             if (Date.now() - start < timeoutMs) { setTimeout(attempt, retryMs); }
-            else { reject(new Error(`drag_drop: elementos no encontrados: "${fromSel}" → "${toSel}"`)); }
+            else { reject(new Error(`drag_drop: elementos no encontrados: "${fromSel}" â†’ "${toSel}"`)); }
             return;
           }
           try {
@@ -1077,7 +978,7 @@
         }
 
         // prompt: muestra un overlay y espera que el usuario ingrese un valor antes de continuar
-        // { type:"prompt", label:"¿Cuál es el RUT?", variable:"RUT", default:"" }
+        // { type:"prompt", label:"Â¿CuÃ¡l es el RUT?", variable:"RUT", default:"" }
         // En tests usar _testValue para auto-responder sin mostrar UI
         if (step.type === "prompt") {
           if (step._testValue !== undefined) {
@@ -1111,7 +1012,7 @@
             "padding:8px 10px;font-size:14px;margin-bottom:14px"
           ].join(";");
           const _btn = document.createElement("button");
-          _btn.textContent = "Continuar ▶";
+          _btn.textContent = "Continuar â–¶";
           _btn.style.cssText = [
             "padding:8px 20px;background:#059669;color:#fff",
             "border:none;border-radius:6px;font-size:14px;cursor:pointer;width:100%"
@@ -1132,7 +1033,7 @@
           return;
         }
 
-        // useCurrentValue: no tocar el campo — dejarlo con lo que ya tiene
+        // useCurrentValue: no tocar el campo â€” dejarlo con lo que ya tiene
         if ((step.type === "input" || step.type === "text") && step.useCurrentValue) {
           resolve();
           return;
@@ -1181,7 +1082,7 @@
           simulateClick(el);
         } else if (step.type === "dblclick") {
           if (!_silentStep) _highlightElement(el);
-          // Fire the full sequence: mousedown+up+click ×2, then dblclick
+          // Fire the full sequence: mousedown+up+click Ã—2, then dblclick
           [1, 1, 1, 2, 2, 2, 2].forEach((detail, i) => {
             const types = ["mousedown", "mouseup", "click", "mousedown", "mouseup", "click", "dblclick"];
             el.dispatchEvent(new MouseEvent(types[i], { bubbles: true, cancelable: true, detail }));
@@ -1194,8 +1095,8 @@
           const _controlKind = String(step && step.controlRef && step.controlRef.controlKind || "").toLowerCase();
           const _isSelect = el instanceof HTMLSelectElement;
 
-          // choose_option también soporta inputs con autocomplete cuando
-          // el grabador promovió input/text a choose_option (inputMode=autocomplete).
+          // choose_option tambiÃ©n soporta inputs con autocomplete cuando
+          // el grabador promoviÃ³ input/text a choose_option (inputMode=autocomplete).
           if (!_isSelect) {
             const _autoDetected = _inputMode === "autocomplete"
               || _controlKind.indexOf("autocomplete") >= 0
@@ -1307,7 +1208,7 @@
           _sel.value = String(el.value ?? "");
 
           const _btn = document.createElement("button");
-          _btn.textContent = "Continuar ▶";
+          _btn.textContent = "Continuar â–¶";
           _btn.style.cssText = [
             "padding:8px 20px;background:#059669;color:#fff",
             "border:none;border-radius:6px;font-size:14px;cursor:pointer;width:100%"
@@ -1335,7 +1236,7 @@
           setInputValue(el, value);
           const _keepFocusForLogin = _isLikelyLoginInputTarget(el, selector);
           // Intentar seleccionar la opción del autocomplete (GeneXus, etc.)
-          // Si no aparece ningún dropdown en ~400ms, sigue sin hacer nada
+          // Si no aparece ningÃºn dropdown en ~400ms, sigue sin hacer nada
           _tryClickAutocomplete(value).then(clicked => {
             if (!clicked) {
               // Sin autocomplete: en login NO forzar Escape/blur para permitir Enter-submit.
@@ -1838,13 +1739,13 @@
     return out;
   }
 
-  // Timers activos de highlight — para cancelarlos todos al terminar la macro
+  // Timers activos de highlight â€” para cancelarlos todos al terminar la macro
   const _hlTimers = [];
 
   /**
    * Espera hasta ~400ms a que aparezca un dropdown de autocompletado y hace clic
    * en la primera opción cuyo texto coincida exactamente con `value`.
-   * Si no aparece ningún autocomplete, resuelve sin hacer nada (non-blocking).
+   * Si no aparece ningÃºn autocomplete, resuelve sin hacer nada (non-blocking).
    */
   function _tryClickAutocomplete(value) {
     return new Promise(resolve => {
@@ -2130,7 +2031,7 @@
     /**
      * Plays an array of steps.
      * @param {object[]} steps
-     * @param {object} options — { speed: number (0.5–3), onStep, onDone, onError }
+     * @param {object} options â€” { speed: number (0.5â€“3), onStep, onDone, onError }
      */
     async play(steps, options = {}) {
       if (!Array.isArray(steps) || steps.length === 0) return false;
@@ -2217,7 +2118,7 @@
           const _silentRuntimeStep = _isSilentInternalStep(runnableStep);
           if (typeof options.onStep === "function" && !_silentRuntimeStep) options.onStep(step, i);
 
-          // Save resumption state BEFORE every step — if a navigation happens at any
+          // Save resumption state BEFORE every step â€” if a navigation happens at any
           // point during this step (or any sleep/wait afterwards), the new page can
           // resume from index i+1. We only clear pending state on full completion.
             if (!_silentRuntimeStep && step.type !== "if_exists" && step.type !== "loop_until" &&
@@ -2245,9 +2146,9 @@
             const _ifFound = !!findElement(_ifSel);
             const _ifBranch = _ifFound ? (step.then || []) : (step.else || []);
             if (_ifBranch.length > 0) {
-              // Guardar estado de reanudación ANTES de ejecutar sub-pasos.
+              // Guardar estado de reanudaciÃ³n ANTES de ejecutar sub-pasos.
               // Si dentro del bloque ocurre una navegación (ej: submit de login),
-              // la nueva página retoma desde el paso SIGUIENTE al if_exists.
+              // la nueva pÃ¡gina retoma desde el paso SIGUIENTE al if_exists.
               await new Promise((res) => {
                 chrome.runtime.sendMessage({
                   type: "SAVE_PLAYBACK_STATE",
@@ -2298,7 +2199,7 @@
           }
 
           // try_fallback: ejecuta 'steps'; si alguno falla, ejecuta 'fallback' en su lugar
-          // El error queda contenido — la macro no se detiene
+          // El error queda contenido â€” la macro no se detiene
           if (step.type === "try_fallback") {
             try {
               if (Array.isArray(step.steps) && step.steps.length > 0) {
@@ -2406,11 +2307,11 @@
                   }, () => { void chrome.runtime.lastError; res(); });
                 });
                 window.location.href = navInfo.targetUrl || _navUrl;
-                // Page is unloading — this promise never continues; exit play()
+                // Page is unloading â€” this promise never continues; exit play()
                 return true;
               }
             }
-            // URL is empty, same-document, or already current — reset the page now that the
+            // URL is empty, same-document, or already current â€” reset the page now that the
             // target hash/section is active, then continue with the real user steps.
             await _applyPreRunReset(preRunReset, "after_navigate", 120);
             if (i < runtimeSteps.length - 1) await new Promise((r) => setTimeout(r, baseDelayMs));
@@ -2446,8 +2347,8 @@
             }
 
             if (handoff.handoff) {
-              // La reproducción continuará en la pestaña de destino via pendingPlayback.
-              // Notificamos handoff para que la pestaña origen limpie su UI flotante.
+              // La reproducción continuarÃ¡ en la pestaÃ±a de destino via pendingPlayback.
+              // Notificamos handoff para que la pestaÃ±a origen limpie su UI flotante.
               if (typeof options.onDone === "function") {
                 options.onDone({
                   handoff: true,
@@ -2516,7 +2417,7 @@
         await new Promise(r => setTimeout(r, 400));
         _clearAllHighlights();
         _doFinalClean();
-        // Clear pending playback state — playback completed normally
+        // Clear pending playback state â€” playback completed normally
         try {
           chrome.runtime.sendMessage({ type: "CLEAR_PENDING_PLAYBACK" }, () => { void chrome.runtime.lastError; });
         } catch (_) {}
@@ -2548,7 +2449,7 @@
     }
 
     // Ejecuta un paso simple o complejo de forma recursiva.
-    // Garantiza que if_exists, loop_until, etc. dentro de sub-pasos también funcionen.
+    // Garantiza que if_exists, loop_until, etc. dentro de sub-pasos tambiÃ©n funcionen.
     async _execComplexStep(step, vars, baseDelayMs, options = {}) {
       const continuationSteps = Array.isArray(options.continuationSteps) ? options.continuationSteps : [];
       const runtimeMeta = options.runtimeMeta && typeof options.runtimeMeta === "object" ? options.runtimeMeta : null;
@@ -2624,7 +2525,7 @@
       if (step.type === "open_tab" || step.type === "switch_tab" || step.type === "close_tab") {
         throw new Error("tab actions inside complex sub-steps are not supported yet; move them to top-level playback steps");
       }
-      // Simple step (navigate in sub-context treated as executeStep — no page-save needed)
+      // Simple step (navigate in sub-context treated as executeStep â€” no page-save needed)
       await executeStep(step, vars, this.retryMs, this.timeoutMs, this._speed);
     }
 
@@ -2675,3 +2576,4 @@
     module.exports = Player;
   }
 })(typeof globalThis !== "undefined" ? globalThis : window);
+
