@@ -49,6 +49,7 @@
         "src/modules/inventory/page-inventory.js",
         "src/common/diagnostics/selector-diagnostics.js",
         "src/common/dom/element-finder.js",
+        "src/common/dom/text-compare.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",

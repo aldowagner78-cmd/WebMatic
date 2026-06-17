@@ -97,18 +97,21 @@
       || /gallery-close/i.test(sel);
   }
 
+    function _textCompare() {
+    if (typeof WebMaticTextCompare !== "undefined") return WebMaticTextCompare;
+    if (globalScope && globalScope.WebMaticTextCompare) return globalScope.WebMaticTextCompare;
+    if (typeof require === "function") {
+      try { return require("../../common/dom/text-compare.js"); } catch (_e) { /* ignore */ }
+    }
+    throw new Error("WebMaticTextCompare no esta disponible");
+  }
+
   function _normalizeTextForCompare(value) {
-    const base = utils
-      ? utils.escapeTextContent(String(value == null ? "" : value))
-      : String(value == null ? "" : value).replace(/\s+/g, " ").trim();
-    return base;
+    return _textCompare().normalizeTextForCompare(value, { utils });
   }
 
   function _foldTextForCompare(value) {
-    return _normalizeTextForCompare(value)
-      .toLocaleLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
+    return _textCompare().foldTextForCompare(value, { utils });
   }
 
   function _findOpenLightboxNode() {
