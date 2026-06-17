@@ -20,7 +20,34 @@
     return null;
   }
 
-  const api = { findInShadow };
+  function findInDocument(doc, selector) {
+    if (!doc) return null;
+
+    try {
+      const direct = findInShadow(doc, selector);
+      if (direct) return direct;
+    } catch (e) { /* cross-origin iframe will throw */ }
+
+    try {
+      const frames = doc.querySelectorAll("iframe, frame");
+      for (const frame of frames) {
+        try {
+          const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+          if (!innerDoc) continue;
+
+          const found = findInDocument(innerDoc, selector);
+          if (found) return found;
+        } catch (e) { /* cross-origin — skip */ }
+      }
+    } catch (e) { /* ignore */ }
+
+    return null;
+  }
+
+  const api = {
+    findInShadow,
+    findInDocument
+  };
 
   globalScope.WebMaticElementFinder = api;
 

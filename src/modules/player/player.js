@@ -34,26 +34,8 @@
    * Recursively searches for a CSS selector inside a document (including all
    * accessible nested iframes). Returns the first match or null.
    */
-  function findInDocument(doc, selector) {
-    if (!doc) return null;
-    try {
-      // Shadow DOM search within this document
-      const direct = findInShadow(doc, selector);
-      if (direct) return direct;
-    } catch (e) { /* cross-origin iframe will throw */ }
-    // Recurse into same-origin iframes
-    try {
-      const frames = doc.querySelectorAll("iframe, frame");
-      for (const frame of frames) {
-        try {
-          const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
-          if (!innerDoc) continue;
-          const found = findInDocument(innerDoc, selector);
-          if (found) return found;
-        } catch (e) { /* cross-origin â€” skip */ }
-      }
-    } catch (e) { /* ignore */ }
-    return null;
+    function findInDocument(doc, selector) {
+    return _elementFinder().findInDocument(doc, selector);
   }
 
   function _findKnownGalleryControlFallback(selector) {
