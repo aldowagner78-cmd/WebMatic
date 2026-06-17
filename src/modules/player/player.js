@@ -1536,14 +1536,15 @@
     el.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
-  function _restoreFormFromBaseline(preRunReset) {
+  function _restoreFormFromBaseline(preRunReset, context) {
     const controls = Array.isArray(preRunReset && preRunReset.controls) ? preRunReset.controls : [];
     const summary = { restored: 0, skipped: 0, mismatch: 0 };
 
     try {
       console.info("[WebMatic][preRunReset:start]", {
         controls: controls.length,
-        url: String((preRunReset && preRunReset.url) || "")
+        url: String((preRunReset && preRunReset.url) || ""),
+        reason: String((context && context.reason) || "")
       });
     } catch (_e) { /* ignore */ }
 
@@ -1587,17 +1588,28 @@
       try {
         if (tag === "select") {
           const rawValue = String((ctrl && ctrl.value) != null ? ctrl.value : "");
-          const hadValue = rawValue !== "";
-          let changed = false;
-          if (hadValue && String(el.value || "") !== rawValue) {
-            el.value = rawValue;
-            changed = true;
+          const hasRecordedValue = Object.prototype.hasOwnProperty.call(ctrl || {}, "value");
+          const hasRecordedIndex = Number.isFinite(Number(ctrl && ctrl.selectedIndex));
+          const beforeValue = String(el.value == null ? "" : el.value);
+          const beforeIndex = Number(el.selectedIndex);
+
+          if (hasRecordedValue) {
+            const proto = el.constructor && el.constructor.prototype ? el.constructor.prototype : HTMLSelectElement.prototype;
+            const desc = Object.getOwnPropertyDescriptor(proto, "value");
+            if (desc && typeof desc.set === "function") desc.set.call(el, rawValue);
+            else el.value = rawValue;
           }
-          if (!hadValue && Number.isFinite(Number(ctrl && ctrl.selectedIndex)) && Number(el.selectedIndex) !== Number(ctrl.selectedIndex)) {
+
+          if (String(el.value == null ? "" : el.value) !== rawValue && hasRecordedIndex) {
             el.selectedIndex = Number(ctrl.selectedIndex);
-            changed = true;
           }
+
+          const afterValue = String(el.value == null ? "" : el.value);
+          const afterIndex = Number(el.selectedIndex);
+          const changed = beforeValue !== afterValue || beforeIndex !== afterIndex;
+
           if (changed) {
+            el.dispatchEvent(new Event("input", { bubbles: true }));
             el.dispatchEvent(new Event("change", { bubbles: true }));
             summary.restored += 1;
             try { console.info("[WebMatic][preRunReset:controlRestored]", { index: idx, selector, type: "select" }); } catch (_e) { /* ignore */ }
@@ -1615,15 +1627,28 @@
             try { console.info("[WebMatic][preRunReset:controlSkipped]", { index: idx, selector, reason: "already_equal" }); } catch (_e) { /* ignore */ }
             return;
           }
-          el.checked = desired;
-          el.dispatchEvent(new Event("input", { bubbles: true }));
-          el.dispatchEvent(new Event("change", { bubbles: true }));
+          _setCheckedNative(el, desired);
           summary.restored += 1;
           try { console.info("[WebMatic][preRunReset:controlRestored]", { index: idx, selector, type }); } catch (_e) { /* ignore */ }
           return;
         }
 
         const desiredValue = String((ctrl && ctrl.value) != null ? ctrl.value : "");
+        if (el && el.isContentEditable) {
+          const currentText = String(el.innerText != null ? el.innerText : (el.textContent || ""));
+          if (currentText === desiredValue) {
+            summary.skipped += 1;
+            try { console.info("[WebMatic][preRunReset:controlSkipped]", { index: idx, selector, reason: "already_equal" }); } catch (_e) { /* ignore */ }
+            return;
+          }
+          el.innerText = desiredValue;
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+          summary.restored += 1;
+          try { console.info("[WebMatic][preRunReset:controlRestored]", { index: idx, selector, type: "contenteditable" }); } catch (_e) { /* ignore */ }
+          return;
+        }
+
         if (String(el.value == null ? "" : el.value) === desiredValue) {
           summary.skipped += 1;
           try { console.info("[WebMatic][preRunReset:controlSkipped]", { index: idx, selector, reason: "already_equal" }); } catch (_e) { /* ignore */ }
@@ -1693,6 +1718,40 @@
     const raw = String(policy && typeof policy === "object" ? policy.mode : policy || "").trim().toLowerCase();
     if (raw === "start_and_resume" || raw === "resume" || raw === "all") return "start_and_resume";
     return "start_only";
+  }
+
+  function _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+  }
+
+  function _sameResetPage(preRunReset) {
+    const baselineUrl = String((preRunReset && preRunReset.url) || "").trim();
+    if (!baselineUrl) return true;
+    try {
+      const base = new URL(baselineUrl, window.location.href);
+      const current = new URL(window.location.href);
+      return base.origin === current.origin &&
+        base.pathname === current.pathname &&
+        base.search === current.search;
+    } catch (_e) {
+      return true;
+    }
+  }
+
+  async function _applyPreRunReset(preRunReset, reason, delayMs) {
+    if (!preRunReset || typeof preRunReset !== "object") return null;
+    if (delayMs) await _sleep(delayMs);
+    if (!_sameResetPage(preRunReset)) {
+      try {
+        console.info("[WebMatic][preRunReset:skippedPage]", {
+          reason: String(reason || ""),
+          baselineUrl: String(preRunReset.url || ""),
+          currentUrl: String(window.location.href || "")
+        });
+      } catch (_e) { /* ignore */ }
+      return null;
+    }
+    return _restoreFormFromBaseline(preRunReset, { reason });
   }
 
   function _isSilentInternalStep(step) {
@@ -2092,8 +2151,9 @@
       this._speed = speed;
       _fallbackBucket = [];
 
-      if (options.preRunReset && typeof options.preRunReset === "object" && (startIndex === 0 || preRunResetPolicy === "start_and_resume")) {
-        _restoreFormFromBaseline(options.preRunReset);
+      const preRunReset = options.preRunReset && typeof options.preRunReset === "object" ? options.preRunReset : null;
+      if (preRunReset) {
+        await _applyPreRunReset(preRunReset, startIndex > 0 ? "play_resume" : "play_start", 0);
       }
 
       // Do not reset page forms implicitly: it can alter defaults not present in the recording.
@@ -2350,7 +2410,9 @@
                 return true;
               }
             }
-            // URL is empty or matches current page — treat as no-op, continue loop
+            // URL is empty, same-document, or already current — reset the page now that the
+            // target hash/section is active, then continue with the real user steps.
+            await _applyPreRunReset(preRunReset, "after_navigate", 120);
             if (i < runtimeSteps.length - 1) await new Promise((r) => setTimeout(r, baseDelayMs));
             continue;
           }

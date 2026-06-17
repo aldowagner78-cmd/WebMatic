@@ -1828,6 +1828,130 @@ test("preRunReset: inicio y reanudacion tambien restaura baseline", async () => 
   });
 });
 
+
+
+test("preRunReset: restaura checkbox ensuciado aunque la macro no lo toque", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(`
+      <input id="chk-extra" type="checkbox">
+      <input id="real-step" type="text" value="">
+    `);
+
+    const chk = win.document.getElementById("chk-extra");
+    chk.checked = true;
+
+    const baseline = {
+      version: 1,
+      url: String(win.location.href || "https://example.com/"),
+      controls: [
+        { selector: "#chk-extra", tag: "input", type: "checkbox", checked: false }
+      ]
+    };
+
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    let failed = null;
+
+    await new Promise((resolve) => {
+      p.play([{ type: "input", selector: "#real-step", value: "ok" }], {
+        vars: {},
+        speed: 1,
+        preRunReset: baseline,
+        onDone: resolve,
+        onError: (err) => { failed = err; resolve(); }
+      });
+    });
+
+    assert.equal(failed, null, failed && failed.message);
+    assert.equal(win.document.getElementById("chk-extra").checked, false);
+    assert.equal(win.document.getElementById("real-step").value, "ok");
+  });
+});
+
+test("preRunReset: se reintenta despues de navigate y resetea controles renderizados tarde", async () => {
+  await withVisibleLayout(async () => {
+    resetBody('<div id="mount"></div>');
+
+    const baseHref = String(win.location.href || "https://example.com/").split("#")[0];
+    const baseline = {
+      version: 1,
+      url: baseHref + "#formulario",
+      controls: [
+        { selector: "#late-check", tag: "input", type: "checkbox", checked: false }
+      ]
+    };
+
+    setTimeout(() => {
+      const mount = win.document.getElementById("mount");
+      if (mount) mount.innerHTML = '<input id="late-check" type="checkbox" checked>';
+    }, 30);
+
+    const vars = {};
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    let failed = null;
+
+    await new Promise((resolve) => {
+      p.play([
+        { type: "navigate", url: baseHref + "#tablas" },
+        { type: "set_variable", variable: "AFTER_NAV_RESET", value: "ok" }
+      ], {
+        vars,
+        speed: 1,
+        bootstrapToFirstNavigate: false,
+        preRunReset: baseline,
+        onDone: resolve,
+        onError: (err) => { failed = err; resolve(); }
+      });
+    });
+
+    assert.equal(failed, null, failed && failed.message);
+    assert.equal(vars.AFTER_NAV_RESET, "ok");
+    assert.equal(win.document.getElementById("late-check").checked, false);
+  });
+});
+
+test("preRunReset: en reanudacion tambien restaura checkbox default no tocado por la macro", async () => {
+  await withVisibleLayout(async () => {
+    resetBody(`
+      <input id="resume-check" type="checkbox">
+      <input id="resume-real" type="text" value="">
+    `);
+
+    win.document.getElementById("resume-check").checked = true;
+
+    const baseline = {
+      version: 1,
+      url: String(win.location.href || "https://example.com/"),
+      controls: [
+        { selector: "#resume-check", tag: "input", type: "checkbox", checked: false }
+      ]
+    };
+
+    const Player2 = require("../../../../src/modules/player/player.js");
+    const p = new Player2({ retryMs: 20, timeoutMs: 500 });
+    let failed = null;
+
+    await new Promise((resolve) => {
+      p.play([
+        { type: "set_variable", variable: "SKIPPED", value: "0" },
+        { type: "input", selector: "#resume-real", value: "resume-ok" }
+      ], {
+        vars: {},
+        speed: 1,
+        startIndex: 1,
+        preRunReset: baseline,
+        onDone: resolve,
+        onError: (err) => { failed = err; resolve(); }
+      });
+    });
+
+    assert.equal(failed, null, failed && failed.message);
+    assert.equal(win.document.getElementById("resume-check").checked, false);
+    assert.equal(win.document.getElementById("resume-real").value, "resume-ok");
+  });
+});
+
 test("preRunReset: tolera controles faltantes y no aborta la macro", async () => {
   await withVisibleLayout(async () => {
     resetBody('<select id="trigger"><option value="x">X</option><option value="y">Y</option></select>');
