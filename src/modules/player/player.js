@@ -10,23 +10,17 @@
    * Recursively searches for a CSS selector within a root node and any
    * attached Shadow Roots. Returns the first match or null.
    */
-  function findInShadow(root, selector) {
-    try {
-      const direct = root.querySelector(selector);
-      if (direct) return direct;
-    } catch (e) {
-      return null; // invalid selector
+    function _elementFinder() {
+    if (typeof WebMaticElementFinder !== "undefined") return WebMaticElementFinder;
+    if (globalScope && globalScope.WebMaticElementFinder) return globalScope.WebMaticElementFinder;
+    if (typeof require === "function") {
+      try { return require("../../common/dom/element-finder.js"); } catch (_e) { /* ignore */ }
     }
-    try {
-      const all = root.querySelectorAll("*");
-      for (const el of all) {
-        if (el.shadowRoot) {
-          const found = findInShadow(el.shadowRoot, selector);
-          if (found) return found;
-        }
-      }
-    } catch (e) { /* ignore */ }
-    return null;
+    throw new Error("WebMaticElementFinder no está disponible");
+  }
+
+  function findInShadow(root, selector) {
+    return _elementFinder().findInShadow(root, selector);
   }
 
   /**
