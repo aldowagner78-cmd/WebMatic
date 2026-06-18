@@ -1106,11 +1106,8 @@
         } else if (step.type === "extract") {
           const extracted = el.value !== undefined ? el.value : (el.textContent || "").trim();
           if (step.variable) vars[step.variable] = extracted;
-        } else if (step.type === "scroll_to") {
-          try { el.scrollIntoView({ behavior: "instant", block: "center" }); } catch (e) { /* ignore */ }
-        } else if (step.type === "hover") {
-          el.dispatchEvent(new MouseEvent("mouseenter", { bubbles: false, cancelable: true }));
-          el.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, cancelable: true }));
+        } else if (_actionSimpleEvents().handleSimpleElementAction(step, el)) {
+          // handled by action-simple-events
         }
 
         resolve();
@@ -1354,6 +1351,17 @@
     }
 
     throw new Error("WebMaticActionAutocomplete no esta disponible");
+  }
+
+  function _actionSimpleEvents() {
+    if (typeof WebMaticActionSimpleEvents !== "undefined") return WebMaticActionSimpleEvents;
+    if (globalScope && globalScope.WebMaticActionSimpleEvents) return globalScope.WebMaticActionSimpleEvents;
+
+    if (typeof require === "function") {
+      return require("./actions/action-simple-events.js");
+    }
+
+    throw new Error("WebMaticActionSimpleEvents no esta disponible");
   }
 
   function _tryClickAutocomplete(value) {
