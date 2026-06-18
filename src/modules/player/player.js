@@ -1009,87 +1009,22 @@
           });
           return; // resolve() se llama dentro del .then()
         } else if (step.type === "check") {
-          if (!_silentStep) _highlightElement(el);
-
-          if (!(el instanceof HTMLInputElement)) {
-            // Some imported macros may reference a visual toggle node instead of
-            // the underlying input. Click it and continue.
-            simulateClick(el);
-            resolve();
-            return;
-          }
-
-          const desired = step.checked === true || step.checked === "true";
-          const elType = (el.type || "").toLowerCase();
-          let _checkAttempts = 0;
-          const _applyCheck = () => {
-            if (el.checked === desired) {
-              resolve();
-              return;
-            }
-
-            const activator = _findCheckActivator(el);
-
-            if (elType === "radio") {
-              // Radio buttons: prefer real click paths to trigger group logic.
-              if (desired) {
-                if (_isInteractable(el)) {
-                  simulateClick(el);
-                } else if (activator) {
-                  simulateClick(activator);
-                } else {
-                  _setCheckedNative(el, true);
-                }
-              }
-            } else {
-              // Checkbox: prefer real click paths, fallback to native property setter.
-              if (el.checked !== desired) {
-                if (_isInteractable(el)) {
-                  simulateClick(el);
-                } else if (activator) {
-                  simulateClick(activator);
-                } else {
-                  _setCheckedNative(el, desired);
-                }
-                // If a custom handler prevented state toggle, force desired state.
-                if (el.checked !== desired) {
-                  _setCheckedNative(el, desired);
-                }
-              }
-            }
-
-            // Some legacy frameworks revert checkbox/radio state asynchronously.
-            setTimeout(() => {
-              if (el.checked === desired) {
-                resolve();
-                return;
-              }
-              _checkAttempts += 1;
-              if (_checkAttempts < 3) {
-                // Retry once with activator-first path for custom widgets.
-                if (activator && _isInteractable(activator)) {
-                  simulateClick(activator);
-                }
-                _applyCheck();
-                return;
-              }
-
-              // Best-effort fallback for custom visual toggles:
-              // some component libraries trigger UI updates but never reflect the
-              // final state in the hidden native input's .checked.
-              if (
-                desired === true &&
-                (elType === "radio" || elType === "checkbox") &&
-                (activator || !_isInteractable(el))
-              ) {
-                resolve();
-                return;
-              }
-
-              reject(new Error(`No se pudo establecer el estado CHECK esperado en: ${selector}`));
-            }, 80);
-          };
-          _applyCheck();
+          _actionCheckRunner().runCheckAction({
+            step,
+            el,
+            selector,
+            silentStep: _silentStep
+          }, {
+            resolve,
+            reject,
+            highlightElement: _highlightElement,
+            simulateClick,
+            findCheckActivator: _findCheckActivator,
+            setCheckedNative: _setCheckedNative,
+            isInteractable: _isInteractable,
+            setTimeout,
+            HTMLInputElement
+          });
           return;
         } else if (step.type === "extract") {
           _actionExtract().extract(step, el, vars);
@@ -1382,6 +1317,17 @@
     }
 
     throw new Error("WebMaticActionInputText no esta disponible");
+  }
+
+  function _actionCheckRunner() {
+    if (typeof WebMaticActionCheckRunner !== "undefined") return WebMaticActionCheckRunner;
+    if (globalScope && globalScope.WebMaticActionCheckRunner) return globalScope.WebMaticActionCheckRunner;
+
+    if (typeof require === "function") {
+      return require("./actions/action-check-runner.js");
+    }
+
+    throw new Error("WebMaticActionCheckRunner no esta disponible");
   }
 
   function _tryClickAutocomplete(value) {
