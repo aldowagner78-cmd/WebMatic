@@ -902,113 +902,17 @@
       fieldsDiv.className = "wm-sved-fields";
 
       const renderFields = (prefill) => {
-        fieldsDiv.replaceChildren();
         const ti = _stepDefinitions().STEP_TYPES.find((t) => t.value === typeSelect.value);
         if (!ti) return;
-        ti.fields.forEach((field) => {
-          const { name, ph } = field;
-          if (typeSelect.value === "choose_option" && (name === "value" || name === "text" || name === "variable")) {
-            const hidden = document.createElement("input");
-            hidden.type = "hidden";
-            hidden.dataset.field = name;
-            if (prefill && prefill[name] != null) {
-              const pv = prefill[name];
-              hidden.value = Array.isArray(pv) ? pv.join(", ") : String(pv);
-            }
-            fieldsDiv.appendChild(hidden);
-            return;
-          }
-          const lbl = document.createElement("label");
-          lbl.className = "wm-sved-field-label";
-          lbl.textContent = name;
-          if (field.select) {
-            const sel = document.createElement("select");
-            sel.className = "wm-sved-select";
-            sel.dataset.field = name;
-            field.select.forEach(([val, text]) => {
-              const opt = document.createElement("option");
-              opt.value = val;
-              opt.textContent = text;
-              if (prefill && prefill[name] === val) opt.selected = true;
-              sel.appendChild(opt);
-            });
-            lbl.appendChild(sel);
-          } else if (name === "checked") {
-            const sel = document.createElement("select");
-            sel.className = "wm-sved-select";
-            sel.dataset.field = name;
-            [["true", "✔ Marcar (true)"], ["false", "✘ Desmarcar (false)"]].forEach(([val, text]) => {
-              const opt = document.createElement("option");
-              opt.value = val;
-              opt.textContent = text;
-              if (prefill && String(prefill[name]) === val) opt.selected = true;
-              sel.appendChild(opt);
-            });
-            lbl.appendChild(sel);
-          } else if (field.type === "toggle") {
-            const wrap = document.createElement("div");
-            wrap.style.cssText = "display:flex;align-items:center;gap:8px;margin-top:4px;";
-            const cb = document.createElement("input");
-            cb.type = "checkbox";
-            cb.dataset.field = name;
-            cb.dataset.fieldtype = "toggle";
-            cb.checked = !!(prefill && prefill[name]);
-            cb.addEventListener("change", () => {
-              const valInp = fieldsDiv.querySelector("[data-field='value']");
-              if (valInp) { valInp.disabled = cb.checked; valInp.style.opacity = cb.checked ? "0.4" : "1"; }
-            });
-            const cbLbl = document.createElement("label");
-            cbLbl.textContent = field.label || name;
-            cbLbl.style.cssText = "font-weight:normal;cursor:pointer;font-size:12px;";
-            wrap.appendChild(cb);
-            wrap.appendChild(cbLbl);
-            lbl.textContent = "";
-            lbl.appendChild(wrap);
-            setTimeout(() => {
-              const valInp = fieldsDiv.querySelector("[data-field='value']");
-              if (valInp && cb.checked) { valInp.disabled = true; valInp.style.opacity = "0.4"; }
-            }, 0);
-          } else {
-            const inp = document.createElement("input");
-            inp.className = "wm-sved-field-input";
-            inp.type = "text";
-            inp.dataset.field = name;
-            inp.placeholder = ph || "";
-            if (prefill && prefill[name] != null) {
-              const pv = prefill[name];
-              inp.value = Array.isArray(pv) ? pv.join(", ") : String(pv);
-            }
-            if ((name === "selector" || name === "from" || name === "to") && this._onPickRequest) {
-              const row = document.createElement("div");
-              row.style.cssText = "display:flex;gap:4px;align-items:center;width:100%";
-              inp.style.flex = "1";
-              const pb = document.createElement("button");
-              pb.type = "button";
-              pb.textContent = "🎯";
-              pb.title = "Haz clic en la p\u00e1gina para capturar el selector";
-              pb.style.cssText = "all:initial;display:inline-flex;align-items:center;justify-content:center;background:#0ea5e9;color:#fff;border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;flex-shrink:0;font-family:system-ui,sans-serif";
-              pb.addEventListener("click", (e) => {
-                e.preventDefault();
-                this._pickElement(name, (selector) => {
-                  inp.value = selector;
-                  inp.dispatchEvent(new Event("input", { bubbles: true }));
-                });
-              });
-              row.appendChild(inp);
-              row.appendChild(pb);
-              lbl.appendChild(row);
-            } else {
-              lbl.appendChild(inp);
-            }
-          }
-          fieldsDiv.appendChild(lbl);
+        _formFieldsRenderer().renderStepTypeFields({
+          documentRef: document,
+          fieldsDiv,
+          typeValue: typeSelect.value,
+          typeInfo: ti,
+          prefill,
+          onPickElement: this._onPickRequest ? (fieldName, onPicked) => this._pickElement(fieldName, onPicked) : null,
+          onSyncOptionPicker: (targetFieldsDiv, typeValue) => this._syncOptionPicker(targetFieldsDiv, typeValue)
         });
-        const first = fieldsDiv.querySelector("input, select");
-        if (first) setTimeout(() => first.focus(), 0);
-        // Combo amigable de opciones reales (solo choose_option sobre <select> real)
-        this._syncOptionPicker(fieldsDiv, typeSelect.value);
-        const selInp = fieldsDiv.querySelector("[data-field='selector']");
-        if (selInp) selInp.addEventListener("input", () => this._syncOptionPicker(fieldsDiv, typeSelect.value));
       };
 
       // Pre-fill with current step values; on type change clear fields
@@ -1085,98 +989,17 @@
       fieldsDiv.className = "wm-sved-fields";
 
       const renderFields = () => {
-        fieldsDiv.replaceChildren();
         const typeInfo = _stepDefinitions().STEP_TYPES.find((t) => t.value === typeSelect.value);
         if (!typeInfo) return;
-        typeInfo.fields.forEach((field) => {
-          const { name, ph } = field;
-          if (typeSelect.value === "choose_option" && (name === "value" || name === "text" || name === "variable")) {
-            const hidden = document.createElement("input");
-            hidden.type = "hidden";
-            hidden.dataset.field = name;
-            fieldsDiv.appendChild(hidden);
-            return;
-          }
-          const lbl = document.createElement("label");
-          lbl.className = "wm-sved-field-label";
-          lbl.textContent = name;
-          if (field.select) {
-            const sel = document.createElement("select");
-            sel.className = "wm-sved-select";
-            sel.dataset.field = name;
-            field.select.forEach(([val, text]) => {
-              const opt = document.createElement("option");
-              opt.value = val;
-              opt.textContent = text;
-              sel.appendChild(opt);
-            });
-            lbl.appendChild(sel);
-          } else if (name === "checked") {
-            const sel = document.createElement("select");
-            sel.className = "wm-sved-select";
-            sel.dataset.field = name;
-            [["true", "✔ Marcar (true)"], ["false", "✘ Desmarcar (false)"]].forEach(([val, text]) => {
-              const opt = document.createElement("option");
-              opt.value = val;
-              opt.textContent = text;
-              sel.appendChild(opt);
-            });
-            lbl.appendChild(sel);
-          } else if (field.type === "toggle") {
-            const wrap = document.createElement("div");
-            wrap.style.cssText = "display:flex;align-items:center;gap:8px;margin-top:4px;";
-            const cb = document.createElement("input");
-            cb.type = "checkbox";
-            cb.dataset.field = name;
-            cb.dataset.fieldtype = "toggle";
-            cb.addEventListener("change", () => {
-              const valInp = fieldsDiv.querySelector("[data-field='value']");
-              if (valInp) { valInp.disabled = cb.checked; valInp.style.opacity = cb.checked ? "0.4" : "1"; }
-            });
-            const cbLbl = document.createElement("label");
-            cbLbl.textContent = field.label || name;
-            cbLbl.style.cssText = "font-weight:normal;cursor:pointer;font-size:12px;";
-            wrap.appendChild(cb);
-            wrap.appendChild(cbLbl);
-            lbl.textContent = "";
-            lbl.appendChild(wrap);
-          } else {
-            const inp = document.createElement("input");
-            inp.className = "wm-sved-field-input";
-            inp.type = "text";
-            inp.dataset.field = name;
-            inp.placeholder = ph || "";
-            if ((name === "selector" || name === "from" || name === "to") && this._onPickRequest) {
-              const row = document.createElement("div");
-              row.style.cssText = "display:flex;gap:4px;align-items:center;width:100%";
-              inp.style.flex = "1";
-              const pb = document.createElement("button");
-              pb.type = "button";
-              pb.textContent = "🎯";
-              pb.title = "Haz clic en la p\u00e1gina para capturar el selector";
-              pb.style.cssText = "all:initial;display:inline-flex;align-items:center;justify-content:center;background:#0ea5e9;color:#fff;border-radius:6px;padding:4px 8px;font-size:14px;cursor:pointer;flex-shrink:0;font-family:system-ui,sans-serif";
-              pb.addEventListener("click", (e) => {
-                e.preventDefault();
-                this._pickElement(name, (selector) => {
-                  inp.value = selector;
-                  inp.dispatchEvent(new Event("input", { bubbles: true }));
-                });
-              });
-              row.appendChild(inp);
-              row.appendChild(pb);
-              lbl.appendChild(row);
-            } else {
-              lbl.appendChild(inp);
-            }
-          }
-          fieldsDiv.appendChild(lbl);
+        _formFieldsRenderer().renderStepTypeFields({
+          documentRef: document,
+          fieldsDiv,
+          typeValue: typeSelect.value,
+          typeInfo,
+          prefill: null,
+          onPickElement: this._onPickRequest ? (fieldName, onPicked) => this._pickElement(fieldName, onPicked) : null,
+          onSyncOptionPicker: (targetFieldsDiv, typeValue) => this._syncOptionPicker(targetFieldsDiv, typeValue)
         });
-        const first = fieldsDiv.querySelector("input, select");
-        if (first) setTimeout(() => first.focus(), 0);
-        // Combo amigable de opciones reales (solo choose_option sobre <select> real)
-        this._syncOptionPicker(fieldsDiv, typeSelect.value);
-        const selInp = fieldsDiv.querySelector("[data-field='selector']");
-        if (selInp) selInp.addEventListener("input", () => this._syncOptionPicker(fieldsDiv, typeSelect.value));
       };
 
       typeSelect.addEventListener("change", renderFields);
@@ -1249,39 +1072,15 @@
     }
 
     _collapseAllBlocksByDefault() {
-      if (!Array.isArray(this.steps) || this.steps.length === 0) return;
-      let idx = 0;
-      while (idx < this.steps.length) {
-        const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
-        const start = block.start;
-        const end = block.end;
-        if (start !== idx) {
-          idx += 1;
-          continue;
-        }
-        const blockSize = end - start + 1;
-        if (blockSize > 1) this._collapsedBlocks.add(`${start}:${end}`);
-        idx = end + 1;
-      }
+      _blockUtils().collectCollapsibleBlockKeys(this.steps).forEach((key) => {
+        this._collapsedBlocks.add(key);
+      });
     }
 
     _initCollapsedBlocksFromSteps() {
-      if (!Array.isArray(this.steps) || this.steps.length === 0) return;
-      let idx = 0;
-      while (idx < this.steps.length) {
-        const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
-        const start = block.start;
-        const end = block.end;
-        if (start !== idx) {
-          idx += 1;
-          continue;
-        }
-        const blockSize = end - start + 1;
-        if (blockSize > 1 && this._wantsCollapsedByDefault(this.steps[start])) {
-          this._collapsedBlocks.add(`${start}:${end}`);
-        }
-        idx = end + 1;
-      }
+      _blockUtils().collectCollapsibleBlockKeys(this.steps, { onlyMarkedByDefault: true }).forEach((key) => {
+        this._collapsedBlocks.add(key);
+      });
     }
 
     _findExecutionBlockBounds(idx) {

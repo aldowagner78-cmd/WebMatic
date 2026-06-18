@@ -114,6 +114,34 @@
     return meta;
   }
 
+  function collectCollapsibleBlockKeys(steps, options) {
+    const list = Array.isArray(steps) ? steps : [];
+    const config = options && typeof options === "object" ? options : {};
+    const onlyMarkedByDefault = !!config.onlyMarkedByDefault;
+    const keys = [];
+    if (list.length === 0) return keys;
+
+    let idx = 0;
+    while (idx < list.length) {
+      const block = findExecutionBlockBounds(list, idx) || { start: idx, end: idx };
+      const start = block.start;
+      const end = block.end;
+      if (start !== idx) {
+        idx += 1;
+        continue;
+      }
+      const blockSize = end - start + 1;
+      if (blockSize > 1) {
+        if (!onlyMarkedByDefault || wantsCollapsedByDefault(list[start])) {
+          keys.push(`${start}:${end}`);
+        }
+      }
+      idx = end + 1;
+    }
+
+    return keys;
+  }
+
   const api = {
     normalizeBlockKey,
     stepBlockKey,
@@ -123,7 +151,8 @@
     wantsCollapsedByDefault,
     findExecutionBlockBounds,
     getExecutionBlockOrdinal,
-    buildExecutionBlockContextMeta
+    buildExecutionBlockContextMeta,
+    collectCollapsibleBlockKeys
   };
 
   globalScope.WebMaticBlockUtils = api;
