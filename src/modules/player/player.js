@@ -1339,38 +1339,27 @@
    * en la primera opción cuyo texto coincida exactamente con `value`.
    * Si no aparece ningÃºn autocomplete, resuelve sin hacer nada (non-blocking).
    */
+    function _actionAutocomplete() {
+    if (typeof WebMaticActionAutocomplete !== "undefined") return WebMaticActionAutocomplete;
+    if (globalScope && globalScope.WebMaticActionAutocomplete) return globalScope.WebMaticActionAutocomplete;
+
+    if (typeof require === "function") {
+      return require("./actions/action-autocomplete.js");
+    }
+
+    throw new Error("WebMaticActionAutocomplete no esta disponible");
+  }
+
   function _tryClickAutocomplete(value) {
-    return new Promise(resolve => {
-      const needle = (value || "").trim().toLowerCase();
-      if (!needle) { resolve(false); return; }
-      let attempts = 0;
-      const poll = () => {
-        attempts++;
-        const candidates = document.querySelectorAll("td, li, [role='option'], [role='listitem']");
-        for (const c of candidates) {
-          if (!c.offsetParent) continue;
-          const rect = c.getBoundingClientRect();
-          if (rect.width === 0 || rect.height === 0) continue;
-          // Solo elementos dentro de un contenedor flotante (popup de autocomplete)
-          let floating = false;
-          let p = c.parentElement;
-          for (let d = 0; d < 8 && p && p !== document.body; d++) {
-            const pos = getComputedStyle(p).position;
-            if (pos === "absolute" || pos === "fixed") { floating = true; break; }
-            p = p.parentElement;
-          }
-          if (!floating) continue;
-          if (c.textContent.trim().toLowerCase() === needle) {
-            simulateClick(c);
-            resolve(true);
-            return;
-          }
-        }
-        if (attempts < 4) setTimeout(poll, 120);
-        else resolve(false);
-      };
-      setTimeout(poll, 150);
+    return _actionAutocomplete().tryClickAutocomplete(value, {
+      document,
+      window,
+      simulateClick
     });
+  }
+
+  function _isLikelyAutocompleteInput(el, step) {
+    return _actionAutocomplete().isLikelyAutocompleteInput(el, step);
   }
 
   function _isLikelyAutocompleteInput(el, step) {

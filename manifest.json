@@ -53,6 +53,7 @@
         "src/modules/player/actions/action-check.js",
         "src/modules/player/actions/action-input-value.js",
         "src/modules/player/actions/action-click.js",
+        "src/modules/player/actions/action-autocomplete.js",
         "src/modules/player/defaults/pre-run-reset-utils.js",
         "src/modules/player/defaults/default-selector.js",
         "src/modules/player/defaults/default-steps-collector.js",
