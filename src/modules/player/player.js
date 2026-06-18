@@ -497,16 +497,38 @@
     return output[0];
   }
 
-  function _isInteractable(el) {
+  function isElementActionable(el, options = {}) {
     if (!el || !(el instanceof Element)) return false;
     const htmlEl = /** @type {HTMLElement} */ (el);
-    if ("disabled" in htmlEl && htmlEl.disabled) return false;
+    const needsEditable = options && options.needsEditable === true;
+
     const view = (htmlEl.ownerDocument && htmlEl.ownerDocument.defaultView) || window;
     const cs = view && typeof view.getComputedStyle === "function"
       ? view.getComputedStyle(htmlEl)
-      : { display: "", visibility: "", pointerEvents: "" };
-    if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return false;
-    return htmlEl.getClientRects && htmlEl.getClientRects().length > 0;
+      : { display: "", visibility: "", opacity: "", pointerEvents: "" };
+
+    if (cs.display === "none") return false;
+    if (cs.visibility === "hidden") return false;
+    if (Number.parseFloat(String(cs.opacity || "1")) === 0) return false;
+    if (cs.pointerEvents === "none") return false;
+
+    const rect = typeof htmlEl.getBoundingClientRect === "function"
+      ? htmlEl.getBoundingClientRect()
+      : null;
+    const hasRects = !!(htmlEl.getClientRects && htmlEl.getClientRects().length > 0);
+    const hasSize = !!(rect && (rect.width > 0 || rect.height > 0));
+    const hasRectObject = !!rect;
+    if (!hasRects && !hasSize && !hasRectObject) return false;
+
+    if ("disabled" in htmlEl && htmlEl.disabled) return false;
+    if (htmlEl.getAttribute && String(htmlEl.getAttribute("aria-disabled") || "").toLowerCase() === "true") return false;
+    if (needsEditable && "readOnly" in htmlEl && htmlEl.readOnly) return false;
+
+    return true;
+  }
+
+  function _isInteractable(el) {
+    return isElementActionable(el);
   }
 
   function _allDocs(rootDoc) {
@@ -551,8 +573,37 @@
       const associated = _findAssociatedCheckInput(direct);
       return associated || direct;
     }
-    const interactable = matches.find((el) => _isInteractable(el));
+    const interactable = matches.find((el) => isElementActionable(el));
     return interactable || matches[0];
+  }
+
+  function _isCheckTargetActionable(el) {
+    if (el instanceof Element && !(el instanceof HTMLInputElement)) return isElementActionable(el);
+    if (!(el instanceof HTMLInputElement)) return false;
+    if (isElementActionable(el)) return true;
+    const activator = _findCheckActivator(el);
+    return isElementActionable(activator);
+  }
+
+  function findActionableElement(selector, options = {}) {
+    if (!selector) return null;
+
+    // XPath and text selectors are resolved with existing strategy and validated afterwards.
+    if (selector.startsWith("/") || selector.startsWith("(") || /^\w+\[text="/.test(selector)) {
+      const found = findElement(selector);
+      return isElementActionable(found, options) ? found : null;
+    }
+
+    for (const d of _allDocs(document)) {
+      try {
+        const list = Array.from(d.querySelectorAll(selector));
+        const actionable = list.find((el) => isElementActionable(el, options));
+        if (actionable) return actionable;
+      } catch (_e) { /* invalid selector */ }
+    }
+
+    const fallback = findElement(selector);
+    return isElementActionable(fallback, options) ? fallback : null;
   }
 
   function _resolveLegacyDescendantFallback(step, selector) {
@@ -1017,7 +1068,7 @@
           const wfSelector = expandVariables(step.selector || "", vars);
           const wfTimeout = step.timeout != null ? step.timeout : timeoutMs;
           const wfPoll = () => {
-            const found = findElement(wfSelector);
+            const found = findActionableElement(wfSelector);
             if (found) { resolve(); }
             else if (_shouldBypassMissingLoginStep("wait_for", wfSelector)) { resolve(); }
             else if (Date.now() - start < wfTimeout) { setTimeout(wfPoll, retryMs); }
@@ -1139,7 +1190,15 @@
         }
 
         const selector = expandVariables(step.selector || "", vars);
-        let el = step.type === "check" ? findBestCheckTarget(selector) : findElement(selector);
+        let el = null;
+        if (step.type === "check") {
+          el = findBestCheckTarget(selector);
+          if (!_isCheckTargetActionable(el)) el = null;
+        } else if (step.type === "input" || step.type === "text") {
+          el = findActionableElement(selector, { needsEditable: true });
+        } else {
+          el = findActionableElement(selector);
+        }
 
         if (!el) {
           if (_shouldBypassMissingLoginStep(step.type, selector)) {
@@ -1154,7 +1213,7 @@
               return;
             }
             const legacyFallbackEl = _resolveLegacyDescendantFallback(step, selector);
-            if (legacyFallbackEl) {
+            if (legacyFallbackEl && isElementActionable(legacyFallbackEl, { needsEditable: step.type === "input" || step.type === "text" })) {
               el = legacyFallbackEl;
               try {
                 if (Array.isArray(_fallbackBucket)) {
