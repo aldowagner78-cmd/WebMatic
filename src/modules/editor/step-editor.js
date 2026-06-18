@@ -10,6 +10,17 @@
     throw new Error("WebMaticStepDefinitions no esta disponible");
   }
 
+  function _editorMeta() {
+    if (typeof WebMaticEditorMeta !== "undefined") return WebMaticEditorMeta;
+    if (globalScope && globalScope.WebMaticEditorMeta) return globalScope.WebMaticEditorMeta;
+
+    if (typeof require === "function") {
+      return require("./state/editor-meta.js");
+    }
+
+    throw new Error("WebMaticEditorMeta no esta disponible");
+  }
+
   function _shortLabel(s) {
     return _stepDefinitions().shortLabel(s);
   }
@@ -38,44 +49,27 @@
   ];
 
   function _cloneMeta(meta) {
-    if (!meta || typeof meta !== "object") return null;
-    return JSON.parse(JSON.stringify(meta));
+    return _editorMeta().cloneMeta(meta);
   }
 
   function _normalizeResetPolicyMode(policy) {
-    const raw = String(policy && typeof policy === "object" ? policy.mode : policy || "").trim().toLowerCase();
-    return raw === "start_and_resume" ? "start_and_resume" : "start_only";
+    return _editorMeta().normalizeResetPolicyMode(policy);
   }
 
   function _normalizeStepEditorMeta(meta) {
-    const out = _cloneMeta(meta) || {};
-    out.preRunResetPolicy = { mode: _normalizeResetPolicyMode(out.preRunResetPolicy) };
-    return out;
+    return _editorMeta().normalizeStepEditorMeta(meta);
   }
 
   function _isBaselineDefaultStep(step) {
-    return !!(step && step._baselineDefault === true);
+    return _editorMeta().isBaselineDefaultStep(step);
   }
 
   function _normalizeComparableStepValue(value) {
-    if (Array.isArray(value)) return value.map(_normalizeComparableStepValue);
-    if (value && typeof value === "object") {
-      const out = {};
-      Object.keys(value).sort().forEach((key) => {
-        if (key === "_baselineDefault" || key === "_fast") return;
-        if (key.startsWith("_wm")) return;
-        out[key] = _normalizeComparableStepValue(value[key]);
-      });
-      return out;
-    }
-    if (typeof value === "undefined") return null;
-    return value;
+    return _editorMeta().normalizeComparableStepValue(value);
   }
 
   function _hasMeaningfulStepChanges(originalStep, updatedStep) {
-    const a = _normalizeComparableStepValue(originalStep || {});
-    const b = _normalizeComparableStepValue(updatedStep || {});
-    return JSON.stringify(a) !== JSON.stringify(b);
+    return _editorMeta().hasMeaningfulStepChanges(originalStep, updatedStep);
   }
 
   class StepEditor {
