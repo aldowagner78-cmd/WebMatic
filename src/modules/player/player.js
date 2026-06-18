@@ -992,27 +992,20 @@
           setTimeout(() => { try { _sel.focus(); } catch (e) { /* ignore */ } }, 50);
           return;
         } else if (step.type === "input" || step.type === "text") {
-          if (!_silentStep) _highlightElement(el);
-          el.focus();
-          setInputValue(el, value);
-          const _keepFocusForLogin = _isLikelyLoginInputTarget(el, selector);
-          // Intentar seleccionar la opción del autocomplete (GeneXus, etc.)
-          // Si no aparece ningÃºn dropdown en ~400ms, sigue sin hacer nada
-          _tryClickAutocomplete(value).then(clicked => {
-            if (!clicked) {
-              // Sin autocomplete: en login NO forzar Escape/blur para permitir Enter-submit.
-              if (!_keepFocusForLogin) {
-                try {
-                  const esc = { key: "Escape", keyCode: 27, bubbles: true, cancelable: true };
-                  el.dispatchEvent(new KeyboardEvent("keydown", esc));
-                  document.dispatchEvent(new KeyboardEvent("keydown", esc));
-                } catch (_) {}
-              }
-            }
-            if (!_keepFocusForLogin) {
-              try { el.blur(); } catch (_) {}
-            }
-            resolve();
+          _actionInputText().runInputText({
+            step,
+            el,
+            selector,
+            value,
+            silentStep: _silentStep
+          }, {
+            highlightElement: _highlightElement,
+            setInputValue,
+            isLikelyLoginInputTarget: _isLikelyLoginInputTarget,
+            tryClickAutocomplete: _tryClickAutocomplete,
+            resolve,
+            document,
+            KeyboardEvent
           });
           return; // resolve() se llama dentro del .then()
         } else if (step.type === "check") {
@@ -1378,6 +1371,17 @@
     }
 
     throw new Error("WebMaticActionExtract no esta disponible");
+  }
+
+  function _actionInputText() {
+    if (typeof WebMaticActionInputText !== "undefined") return WebMaticActionInputText;
+    if (globalScope && globalScope.WebMaticActionInputText) return globalScope.WebMaticActionInputText;
+
+    if (typeof require === "function") {
+      return require("./actions/action-input-text.js");
+    }
+
+    throw new Error("WebMaticActionInputText no esta disponible");
   }
 
   function _tryClickAutocomplete(value) {

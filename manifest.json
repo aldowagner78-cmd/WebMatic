@@ -71,6 +71,7 @@
         "src/modules/player/actions/action-simple-events.js",
         "src/modules/player/actions/action-wait.js",
         "src/modules/player/actions/action-extract.js",
+        "src/modules/player/actions/action-input-text.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",
