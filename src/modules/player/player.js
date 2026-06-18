@@ -535,23 +535,20 @@
     return _navigationAnalyzer().analyzeNavigation(currentHref, rawTargetUrl);
   }
 
+    function _backgroundNavigator() {
+    if (typeof WebMaticBackgroundNavigator !== "undefined") return WebMaticBackgroundNavigator;
+    if (globalScope && globalScope.WebMaticBackgroundNavigator) return globalScope.WebMaticBackgroundNavigator;
+
+    if (typeof require === "function") {
+      return require("./navigation/background-navigator.js");
+    }
+
+    throw new Error("WebMaticBackgroundNavigator no esta disponible");
+  }
+
   function _requestBackgroundNavigate(url, playbackState) {
-    return new Promise((resolve) => {
-      chrome.runtime.sendMessage({
-        type: "PLAYBACK_NAVIGATE",
-        url,
-        steps: Array.isArray(playbackState && playbackState.steps) ? playbackState.steps : undefined,
-        index: Number.isFinite(Number(playbackState && playbackState.index)) ? Number(playbackState.index) : undefined,
-        vars: playbackState && playbackState.vars ? playbackState.vars : undefined,
-        speed: playbackState && playbackState.speed ? playbackState.speed : undefined,
-        macroId: playbackState && playbackState.macroId ? playbackState.macroId : null
-      }, (resp) => {
-        if (chrome.runtime.lastError) {
-          resolve({ ok: false, error: chrome.runtime.lastError.message || "playback_navigate_runtime_error" });
-          return;
-        }
-        resolve(resp || { ok: false, error: "playback_navigate_no_response" });
-      });
+    return _backgroundNavigator().requestBackgroundNavigate(url, playbackState, {
+      chromeApi: chrome
     });
   }
 
