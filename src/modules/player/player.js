@@ -1331,8 +1331,14 @@
     });
   }
 
-  // Timers activos de highlight â€” para cancelarlos todos al terminar la macro
-  const _hlTimers = [];
+  function _highlightManager() {
+    if (typeof WebMaticHighlightManager !== "undefined") return WebMaticHighlightManager;
+    if (globalScope && globalScope.WebMaticHighlightManager) return globalScope.WebMaticHighlightManager;
+    if (typeof require === "function") {
+      return require("./diagnostics/highlight-manager.js");
+    }
+    throw new Error("WebMaticHighlightManager no esta disponible");
+  }
 
   /**
    * Espera hasta ~400ms a que aparezca un dropdown de autocompletado y hace clic
@@ -1387,32 +1393,11 @@
   }
 
   function _highlightElement(el) {
-    try {
-      el.setAttribute("data-wm-hl", "1");
-      el.style.transition = "box-shadow 0.08s";
-      el.style.outline = "2px solid #ef4444";
-      el.style.boxShadow = "0 0 0 4px rgba(239,68,68,0.4)";
-      const tid = setTimeout(() => {
-        el.style.outline = "";
-        el.style.boxShadow = "";
-        el.style.transition = "";
-        el.removeAttribute("data-wm-hl");
-      }, 500);
-      _hlTimers.push(tid);
-    } catch (e) { /* ignore */ }
+    return _highlightManager().highlightElement(el);
   }
 
   function _clearAllHighlights() {
-    _hlTimers.forEach(t => clearTimeout(t));
-    _hlTimers.length = 0;
-    try {
-      document.querySelectorAll("[data-wm-hl]").forEach(el => {
-        el.style.outline = "";
-        el.style.boxShadow = "";
-        el.style.transition = "";
-        el.removeAttribute("data-wm-hl");
-      });
-    } catch (e) { /* ignore */ }
+    return _highlightManager().clearAllHighlights({ document });
   }
 
   function _normalizeStepsForPlayback(steps) {

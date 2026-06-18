@@ -65,6 +65,7 @@
         "src/modules/player/state/variable-expander.js",
         "src/modules/player/state/login-step-bypass.js",
         "src/modules/player/control-flow/continuation-steps.js",
+        "src/modules/player/diagnostics/highlight-manager.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",
