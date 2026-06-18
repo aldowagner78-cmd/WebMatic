@@ -43,6 +43,50 @@
     throw new Error("WebMaticEditorRenderUtils no esta disponible");
   }
 
+  function _formFieldsRenderer() {
+    if (typeof WebMaticFormFieldsRenderer !== "undefined") return WebMaticFormFieldsRenderer;
+    if (globalScope && globalScope.WebMaticFormFieldsRenderer) return globalScope.WebMaticFormFieldsRenderer;
+
+    if (typeof require === "function") {
+      return require("./renderers/form-fields-renderer.js");
+    }
+
+    throw new Error("WebMaticFormFieldsRenderer no esta disponible");
+  }
+
+  function _editorValidation() {
+    if (typeof WebMaticEditorValidation !== "undefined") return WebMaticEditorValidation;
+    if (globalScope && globalScope.WebMaticEditorValidation) return globalScope.WebMaticEditorValidation;
+
+    if (typeof require === "function") {
+      return require("./validation/editor-validation.js");
+    }
+
+    throw new Error("WebMaticEditorValidation no esta disponible");
+  }
+
+  function _blockUtils() {
+    if (typeof WebMaticBlockUtils !== "undefined") return WebMaticBlockUtils;
+    if (globalScope && globalScope.WebMaticBlockUtils) return globalScope.WebMaticBlockUtils;
+
+    if (typeof require === "function") {
+      return require("./blocks/block-utils.js");
+    }
+
+    throw new Error("WebMaticBlockUtils no esta disponible");
+  }
+
+  function _editorStateUtils() {
+    if (typeof WebMaticEditorStateUtils !== "undefined") return WebMaticEditorStateUtils;
+    if (globalScope && globalScope.WebMaticEditorStateUtils) return globalScope.WebMaticEditorStateUtils;
+
+    if (typeof require === "function") {
+      return require("./state/editor-state-utils.js");
+    }
+
+    throw new Error("WebMaticEditorStateUtils no esta disponible");
+  }
+
   function _shortLabel(s) {
     return _stepDefinitions().shortLabel(s);
   }
@@ -386,19 +430,19 @@
     }
 
     _openAddForm(insertAt, asNewBlock = false) {
-      this._addFormOpen = true;
-      this._addFormTargetIndex = Number.isInteger(insertAt) ? insertAt : this.steps.length;
-      if (this._addFormTargetIndex < 0) this._addFormTargetIndex = 0;
-      if (this._addFormTargetIndex > this.steps.length) this._addFormTargetIndex = this.steps.length;
-      this._addFormAsNewBlock = !!asNewBlock;
+      const state = _editorStateUtils().openAddFormState(insertAt, this.steps.length, asNewBlock);
+      this._addFormOpen = state.addFormOpen;
+      this._addFormTargetIndex = state.addFormTargetIndex;
+      this._addFormAsNewBlock = state.addFormAsNewBlock;
       this._editIdx = null;
       this._render();
     }
 
     _closeAddForm() {
-      this._addFormOpen = false;
-      this._addFormTargetIndex = null;
-      this._addFormAsNewBlock = false;
+      const state = _editorStateUtils().closeAddFormState();
+      this._addFormOpen = state.addFormOpen;
+      this._addFormTargetIndex = state.addFormTargetIndex;
+      this._addFormAsNewBlock = state.addFormAsNewBlock;
     }
 
     getSteps() {
@@ -1077,33 +1121,8 @@
       confirmBtn.addEventListener("click", () => {
         const originalStep = step && typeof step === "object" ? { ...step } : step;
         const updated = { type: typeSelect.value };
-        fieldsDiv.querySelectorAll("[data-field]").forEach((inp) => {
-          if (inp.dataset.fieldtype === "toggle") {
-            updated[inp.dataset.field] = inp.checked;
-          } else {
-            const v = inp.value.trim();
-            if (v !== "") updated[inp.dataset.field] = v;
-          }
-        });
-        if (updated.type === "wait") {
-          const n = Number(updated.seconds);
-          updated.seconds = Number.isFinite(n) && n > 0 ? n : 1;
-        }
-        if (updated.type === "check")
-          updated.checked = updated.checked === "true";
-        if (updated.type === "if_exists") {
-          updated.then = step.then || [];
-          updated.else = step.else || [];
-        }
-        if (updated.type === "loop_until") {
-          updated.max_iterations = Number(updated.max_iterations) || 50;
-          updated.steps = step.steps || [];
-        }
-        if (updated.type === "for_each_row") {
-          updated.columns = String(updated.columns || "").split(/,\s*/).map((c) => c.trim()).filter(Boolean);
-          updated.dataset = step.dataset || [];
-          updated.steps = step.steps || [];
-        }
+        _formFieldsRenderer().readStepFields(fieldsDiv, updated);
+        _editorValidation().normalizeEditedStep(updated, step);
 
         // Preserve block layout metadata handled by the visual editor.
         if (step && step._wmBlockStart) updated._wmBlockStart = true;
@@ -1267,34 +1286,8 @@
       confirmBtn.textContent = "\u2714 Agregar";
       confirmBtn.addEventListener("click", () => {
         const step = { type: typeSelect.value };
-        fieldsDiv.querySelectorAll("[data-field]").forEach((inp) => {
-          if (inp.dataset.fieldtype === "toggle") {
-            step[inp.dataset.field] = inp.checked;
-          } else {
-            const v = inp.value.trim();
-            if (v !== "") step[inp.dataset.field] = v;
-          }
-        });
-        if (step.type === "wait") {
-          const n = Number(step.seconds);
-          step.seconds = Number.isFinite(n) && n > 0 ? n : 1;
-        }
-        if (step.type === "check") {
-          step.checked = step.checked === "true";
-        }
-        if (step.type === "if_exists") {
-          step.then = [];
-          step.else = [];
-        }
-        if (step.type === "loop_until") {
-          step.max_iterations = Number(step.max_iterations) || 50;
-          step.steps = [];
-        }
-        if (step.type === "for_each_row") {
-          step.columns = String(step.columns || "").split(/,\s*/).map((c) => c.trim()).filter(Boolean);
-          step.dataset = [];
-          step.steps = [];
-        }
+        _formFieldsRenderer().readStepFields(fieldsDiv, step);
+        _editorValidation().normalizeNewStep(step);
         if (this._addFormAsNewBlock) {
           step._wmBlockStart = true;
           step._wmCollapsed = true;
@@ -1323,50 +1316,31 @@
     }
 
     _markStepMoved(stepRef, source) {
-      if (!stepRef || typeof stepRef !== "object") return;
-      this._movedStepMeta.set(stepRef, { source, at: Date.now() });
+      _editorStateUtils().markStepMoved(this._movedStepMeta, stepRef, source);
     }
 
     _normalizeBlockKey(raw) {
-      const key = String(raw || "").trim();
-      return key || "";
+      return _blockUtils().normalizeBlockKey(raw);
     }
 
     _stepBlockKey(step) {
-      if (!step || typeof step !== "object") return "";
-      return this._normalizeBlockKey(step._wmBlockKey);
+      return _blockUtils().stepBlockKey(step);
     }
 
     _formatBlockContextLabel(blockKey) {
-      const key = this._normalizeBlockKey(blockKey);
-      if (!key) return "";
-      const slash = key.indexOf("/");
-      if (slash < 0) return key;
-      const host = key.slice(0, slash);
-      const path = key.slice(slash) || "/";
-      if (path.length <= 32) return `${host}${path}`;
-      return `${host}${path.slice(0, 29)}...`;
+      return _blockUtils().formatBlockContextLabel(blockKey);
     }
 
     _isExecutionBlockBoundaryType(stepType) {
-      return stepType === "navigate" || stepType === "open_tab" || stepType === "switch_tab" || stepType === "close_tab";
+      return _blockUtils().isExecutionBlockBoundaryType(stepType);
     }
 
     _isExecutionBlockBoundaryStep(step, idx) {
-      if (!step || typeof step !== "object") return false;
-      if (idx === 0) return true;
-      if (step._wmBlockStart === true || String(step._wmBlockStart).toLowerCase() === "true") return true;
-      const currKey = this._stepBlockKey(step);
-      const prev = this.steps[idx - 1];
-      const prevKey = this._stepBlockKey(prev);
-      if (currKey && prevKey && currKey !== prevKey) return true;
-      if (currKey && prevKey && currKey === prevKey) return false;
-      return this._isExecutionBlockBoundaryType(step.type);
+      return _blockUtils().isExecutionBlockBoundaryStep(step, idx, this.steps);
     }
 
     _wantsCollapsedByDefault(step) {
-      if (!step || typeof step !== "object") return false;
-      return step._wmCollapsed === true || String(step._wmCollapsed).toLowerCase() === "true";
+      return _blockUtils().wantsCollapsedByDefault(step);
     }
 
     _collapseAllBlocksByDefault() {
@@ -1406,72 +1380,15 @@
     }
 
     _findExecutionBlockBounds(idx) {
-      if (idx < 0 || idx >= this.steps.length) return null;
-      let start = 0;
-      for (let i = idx; i > 0; i--) {
-        const s = this.steps[i];
-        if (this._isExecutionBlockBoundaryStep(s, i)) {
-          start = i;
-          break;
-        }
-      }
-
-      let end = this.steps.length - 1;
-      for (let j = Math.max(start + 1, idx + 1); j < this.steps.length; j++) {
-        const s = this.steps[j];
-        if (this._isExecutionBlockBoundaryStep(s, j)) {
-          end = j - 1;
-          break;
-        }
-      }
-      if (end < start) end = start;
-      return { start, end };
+      return _blockUtils().findExecutionBlockBounds(this.steps, idx);
     }
 
     _getExecutionBlockOrdinal(idx) {
-      if (idx < 0 || idx >= this.steps.length) return 1;
-      let ord = 1;
-      for (let i = 1; i <= idx; i++) {
-        const s = this.steps[i];
-        if (this._isExecutionBlockBoundaryStep(s, i)) ord += 1;
-      }
-      return ord;
+      return _blockUtils().getExecutionBlockOrdinal(this.steps, idx);
     }
 
     _buildExecutionBlockContextMeta() {
-      const meta = new Map();
-      if (!Array.isArray(this.steps) || this.steps.length === 0) return meta;
-      const visitCountByKey = new Map();
-      let idx = 0;
-      while (idx < this.steps.length) {
-        const block = this._findExecutionBlockBounds(idx) || { start: idx, end: idx };
-        const start = block.start;
-        const end = block.end;
-        if (start !== idx) {
-          idx += 1;
-          continue;
-        }
-        const key = this._stepBlockKey(this.steps[start]);
-        if (key) {
-          const visitIndex = (visitCountByKey.get(key) || 0) + 1;
-          visitCountByKey.set(key, visitIndex);
-          meta.set(start, {
-            visitIndex,
-            isReentry: visitIndex > 1,
-            blockKey: key,
-            contextLabel: this._formatBlockContextLabel(key)
-          });
-        } else {
-          meta.set(start, {
-            visitIndex: 0,
-            isReentry: false,
-            blockKey: "",
-            contextLabel: ""
-          });
-        }
-        idx = end + 1;
-      }
-      return meta;
+      return _blockUtils().buildExecutionBlockContextMeta(this.steps);
     }
 
     _moveRangeToIndex(start, end, toIndex, source) {
