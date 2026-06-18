@@ -337,50 +337,26 @@
     return htmlEl.getClientRects && htmlEl.getClientRects().length > 0;
   }
 
-  function _allDocs(rootDoc) {
-    const docs = [];
-    function _walk(doc) {
-      if (!doc) return;
-      docs.push(doc);
-      try {
-        const frames = doc.querySelectorAll("iframe, frame");
-        for (const frame of frames) {
-          try {
-            const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
-            if (innerDoc) _walk(innerDoc);
-          } catch (e) { /* cross-origin */ }
-        }
-      } catch (e) { /* ignore */ }
+    function _actionCheck() {
+    if (typeof WebMaticActionCheck !== "undefined") return WebMaticActionCheck;
+    if (globalScope && globalScope.WebMaticActionCheck) return globalScope.WebMaticActionCheck;
+
+    if (typeof require === "function") {
+      return require("./actions/action-check.js");
     }
-    _walk(rootDoc || document);
-    return docs;
+
+    throw new Error("WebMaticActionCheck no esta disponible");
+  }
+  function _allDocs(rootDoc) {
+    return _actionCheck().allDocs(rootDoc || document);
   }
 
   function findBestCheckTarget(selector) {
-    if (!selector) return null;
-    // Keep XPath / custom text selectors on existing path.
-    if (selector.startsWith("/") || selector.startsWith("(") || /^\w+\[text="/.test(selector)) {
-      return findElement(selector);
-    }
-    const matches = [];
-    for (const d of _allDocs(document)) {
-      try {
-        const list = d.querySelectorAll(selector);
-        for (const el of list) {
-          if (!(el instanceof HTMLInputElement)) continue;
-          const t = (el.type || "").toLowerCase();
-          if (t !== "checkbox" && t !== "radio") continue;
-          matches.push(el);
-        }
-      } catch (e) { /* invalid selector */ }
-    }
-    if (matches.length === 0) {
-      const direct = findElement(selector);
-      const associated = _findAssociatedCheckInput(direct);
-      return associated || direct;
-    }
-    const interactable = matches.find((el) => _isInteractable(el));
-    return interactable || matches[0];
+    return _actionCheck().findBestCheckTarget(selector, {
+      document,
+      findElement,
+      isInteractable: _isInteractable
+    });
   }
 
   function _resolveLegacyDescendantFallback(step, selector) {
@@ -417,82 +393,17 @@
   }
 
   function _findAssociatedCheckInput(el) {
-    if (!el || !(el instanceof Element)) return null;
-    if (el instanceof HTMLInputElement) {
-      const t = (el.type || "").toLowerCase();
-      if (t === "checkbox" || t === "radio") return el;
-    }
-
-    // label wrapping input
-    try {
-      const nested = el.querySelector && el.querySelector('input[type="checkbox"], input[type="radio"]');
-      if (nested instanceof HTMLInputElement) return nested;
-    } catch (e) { /* ignore */ }
-
-    // label[for=id] target
-    try {
-      const lbl = el instanceof HTMLLabelElement ? el : (el.closest && el.closest("label[for]"));
-      if (lbl && lbl.htmlFor) {
-        const doc = el.ownerDocument || document;
-        const linked = doc.getElementById(lbl.htmlFor);
-        if (linked instanceof HTMLInputElement) {
-          const t = (linked.type || "").toLowerCase();
-          if (t === "checkbox" || t === "radio") return linked;
-        }
-      }
-    } catch (e) { /* ignore */ }
-
-    return null;
+    return _actionCheck().findAssociatedCheckInput(el);
   }
 
   function _findCheckActivator(inputEl) {
-    if (!(inputEl instanceof HTMLInputElement)) return null;
-
-    // 1) Associated labels are the most reliable trigger for hidden radios/checkboxes.
-    try {
-      if (inputEl.labels && inputEl.labels.length) {
-        const visibleLabel = Array.from(inputEl.labels).find((l) => _isInteractable(l));
-        if (visibleLabel) return visibleLabel;
-        if (inputEl.labels[0]) return inputEl.labels[0];
-      }
-    } catch (e) { /* ignore */ }
-
-    // 2) Any explicit label[for=id] in the same document.
-    if (inputEl.id) {
-      try {
-        const doc = inputEl.ownerDocument || document;
-        const escapedId = String(inputEl.id).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-        const labels = doc.querySelectorAll(`label[for="${escapedId}"]`);
-        for (const lbl of labels) {
-          if (_isInteractable(lbl)) return lbl;
-        }
-        if (labels.length > 0) return labels[0];
-      } catch (e) { /* ignore */ }
-    }
-
-    // 3) Nearby role wrappers often receive the click in custom components.
-    try {
-      const roleWrap = inputEl.closest('[role="radio"], [role="checkbox"], label');
-      if (roleWrap && roleWrap !== inputEl) return roleWrap;
-    } catch (e) { /* ignore */ }
-
-    return null;
+    return _actionCheck().findCheckActivator(inputEl, {
+      isInteractable: _isInteractable
+    });
   }
 
   function _setCheckedNative(inputEl, desired) {
-    try {
-      const proto = Object.getPrototypeOf(inputEl) || HTMLInputElement.prototype;
-      const desc = Object.getOwnPropertyDescriptor(proto, "checked");
-      if (desc && typeof desc.set === "function") {
-        desc.set.call(inputEl, Boolean(desired));
-      } else {
-        inputEl.checked = Boolean(desired);
-      }
-    } catch (e) {
-      inputEl.checked = Boolean(desired);
-    }
-    inputEl.dispatchEvent(new Event("input", { bubbles: true }));
-    inputEl.dispatchEvent(new Event("change", { bubbles: true }));
+    return _actionCheck().setCheckedNative(inputEl, desired);
   }
 
   /**
@@ -2503,5 +2414,6 @@
     module.exports = Player;
   }
 })(typeof globalThis !== "undefined" ? globalThis : window);
+
 
 
