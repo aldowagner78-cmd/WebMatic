@@ -43,6 +43,17 @@
     throw new Error("WebMaticEditorRenderUtils no esta disponible");
   }
 
+  function _blockHeaderRenderer() {
+    if (typeof WebMaticBlockHeaderRenderer !== "undefined") return WebMaticBlockHeaderRenderer;
+    if (globalScope && globalScope.WebMaticBlockHeaderRenderer) return globalScope.WebMaticBlockHeaderRenderer;
+
+    if (typeof require === "function") {
+      return require("./renderers/block-header-renderer.js");
+    }
+
+    throw new Error("WebMaticBlockHeaderRenderer no esta disponible");
+  }
+
   function _formFieldsRenderer() {
     if (typeof WebMaticFormFieldsRenderer !== "undefined") return WebMaticFormFieldsRenderer;
     if (globalScope && globalScope.WebMaticFormFieldsRenderer) return globalScope.WebMaticFormFieldsRenderer;
@@ -612,69 +623,25 @@
           if (contextMeta.isReentry) blockWrap.dataset.blockReentry = "true";
           if (collapsed) blockWrap.classList.add("wm-sved-block-collapsed");
 
-          const blockHeader = document.createElement("div");
-          blockHeader.className = "wm-sved-block-header";
-
-          const blockTag = document.createElement("span");
-          blockTag.className = "wm-sved-block-tag";
-          blockTag.textContent = `bloque ${blockOrdinal}`;
-          blockTag.title = `Bloque encadenado de ${blockSize} pasos`;
-          blockHeader.appendChild(blockTag);
-
-          const blockContext = contextMeta.contextLabel || this._formatBlockContextLabel(this._stepBlockKey(this.steps[start]));
-          if (blockContext) {
-            const ctx = document.createElement("span");
-            ctx.className = "wm-sved-block-context";
-            ctx.textContent = blockContext;
-            const visitSuffix = contextMeta.visitIndex > 0 ? ` · visita ${contextMeta.visitIndex}` : "";
-            ctx.title = `Contexto del bloque: ${this._stepBlockKey(this.steps[start])}${visitSuffix}`;
-            blockHeader.appendChild(ctx);
-          }
-
-          if (contextMeta.visitIndex > 0) {
-            const visitBadge = document.createElement("span");
-            visitBadge.className = "wm-sved-block-visit-badge";
-            visitBadge.textContent = `visita ${contextMeta.visitIndex}`;
-            visitBadge.title = contextMeta.isReentry
-              ? "Este bloque vuelve a un contexto ya usado antes en la grabación"
-              : "Primera visita a este contexto durante la grabación";
-            blockHeader.appendChild(visitBadge);
-          }
-
-          if (contextMeta.isReentry) {
-            const reentryBadge = document.createElement("span");
-            reentryBadge.className = "wm-sved-block-reentry-badge";
-            reentryBadge.textContent = "reingreso";
-            reentryBadge.title = "Este bloque vuelve a un contexto ya usado antes en la grabación";
-            blockHeader.appendChild(reentryBadge);
-          }
-
-          const blockMeta = document.createElement("span");
-          blockMeta.className = "wm-sved-block-meta";
-          blockMeta.textContent = `${blockSize} paso${blockSize !== 1 ? "s" : ""}`;
-          blockHeader.appendChild(blockMeta);
-
-          const blockStateBadge = document.createElement("span");
-          blockStateBadge.className = "wm-sved-block-state-badge";
-          if (canCollapse) {
-            blockStateBadge.textContent = collapsed ? "⊞ colapsado" : "⊟ expandido";
-            blockStateBadge.classList.add(collapsed ? "wm-sved-block-state-collapsed" : "wm-sved-block-state-expanded");
-          }
-          blockHeader.appendChild(blockStateBadge);
-
-          if (canCollapse) {
-            const toggleBtn = document.createElement("button");
-            toggleBtn.className = "wm-sved-block-toggle";
-            toggleBtn.type = "button";
-            toggleBtn.innerHTML = collapsed ? "&#9654;" : "&#9660;";
-            toggleBtn.title = collapsed ? "Desplegar bloque para editar pasos" : "Colapsar bloque";
-            toggleBtn.addEventListener("click", () => {
+          const blockKeyName = this._stepBlockKey(this.steps[start]);
+          const blockContext = contextMeta.contextLabel || this._formatBlockContextLabel(blockKeyName);
+          const visitSuffix = contextMeta.visitIndex > 0 ? ` · visita ${contextMeta.visitIndex}` : "";
+          const blockHeader = _blockHeaderRenderer().buildExecutionBlockHeader({
+            documentRef: document,
+            blockOrdinal,
+            blockSize,
+            blockContextLabel: blockContext,
+            blockContextTitle: blockContext ? `Contexto del bloque: ${blockKeyName}${visitSuffix}` : "",
+            visitIndex: contextMeta.visitIndex,
+            isReentry: contextMeta.isReentry,
+            collapsed,
+            canCollapse,
+            onToggle: () => {
               if (this._collapsedBlocks.has(blockKey)) this._collapsedBlocks.delete(blockKey);
               else this._collapsedBlocks.add(blockKey);
               this._render();
-            });
-            blockHeader.appendChild(toggleBtn);
-          }
+            }
+          });
 
           blockWrap.appendChild(blockHeader);
 
