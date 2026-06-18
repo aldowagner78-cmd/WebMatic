@@ -1408,12 +1408,19 @@
     return summary;
   }
 
-  function _splitSelectorList(raw) {
-    if (!raw) return [];
-    return String(raw)
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
+    function _preRunResetUtils() {
+    if (typeof WebMaticPreRunResetUtils !== "undefined") return WebMaticPreRunResetUtils;
+    if (globalScope && globalScope.WebMaticPreRunResetUtils) return globalScope.WebMaticPreRunResetUtils;
+
+    if (typeof require === "function") {
+      return require("./defaults/pre-run-reset-utils.js");
+    }
+
+    throw new Error("WebMaticPreRunResetUtils no esta disponible");
+  }
+
+    function _splitSelectorList(raw) {
+    return _preRunResetUtils().splitSelectorList(raw);
   }
 
   function _collectModifiedSelectors(steps, startIndex) {
@@ -1453,28 +1460,16 @@
     return "";
   }
 
-  function _normalizePreRunResetPolicy(policy) {
-    const raw = String(policy && typeof policy === "object" ? policy.mode : policy || "").trim().toLowerCase();
-    if (raw === "start_and_resume" || raw === "resume" || raw === "all") return "start_and_resume";
-    return "start_only";
+    function _normalizePreRunResetPolicy(policy) {
+    return _preRunResetUtils().normalizePreRunResetPolicy(policy);
   }
 
-  function _sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(ms) || 0)));
+    function _sleep(ms) {
+    return _preRunResetUtils().sleep(ms);
   }
 
-  function _sameResetPage(preRunReset) {
-    const baselineUrl = String((preRunReset && preRunReset.url) || "").trim();
-    if (!baselineUrl) return true;
-    try {
-      const base = new URL(baselineUrl, window.location.href);
-      const current = new URL(window.location.href);
-      return base.origin === current.origin &&
-        base.pathname === current.pathname &&
-        base.search === current.search;
-    } catch (_e) {
-      return true;
-    }
+    function _sameResetPage(preRunReset) {
+    return _preRunResetUtils().sameResetPage(preRunReset, window.location.href);
   }
 
   async function _applyPreRunReset(preRunReset, reason, delayMs) {
@@ -1493,13 +1488,12 @@
     return _restoreFormFromBaseline(preRunReset, { reason });
   }
 
-  function _isSilentInternalStep(step) {
-    // Solo ocultamos pasos tecnicos internos para no perder visibilidad de la macro real.
-    return !!(step && step._fast === true && (step.type === "capture_defaults" || step._baselineDefault === true));
+    function _isSilentInternalStep(step) {
+    return _preRunResetUtils().isSilentInternalStep(step);
   }
 
-  function _isBaselineDefaultStep(step) {
-    return !!(step && step._baselineDefault === true);
+    function _isBaselineDefaultStep(step) {
+    return _preRunResetUtils().isBaselineDefaultStep(step);
   }
 
   function _collectDefaultStepsFromPage(opts) {
