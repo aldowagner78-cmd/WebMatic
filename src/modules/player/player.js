@@ -1448,16 +1448,19 @@
     return out;
   }
 
-  function _buildSelectorForDefault(el) {
-    const Rec = globalScope.WebMaticRecorder;
-    if (Rec && typeof Rec.buildSelector === "function") {
-      return Rec.buildSelector(el);
+    function _defaultSelector() {
+    if (typeof WebMaticDefaultSelector !== "undefined") return WebMaticDefaultSelector;
+    if (globalScope && globalScope.WebMaticDefaultSelector) return globalScope.WebMaticDefaultSelector;
+
+    if (typeof require === "function") {
+      return require("./defaults/default-selector.js");
     }
-    if (el.id) return "#" + el.id;
-    const tag = (el.tagName || "").toLowerCase();
-    const name = el.getAttribute && el.getAttribute("name");
-    if (name) return `${tag}[name="${name.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"]`;
-    return "";
+
+    throw new Error("WebMaticDefaultSelector no esta disponible");
+  }
+
+  function _buildSelectorForDefault(el) {
+    return _defaultSelector().buildSelectorForDefault(el);
   }
 
     function _normalizePreRunResetPolicy(policy) {
