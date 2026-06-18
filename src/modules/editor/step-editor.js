@@ -109,6 +109,28 @@
     throw new Error("WebMaticBlockUtils no esta disponible");
   }
 
+  function _dragDropUtils() {
+    if (typeof WebMaticDragDropUtils !== "undefined") return WebMaticDragDropUtils;
+    if (globalScope && globalScope.WebMaticDragDropUtils) return globalScope.WebMaticDragDropUtils;
+
+    if (typeof require === "function") {
+      return require("./blocks/drag-drop-utils.js");
+    }
+
+    throw new Error("WebMaticDragDropUtils no esta disponible");
+  }
+
+  function _inlineRecordingState() {
+    if (typeof WebMaticInlineRecordingState !== "undefined") return WebMaticInlineRecordingState;
+    if (globalScope && globalScope.WebMaticInlineRecordingState) return globalScope.WebMaticInlineRecordingState;
+
+    if (typeof require === "function") {
+      return require("./state/inline-recording-state.js");
+    }
+
+    throw new Error("WebMaticInlineRecordingState no esta disponible");
+  }
+
   function _editorStateUtils() {
     if (typeof WebMaticEditorStateUtils !== "undefined") return WebMaticEditorStateUtils;
     if (globalScope && globalScope.WebMaticEditorStateUtils) return globalScope.WebMaticEditorStateUtils;
@@ -604,8 +626,7 @@
 
         const computeDropPos = (evt, row) => {
           const rect = row.getBoundingClientRect();
-          const relY = evt.clientY - rect.top;
-          return relY >= rect.height / 2 ? "after" : "before";
+          return _dragDropUtils().computeDropPosition(evt.clientY, rect.top, rect.height);
         };
 
         const applyDropIndicator = (row, pos) => {
@@ -708,7 +729,7 @@
             if (dragEnabled) {
               row.addEventListener("dragstart", (evt) => {
                 this._dragFromIdx = rowIdx;
-                this._dragMode = (blockSize > 1 && blockLead) ? "block" : "step";
+                this._dragMode = _dragDropUtils().resolveDragMode(blockSize, blockLead, "auto");
                 row.classList.add("wm-sved-row-dragging");
                 if (evt.dataTransfer) {
                   evt.dataTransfer.effectAllowed = "move";
@@ -729,8 +750,7 @@
                 const from = this._dragFromIdx;
                 const pos = computeDropPos(evt, row);
                 const rawTarget = pos === "after" ? rowIdx + 1 : rowIdx;
-                let to = rawTarget;
-                if (rawTarget > from) to -= 1;
+                const to = _dragDropUtils().normalizeDropTarget(rawTarget, from);
                 const mode = this._dragMode;
                 clearDraggingState();
                 if (to === from || to < 0 || to >= this.steps.length) return;
@@ -769,7 +789,7 @@
                 this._render();
                 this._onRecordRequest((capturedSteps) => {
                   this._pendingRecordIntoBlock = null;
-                  const toInsert = Array.isArray(capturedSteps) ? capturedSteps : [];
+                  const toInsert = _inlineRecordingState().normalizeInlineRecordedSteps(capturedSteps, false);
                   const insertAt = this._findExecutionBlockBounds(start)
                     ? this._findExecutionBlockBounds(start).end + 1
                     : end + 1;
@@ -839,11 +859,7 @@
               this._render();
               this._onRecordRequest((capturedSteps) => {
                 this._pendingRecord = false;
-                const next = Array.isArray(capturedSteps) ? capturedSteps : [];
-                if (next.length > 0 && next[0] && typeof next[0] === "object") {
-                  next[0]._wmBlockStart = true;
-                  next[0]._wmCollapsed = true;
-                }
+                const next = _inlineRecordingState().normalizeInlineRecordedSteps(capturedSteps, true);
                 for (const s of next) {
                   this.steps.push(s);
                 }
