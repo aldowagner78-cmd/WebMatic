@@ -520,36 +520,19 @@
     return str;
   }
 
+    function _navigationAnalyzer() {
+    if (typeof WebMaticNavigationAnalyzer !== "undefined") return WebMaticNavigationAnalyzer;
+    if (globalScope && globalScope.WebMaticNavigationAnalyzer) return globalScope.WebMaticNavigationAnalyzer;
+
+    if (typeof require === "function") {
+      return require("./navigation/navigation-analyzer.js");
+    }
+
+    throw new Error("WebMaticNavigationAnalyzer no esta disponible");
+  }
+
   function _analyzeNavigation(currentHref, rawTargetUrl) {
-    const targetRaw = String(rawTargetUrl || "").trim();
-    if (!targetRaw) {
-      return { targetUrl: "", sameDocument: false, mustUseBackground: false };
-    }
-
-    let currentUrl;
-    let targetUrl;
-    try {
-      currentUrl = new URL(String(currentHref || ""));
-      targetUrl = new URL(targetRaw, currentUrl.href);
-    } catch (_e) {
-      return { targetUrl: targetRaw, sameDocument: false, mustUseBackground: false };
-    }
-
-    const sameDocument =
-      currentUrl.origin === targetUrl.origin &&
-      currentUrl.pathname === targetUrl.pathname &&
-      currentUrl.search === targetUrl.search;
-
-    // Content scripts cannot reliably force some cross-scheme jumps (notably to file://).
-    const mustUseBackground = targetUrl.protocol === "file:" || currentUrl.protocol !== targetUrl.protocol;
-
-    return {
-      targetUrl: targetUrl.href,
-      sameDocument,
-      mustUseBackground,
-      currentUrl,
-      targetUrlObject: targetUrl
-    };
+    return _navigationAnalyzer().analyzeNavigation(currentHref, rawTargetUrl);
   }
 
   function _requestBackgroundNavigate(url, playbackState) {

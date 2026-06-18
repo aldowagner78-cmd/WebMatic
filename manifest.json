@@ -57,6 +57,7 @@
         "src/modules/player/defaults/baseline-restorer.js",
         "src/modules/player/defaults/pre-run-reset-runner.js",
         "src/modules/player/defaults/modified-selectors.js",
+        "src/modules/player/navigation/navigation-analyzer.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",
