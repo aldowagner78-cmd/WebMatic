@@ -451,21 +451,21 @@
    * {{!NOW:fmt}} â†’ formatted date
    * %VARNAME% or {{!VARNAME}} â†’ looked up in vars map
    */
+    function _variableExpander() {
+    if (typeof WebMaticVariableExpander !== "undefined") return WebMaticVariableExpander;
+    if (globalScope && globalScope.WebMaticVariableExpander) return globalScope.WebMaticVariableExpander;
+
+    if (typeof require === "function") {
+      return require("./state/variable-expander.js");
+    }
+
+    throw new Error("WebMaticVariableExpander no esta disponible");
+  }
+
   function expandVariables(str, vars) {
-    if (!str) return str;
-    // {{!NOW:fmt}}
-    str = str.replace(/\{\{!NOW:([^}]+)\}\}/g, (_, fmt) => {
-      return utils ? utils.formatDate(fmt) : new Date().toLocaleString();
+    return _variableExpander().expandVariables(str, vars, {
+      utils
     });
-    // {{!VARNAME}}
-    str = str.replace(/\{\{!([^}]+)\}\}/g, (_, name) => {
-      return Object.prototype.hasOwnProperty.call(vars, name) ? vars[name] : "";
-    });
-    // %VARNAME%
-    str = str.replace(/%([A-Z0-9_]+)%/gi, (_, name) => {
-      return Object.prototype.hasOwnProperty.call(vars, name) ? vars[name] : "";
-    });
-    return str;
   }
 
     function _navigationAnalyzer() {
