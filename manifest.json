@@ -45,6 +45,7 @@
         "src/modules/ui/ui-shell.js",
         "src/modules/editor/schema/step-definitions.js",
         "src/modules/editor/state/editor-meta.js",
+        "src/modules/editor/state/editor-catalogs.js",
         "src/modules/editor/step-editor.js",
         "src/common/selectors/selector-builder.js",
         "src/modules/recorder/recorder.js",

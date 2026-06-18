@@ -21,6 +21,17 @@
     throw new Error("WebMaticEditorMeta no esta disponible");
   }
 
+  function _editorCatalogs() {
+    if (typeof WebMaticEditorCatalogs !== "undefined") return WebMaticEditorCatalogs;
+    if (globalScope && globalScope.WebMaticEditorCatalogs) return globalScope.WebMaticEditorCatalogs;
+
+    if (typeof require === "function") {
+      return require("./state/editor-catalogs.js");
+    }
+
+    throw new Error("WebMaticEditorCatalogs no esta disponible");
+  }
+
   function _shortLabel(s) {
     return _stepDefinitions().shortLabel(s);
   }
@@ -113,30 +124,7 @@
     }
 
     _catalogOptionsForSelector(selector) {
-      if (!selector) return null;
-      const bag = this._autocompleteCatalogs && typeof this._autocompleteCatalogs === "object"
-        ? this._autocompleteCatalogs
-        : {};
-
-      const keys = [selector.trim()];
-      const idMatch = selector.trim().match(/^#([\w-]+)$/);
-      if (idMatch) {
-        keys.push(`#${idMatch[1]}`);
-        keys.push(`input[name="${idMatch[1]}"]`);
-      }
-
-      for (const key of keys) {
-        const arr = bag[key];
-        if (!Array.isArray(arr) || arr.length === 0) continue;
-        return arr.map((o, idx) => ({
-          index: idx,
-          value: String(o && o.value != null ? o.value : ""),
-          text: String(o && o.text != null ? o.text : ""),
-          selected: !!(o && o.selected),
-          disabled: !!(o && o.disabled)
-        })).filter((o) => o.value || o.text);
-      }
-      return null;
+      return _editorCatalogs().catalogOptionsForSelector(this._autocompleteCatalogs, selector);
     }
 
     /** Registra el handler que activa la grabación inline desde content.js */
