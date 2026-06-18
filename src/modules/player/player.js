@@ -1415,27 +1415,23 @@
     return _stepNormalizer().normalizeStepsForPlayback(steps);
   }
 
+    function _transientRecovery() {
+    if (typeof WebMaticTransientRecovery !== "undefined") return WebMaticTransientRecovery;
+    if (globalScope && globalScope.WebMaticTransientRecovery) return globalScope.WebMaticTransientRecovery;
+
+    if (typeof require === "function") {
+      return require("./state/transient-recovery.js");
+    }
+
+    throw new Error("WebMaticTransientRecovery no esta disponible");
+  }
+
   function _isTransientGallerySelector(selector) {
-    return /(next|siguiente|prev|anterior|close|cerrar|arrow|flecha|gallery|thumbnail|overlay)/i.test(String(selector || ""));
+    return _transientRecovery().isTransientGallerySelector(selector);
   }
 
   function _hasNavigateSoon(steps, fromIndex, maxLookahead) {
-    if (!Array.isArray(steps)) return false;
-    const start = Math.max(0, Number(fromIndex) || 0);
-    const max = Math.max(1, Number(maxLookahead) || 6);
-    let seen = 0;
-    for (let i = start; i < steps.length && seen < max; i++) {
-      const t = steps[i] && steps[i].type;
-      if (!t) continue;
-      if (t === "wait" || t === "hover" || t === "scroll_to") {
-        seen++;
-        continue;
-      }
-      if (t === "navigate") return true;
-      if (t === "input" || t === "text" || t === "check" || t === "choose_option" || t === "extract" || t === "click") return false;
-      seen++;
-    }
-    return false;
+    return _transientRecovery().hasNavigateSoon(steps, fromIndex, maxLookahead);
   }
 
     function _loginStepBypass() {

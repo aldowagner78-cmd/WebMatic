@@ -67,6 +67,7 @@
         "src/modules/player/state/step-normalizer.js",
         "src/modules/player/control-flow/continuation-steps.js",
         "src/modules/player/diagnostics/highlight-manager.js",
+        "src/modules/player/state/transient-recovery.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",
