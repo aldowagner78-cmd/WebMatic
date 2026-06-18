@@ -40,9 +40,48 @@
     return false;
   }
 
+  function isRecoverableTransientFailure(err, step, steps, stepIndex, deps) {
+    const options = deps && typeof deps === "object" ? deps : {};
+    const shouldBypassMissingLoginStep = options.shouldBypassMissingLoginStep;
+
+    if (
+      !step ||
+      (
+        step.type !== "click" &&
+        step.type !== "wait_for" &&
+        step.type !== "hover" &&
+        step.type !== "input" &&
+        step.type !== "text" &&
+        step.type !== "check" &&
+        step.type !== "choose_option"
+      )
+    ) {
+      return false;
+    }
+
+    const msg = String((err && err.message) || err || "");
+
+    if (
+      typeof shouldBypassMissingLoginStep === "function" &&
+      shouldBypassMissingLoginStep(step.type, step.selector || "")
+    ) {
+      return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
+    }
+
+    if (step.type === "hover") {
+      return /Elemento no encontrado/i.test(msg);
+    }
+
+    if (!isTransientGallerySelector(step.selector || "")) return false;
+    if (!hasNavigateSoon(steps, (stepIndex || 0) + 1, 8)) return false;
+
+    return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
+  }
+
   const api = {
     isTransientGallerySelector,
-    hasNavigateSoon
+    hasNavigateSoon,
+    isRecoverableTransientFailure
   };
 
   globalScope.WebMaticTransientRecovery = api;

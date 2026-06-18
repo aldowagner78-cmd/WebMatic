@@ -1485,23 +1485,10 @@
     });
   }
 
-  function _isRecoverableTransientFailure(err, step, steps, stepIndex) {
-    if (!step || (step.type !== "click" && step.type !== "wait_for" && step.type !== "hover" && step.type !== "input" && step.type !== "text" && step.type !== "check" && step.type !== "choose_option")) return false;
-    const msg = String((err && err.message) || err || "");
-
-    if (_shouldBypassMissingLoginStep(step.type, step.selector || "")) {
-      return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
-    }
-
-    // Hover should be best-effort during playback. Missing targets are common
-    // on volatile UIs and should not abort the whole macro.
-    if (step.type === "hover") {
-      return /Elemento no encontrado/i.test(msg);
-    }
-
-    if (!_isTransientGallerySelector(step.selector || "")) return false;
-    if (!_hasNavigateSoon(steps, (stepIndex || 0) + 1, 8)) return false;
-    return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
+    function _isRecoverableTransientFailure(err, step, steps, stepIndex) {
+    return _transientRecovery().isRecoverableTransientFailure(err, step, steps, stepIndex, {
+      shouldBypassMissingLoginStep: _shouldBypassMissingLoginStep
+    });
   }
 
     function _continuationSteps() {
