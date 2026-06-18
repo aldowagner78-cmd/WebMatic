@@ -616,12 +616,7 @@
         }
 
         if (step.type === "wait") {
-          const rawMs = step.seconds != null
-            ? Math.round(Number(step.seconds) * 1000)
-            : (Number(step.ms) || 500);
-          // Escalar por velocidad: a speed=2 un WAIT SECONDS=1 dura solo 500ms
-          const scaledMs = Math.round(rawMs / (speed || 1));
-          setTimeout(resolve, scaledMs);
+          _actionWait().wait(step, speed, { resolve, setTimeout });
           return;
         }
 
@@ -1362,6 +1357,17 @@
     }
 
     throw new Error("WebMaticActionSimpleEvents no esta disponible");
+  }
+
+  function _actionWait() {
+    if (typeof WebMaticActionWait !== "undefined") return WebMaticActionWait;
+    if (globalScope && globalScope.WebMaticActionWait) return globalScope.WebMaticActionWait;
+
+    if (typeof require === "function") {
+      return require("./actions/action-wait.js");
+    }
+
+    throw new Error("WebMaticActionWait no esta disponible");
   }
 
   function _tryClickAutocomplete(value) {
