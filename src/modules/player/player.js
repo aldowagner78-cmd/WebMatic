@@ -1099,8 +1099,7 @@
           _applyCheck();
           return;
         } else if (step.type === "extract") {
-          const extracted = el.value !== undefined ? el.value : (el.textContent || "").trim();
-          if (step.variable) vars[step.variable] = extracted;
+          _actionExtract().extract(step, el, vars);
         } else if (_actionSimpleEvents().handleSimpleElementAction(step, el)) {
           // handled by action-simple-events
         }
@@ -1368,6 +1367,17 @@
     }
 
     throw new Error("WebMaticActionWait no esta disponible");
+  }
+
+  function _actionExtract() {
+    if (typeof WebMaticActionExtract !== "undefined") return WebMaticActionExtract;
+    if (globalScope && globalScope.WebMaticActionExtract) return globalScope.WebMaticActionExtract;
+
+    if (typeof require === "function") {
+      return require("./actions/action-extract.js");
+    }
+
+    throw new Error("WebMaticActionExtract no esta disponible");
   }
 
   function _tryClickAutocomplete(value) {
