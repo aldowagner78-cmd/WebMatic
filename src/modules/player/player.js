@@ -1311,29 +1311,19 @@
     return _preRunResetUtils().splitSelectorList(raw);
   }
 
-  function _collectModifiedSelectors(steps, startIndex) {
-    const out = new Set();
-    if (!Array.isArray(steps)) return out;
-    for (let i = Math.max(0, startIndex || 0); i < steps.length; i++) {
-      const s = steps[i];
-      if (!s || typeof s !== "object") continue;
-      if ((s.type === "input" || s.type === "text" || s.type === "check" || s.type === "choose_option") && s.selector) {
-        out.add(String(s.selector));
-      }
-      if (Array.isArray(s.steps)) {
-        _collectModifiedSelectors(s.steps, 0).forEach((sel) => out.add(sel));
-      }
-      if (Array.isArray(s.then)) {
-        _collectModifiedSelectors(s.then, 0).forEach((sel) => out.add(sel));
-      }
-      if (Array.isArray(s.else)) {
-        _collectModifiedSelectors(s.else, 0).forEach((sel) => out.add(sel));
-      }
-      if (Array.isArray(s.fallback)) {
-        _collectModifiedSelectors(s.fallback, 0).forEach((sel) => out.add(sel));
-      }
+    function _modifiedSelectors() {
+    if (typeof WebMaticModifiedSelectors !== "undefined") return WebMaticModifiedSelectors;
+    if (globalScope && globalScope.WebMaticModifiedSelectors) return globalScope.WebMaticModifiedSelectors;
+
+    if (typeof require === "function") {
+      return require("./defaults/modified-selectors.js");
     }
-    return out;
+
+    throw new Error("WebMaticModifiedSelectors no esta disponible");
+  }
+
+  function _collectModifiedSelectors(steps, startIndex) {
+    return _modifiedSelectors().collectModifiedSelectors(steps, startIndex);
   }
 
     function _defaultSelector() {
