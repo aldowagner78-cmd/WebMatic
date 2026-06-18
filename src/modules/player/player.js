@@ -428,74 +428,21 @@
    * Simulates real keyboard events character by character for frameworks like
    * GeneXus that listen to keydown/keypress/keyup instead of just input/change.
    */
+    function _actionInputValue() {
+    if (typeof WebMaticActionInputValue !== "undefined") return WebMaticActionInputValue;
+    if (globalScope && globalScope.WebMaticActionInputValue) return globalScope.WebMaticActionInputValue;
+
+    if (typeof require === "function") {
+      return require("./actions/action-input-value.js");
+    }
+
+    throw new Error("WebMaticActionInputValue no esta disponible");
+  }
+
   function setInputValue(el, value) {
-    const tag = (el.tagName || "").toLowerCase();
-    const str = String(value == null ? "" : value);
-    const canExecCommand = typeof document !== "undefined" && typeof document.execCommand === "function";
-
-    // contenteditable elements do not have a .value â€” set innerText instead
-    if (el.isContentEditable) {
-      el.focus();
-      if (canExecCommand) {
-        document.execCommand("selectAll", false, null);
-      }
-      if (!canExecCommand || !document.execCommand("insertText", false, str)) {
-        el.innerText = str;
-      }
-      el.dispatchEvent(new Event("input",  { bubbles: true }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
-      return;
-    }
-
-    // <select>: set by value then by visible text
-    if (tag === "select") {
-      const proto = el.constructor.prototype || HTMLSelectElement.prototype;
-      const desc  = Object.getOwnPropertyDescriptor(proto, "value");
-      const setV  = (v) => { if (desc && desc.set) desc.set.call(el, v); else el.value = v; };
-      setV(str);
-      if (el.value !== str) {
-        const opt = Array.from(el.options || []).find(
-          (o) => (o.text || "").trim() === str.trim() || (o.innerText || "").trim() === str.trim()
-        );
-        if (opt) setV(opt.value);
-      }
-      el.dispatchEvent(new Event("change", { bubbles: true }));
-      return;
-    }
-
-    // <input> / <textarea>: simulate real typing
-    el.focus && el.focus();
-    try { el.select(); } catch (_) {}
-
-    // Attempt 1: execCommand fires beforeinput/input natively in Firefox
-    if (canExecCommand && document.execCommand("insertText", false, str)) {
-      el.dispatchEvent(new Event("change", { bubbles: true }));
-      return;
-    }
-
-    // Attempt 2: native setter + per-character keyboard events
-    const proto = el.constructor.prototype || HTMLInputElement.prototype;
-    const desc  = Object.getOwnPropertyDescriptor(proto, "value");
-    const nativeSet = (desc && desc.set) ? desc.set.bind(el) : (v) => { el.value = v; };
-
-    nativeSet("");
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-
-    for (const char of str) {
-      const kc = char.charCodeAt(0);
-      const kOpts = { key: char, charCode: kc, keyCode: kc, bubbles: true, cancelable: true };
-      el.dispatchEvent(new KeyboardEvent("keydown",  kOpts));
-      el.dispatchEvent(new KeyboardEvent("keypress", kOpts));
-      nativeSet(el.value + char);
-      if (typeof InputEvent !== "undefined") {
-        el.dispatchEvent(new InputEvent("input", { data: char, inputType: "insertText", bubbles: true }));
-      } else {
-        el.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      el.dispatchEvent(new KeyboardEvent("keyup", kOpts));
-    }
-
-    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return _actionInputValue().setInputValue(el, value, {
+      document
+    });
   }
 
   /**
