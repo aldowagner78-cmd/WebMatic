@@ -1363,20 +1363,24 @@
     return _preRunResetUtils().sameResetPage(preRunReset, window.location.href);
   }
 
-  async function _applyPreRunReset(preRunReset, reason, delayMs) {
-    if (!preRunReset || typeof preRunReset !== "object") return null;
-    if (delayMs) await _sleep(delayMs);
-    if (!_sameResetPage(preRunReset)) {
-      try {
-        console.info("[WebMatic][preRunReset:skippedPage]", {
-          reason: String(reason || ""),
-          baselineUrl: String(preRunReset.url || ""),
-          currentUrl: String(window.location.href || "")
-        });
-      } catch (_e) { /* ignore */ }
-      return null;
+    function _preRunResetRunner() {
+    if (typeof WebMaticPreRunResetRunner !== "undefined") return WebMaticPreRunResetRunner;
+    if (globalScope && globalScope.WebMaticPreRunResetRunner) return globalScope.WebMaticPreRunResetRunner;
+
+    if (typeof require === "function") {
+      return require("./defaults/pre-run-reset-runner.js");
     }
-    return _restoreFormFromBaseline(preRunReset, { reason });
+
+    throw new Error("WebMaticPreRunResetRunner no esta disponible");
+  }
+
+  async function _applyPreRunReset(preRunReset, reason, delayMs) {
+    return _preRunResetRunner().applyPreRunReset(preRunReset, reason, delayMs, {
+      window,
+      sleep: _sleep,
+      sameResetPage: _sameResetPage,
+      restoreFormFromBaseline: _restoreFormFromBaseline
+    });
   }
 
     function _isSilentInternalStep(step) {
