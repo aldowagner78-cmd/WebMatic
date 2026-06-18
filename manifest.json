@@ -53,6 +53,7 @@
         "src/modules/player/actions/action-check.js",
         "src/modules/player/defaults/pre-run-reset-utils.js",
         "src/modules/player/defaults/default-selector.js",
+        "src/modules/player/defaults/default-steps-collector.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",

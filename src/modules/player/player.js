@@ -1499,79 +1499,26 @@
     return _preRunResetUtils().isBaselineDefaultStep(step);
   }
 
+    function _defaultStepsCollector() {
+    if (typeof WebMaticDefaultStepsCollector !== "undefined") return WebMaticDefaultStepsCollector;
+    if (globalScope && globalScope.WebMaticDefaultStepsCollector) return globalScope.WebMaticDefaultStepsCollector;
+
+    if (typeof require === "function") {
+      return require("./defaults/default-steps-collector.js");
+    }
+
+    throw new Error("WebMaticDefaultStepsCollector no esta disponible");
+  }
+
   function _collectDefaultStepsFromPage(opts) {
-    const preserveSelectors = opts?.preserveSelectors || new Set();
-    const explicitExcludes = opts?.explicitExcludes || [];
-    const seenSelectors = new Set();
-    const out = [];
+    const options = opts && typeof opts === "object" ? opts : {};
 
-    function isExplicitlyExcluded(el, selector) {
-      if (explicitExcludes.includes(selector)) return true;
-      for (const exSel of explicitExcludes) {
-        try {
-          if (el.matches && el.matches(exSel)) return true;
-        } catch (e) { /* ignore invalid explicit selector */ }
-      }
-      return false;
-    }
-
-    function scanDoc(doc) {
-      if (!doc) return;
-      let fields = [];
-      try {
-        fields = Array.from(doc.querySelectorAll("input, select, textarea"));
-      } catch (e) {
-        fields = [];
-      }
-
-      for (const el of fields) {
-        try {
-          if (el.closest && (el.closest("#webmatic-panel-root") || el.closest("#webmatic-floating-recorder-global") || el.closest("#webmatic-floating-player-global"))) {
-            continue;
-          }
-          const tag = (el.tagName || "").toLowerCase();
-          const type = (el.type || "").toLowerCase();
-          if (type === "submit" || type === "button" || type === "image" || type === "file" || type === "reset" || type === "hidden") continue;
-          if (el.disabled || el.readOnly) continue;
-
-          const cs = (doc.defaultView || window).getComputedStyle(el);
-          const rect = el.getBoundingClientRect();
-          if (cs.display === "none" || cs.visibility === "hidden") continue;
-          if ((!rect || (rect.width === 0 && rect.height === 0)) && type !== "radio" && type !== "checkbox") continue;
-
-          const selector = _buildSelectorForDefault(el);
-          if (!selector || seenSelectors.has(selector)) continue;
-          if (preserveSelectors.has(selector) || isExplicitlyExcluded(el, selector)) continue;
-          seenSelectors.add(selector);
-
-          if (tag === "select") {
-            const options = Array.from(el.options || []);
-            const defaultOpt = options.find((o) => o.defaultSelected) || options[0] || null;
-            const defaultValue = defaultOpt ? String(defaultOpt.value ?? "") : String(el.value ?? "");
-            out.push({ type: "input", selector, value: defaultValue, _fast: true });
-          } else if (type === "checkbox") {
-            out.push({ type: "check", selector, checked: Boolean(el.defaultChecked), _fast: true });
-          } else if (type === "radio") {
-            if (el.defaultChecked) out.push({ type: "check", selector, checked: true, _fast: true });
-          } else {
-            out.push({ type: "input", selector, value: String(el.defaultValue ?? ""), _fast: true });
-          }
-        } catch (e) { /* ignore single field issues */ }
-      }
-
-      try {
-        const frames = doc.querySelectorAll("iframe, frame");
-        for (const frame of frames) {
-          try {
-            const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
-            if (innerDoc) scanDoc(innerDoc);
-          } catch (e) { /* cross-origin */ }
-        }
-      } catch (e) { /* ignore */ }
-    }
-
-    scanDoc(document);
-    return out;
+    return _defaultStepsCollector().collectDefaultStepsFromPage({
+      ...options,
+      document,
+      window,
+      buildSelectorForDefault: _buildSelectorForDefault
+    });
   }
 
   // Timers activos de highlight â€” para cancelarlos todos al terminar la macro
