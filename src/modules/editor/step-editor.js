@@ -32,32 +32,26 @@
     throw new Error("WebMaticEditorCatalogs no esta disponible");
   }
 
+  function _editorRenderUtils() {
+    if (typeof WebMaticEditorRenderUtils !== "undefined") return WebMaticEditorRenderUtils;
+    if (globalScope && globalScope.WebMaticEditorRenderUtils) return globalScope.WebMaticEditorRenderUtils;
+
+    if (typeof require === "function") {
+      return require("./renderers/editor-render-utils.js");
+    }
+
+    throw new Error("WebMaticEditorRenderUtils no esta disponible");
+  }
+
   function _shortLabel(s) {
     return _stepDefinitions().shortLabel(s);
   }
 
   function _mkBtn(text, title, disabled, onClick) {
-    const btn = document.createElement("button");
-    btn.className = "wm-sved-btn";
-    btn.textContent = text;
-    btn.title = title;
-    btn.disabled = disabled;
-    if (!disabled) btn.addEventListener("click", onClick);
-    return btn;
+    return _editorRenderUtils().mkBtn(text, title, disabled, onClick);
   }
 
-  const RESET_POLICY_OPTIONS = [
-    {
-      value: "start_only",
-      label: "Solo al inicio",
-      hint: "Aplica el baseline al arrancar la macro. Mantiene el comportamiento legacy."
-    },
-    {
-      value: "start_and_resume",
-      label: "Inicio y reanudación",
-      hint: "Aplica el baseline al arrancar y también al retomar tras navegación o cambio de pestaña."
-    }
-  ];
+  const RESET_POLICY_OPTIONS = _editorRenderUtils().RESET_POLICY_OPTIONS;
 
   function _cloneMeta(meta) {
     return _editorMeta().cloneMeta(meta);
