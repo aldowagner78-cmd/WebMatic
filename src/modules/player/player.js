@@ -1570,32 +1570,27 @@
     return /Elemento no encontrado|wait_for: tiempo agotado/i.test(msg);
   }
 
+    function _continuationSteps() {
+    if (typeof WebMaticContinuationSteps !== "undefined") return WebMaticContinuationSteps;
+    if (globalScope && globalScope.WebMaticContinuationSteps) return globalScope.WebMaticContinuationSteps;
+
+    if (typeof require === "function") {
+      return require("./control-flow/continuation-steps.js");
+    }
+
+    throw new Error("WebMaticContinuationSteps no esta disponible");
+  }
+
   function _cloneDatasetRows(rows) {
-    if (!Array.isArray(rows)) return [];
-    return rows.map((row) => {
-      if (Array.isArray(row)) return row.slice();
-      if (row && typeof row === "object") return { ...row };
-      return row;
-    });
+    return _continuationSteps().cloneDatasetRows(rows);
   }
 
   function _buildForEachRowContinuationStep(step, remainingRows) {
-    const cloned = { ...(step || {}) };
-    cloned.columns = Array.isArray(step && step.columns) ? step.columns.slice() : [];
-    cloned.dataset = _cloneDatasetRows(remainingRows);
-    cloned.steps = Array.isArray(step && step.steps)
-      ? step.steps.map((s) => (s && typeof s === "object" ? { ...s } : s))
-      : [];
-    return cloned;
+    return _continuationSteps().buildForEachRowContinuationStep(step, remainingRows);
   }
 
   function _buildLoopUntilContinuationStep(step, remainingIterations) {
-    const cloned = { ...(step || {}) };
-    cloned.steps = Array.isArray(step && step.steps)
-      ? step.steps.map((s) => (s && typeof s === "object" ? { ...s } : s))
-      : [];
-    cloned.max_iterations = remainingIterations;
-    return cloned;
+    return _continuationSteps().buildLoopUntilContinuationStep(step, remainingIterations);
   }
 
   class Player {
