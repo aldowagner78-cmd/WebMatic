@@ -63,6 +63,7 @@
         "src/modules/player/navigation/navigation-analyzer.js",
         "src/modules/player/navigation/background-navigator.js",
         "src/modules/player/state/variable-expander.js",
+        "src/modules/player/state/login-step-bypass.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",

@@ -1500,58 +1500,55 @@
     return false;
   }
 
+    function _loginStepBypass() {
+    if (typeof WebMaticLoginStepBypass !== "undefined") return WebMaticLoginStepBypass;
+    if (globalScope && globalScope.WebMaticLoginStepBypass) return globalScope.WebMaticLoginStepBypass;
+
+    if (typeof require === "function") {
+      return require("./state/login-step-bypass.js");
+    }
+
+    throw new Error("WebMaticLoginStepBypass no esta disponible");
+  }
+
   function _isLikelyLoginSelector(raw) {
-    const s = String(raw || "").toLowerCase();
-    if (!s) return false;
-    return /(login|log in|signin|sign in|auth|autent|usuario|user|mail|email|clave|contras|password|passwd|pwd|ingresar|iniciar sesion|acceder|codusu|usuacod|idusu|\busu\b)/i.test(s);
+    return _loginStepBypass().isLikelyLoginSelector(raw);
   }
 
   function _hasVisiblePasswordField() {
-    try {
-      const list = document.querySelectorAll('input[type="password"]');
-      return Array.from(list).some((el) => _isInteractable(el));
-    } catch (_e) {
-      return false;
-    }
+    return _loginStepBypass().hasVisiblePasswordField({
+      document,
+      window,
+      isInteractable: _isInteractable
+    });
   }
 
   function _getFirstVisiblePasswordField() {
-    try {
-      const list = document.querySelectorAll('input[type="password"]');
-      return Array.from(list).find((el) => _isInteractable(el)) || null;
-    } catch (_e) {
-      return null;
-    }
+    return _loginStepBypass().getFirstVisiblePasswordField({
+      document,
+      window,
+      isInteractable: _isInteractable
+    });
   }
 
   function _isLikelyLoginInputTarget(el, selector) {
-    if (_isLikelyLoginSelector(selector || "")) return true;
-    if (!el) return false;
-    try {
-      if (el instanceof HTMLInputElement) {
-        const type = String(el.type || "").toLowerCase();
-        if (type === "password") return true;
-      }
-      const id = String(el.id || "");
-      const name = String(el.getAttribute && el.getAttribute("name") || "");
-      const aria = String(el.getAttribute && el.getAttribute("aria-label") || "");
-      return /(password|passwd|pwd|clave|contras|usuario|user|mail|email|codusu|usuacod|idusu|login|signin|ingresar|acceder)/i.test(`${id} ${name} ${aria}`);
-    } catch (_e) {
-      return false;
-    }
+    return _loginStepBypass().isLikelyLoginInputTarget(el, selector);
   }
 
   function _isAuthenticatedLikeContext() {
-    const href = String((window && window.location && window.location.href) || "");
-    const looksLikeLoginUrl = /(login|signin|auth|oauth|sesion|session|acceso|ingresar)/i.test(href);
-    if (looksLikeLoginUrl) return false;
-    return !_hasVisiblePasswordField();
+    return _loginStepBypass().isAuthenticatedLikeContext({
+      document,
+      window,
+      isInteractable: _isInteractable
+    });
   }
 
   function _shouldBypassMissingLoginStep(stepType, selector) {
-    if (!_isLikelyLoginSelector(selector)) return false;
-    if (!_isAuthenticatedLikeContext()) return false;
-    return ["wait_for", "click", "input", "text", "check", "choose_option", "loop_until"].includes(String(stepType || ""));
+    return _loginStepBypass().shouldBypassMissingLoginStep(stepType, selector, {
+      document,
+      window,
+      isInteractable: _isInteractable
+    });
   }
 
   function _isRecoverableTransientFailure(err, step, steps, stepIndex) {
