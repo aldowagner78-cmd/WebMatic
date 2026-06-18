@@ -48,6 +48,8 @@
         "src/modules/editor/state/editor-catalogs.js",
         "src/modules/editor/renderers/editor-render-utils.js",
         "src/modules/editor/renderers/block-header-renderer.js",
+        "src/modules/editor/renderers/block-actions-renderer.js",
+        "src/modules/editor/renderers/step-row-renderer.js",
         "src/modules/editor/renderers/form-fields-renderer.js",
         "src/modules/editor/validation/editor-validation.js",
         "src/modules/editor/blocks/block-utils.js",
