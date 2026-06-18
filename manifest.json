@@ -64,6 +64,7 @@
         "src/modules/player/navigation/background-navigator.js",
         "src/modules/player/state/variable-expander.js",
         "src/modules/player/state/login-step-bypass.js",
+        "src/modules/player/state/step-normalizer.js",
         "src/modules/player/control-flow/continuation-steps.js",
         "src/modules/player/diagnostics/highlight-manager.js",
         "src/modules/player/player.js",
