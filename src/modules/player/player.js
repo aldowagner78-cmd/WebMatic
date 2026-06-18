@@ -409,18 +409,19 @@
   /**
    * Simulates a click on an element, dispatching mousedown + mouseup + click.
    */
-  function simulateClick(el) {
-    const isAnchor = el.tagName && el.tagName.toLowerCase() === "a";
-    // Always dispatch mousedown + mouseup (page handlers may listen to these)
-    el.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-    el.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
-    if (isAnchor) {
-      // For anchors, use the native click() which guarantees href navigation
-      // AND dispatches a real "click" event that bubbles. Avoids double-click/double-submit.
-      el.click();
-    } else {
-      el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    function _actionClick() {
+    if (typeof WebMaticActionClick !== "undefined") return WebMaticActionClick;
+    if (globalScope && globalScope.WebMaticActionClick) return globalScope.WebMaticActionClick;
+
+    if (typeof require === "function") {
+      return require("./actions/action-click.js");
     }
+
+    throw new Error("WebMaticActionClick no esta disponible");
+  }
+
+  function simulateClick(el) {
+    return _actionClick().simulateClick(el);
   }
 
   /**
