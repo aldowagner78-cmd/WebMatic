@@ -1023,14 +1023,45 @@ function updateProvincias() {
   });
 }
 
-function handleSearch(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    e.stopPropagation();
-    toast('Buscando: ' + e.target.value);
-    return false;
+let _lastSearchEnterAt = 0;
+function stopSearchEnter(e) {
+  if (!e || e.key !== 'Enter') return true;
+  const input = document.getElementById('busqueda');
+  if (!input || e.target !== input) return true;
+
+  e.preventDefault();
+  e.stopPropagation();
+  if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+
+  const now = Date.now();
+  if (now - _lastSearchEnterAt > 250) {
+    toast('Buscando: ' + input.value);
+    _lastSearchEnterAt = now;
   }
+  try { input.focus({ preventScroll: true }); } catch (_err) { input.focus(); }
+  return false;
 }
+
+function handleSearch(e) {
+  return stopSearchEnter(e);
+}
+
+(function bindSearchEnterGuard() {
+  const input = document.getElementById('busqueda');
+  const form = document.getElementById('form-registro');
+  if (input) {
+    input.addEventListener('keydown', stopSearchEnter, true);
+    input.addEventListener('keypress', stopSearchEnter, true);
+  }
+  if (form && input) {
+    form.addEventListener('submit', (e) => {
+      if (document.activeElement !== input) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+    }, true);
+  }
+})();
 
 // ── Tabla ─────────────────────────────────────────────────────
 let rowCount = 3;
