@@ -1,6 +1,9 @@
 (function initUiShell(globalScope) {
   const PANEL_ID = "webmatic-panel-root";
   const UI_VERSION = "2026-06-02-v12";
+  const uiComponents = globalScope.WebMaticUiComponents || {};
+  const uiShellState = globalScope.WebMaticUiShellState || {};
+  const uiStyleUtils = globalScope.WebMaticUiStyleUtils || {};
   // Paletas completas: cada variante define TODOS los tokens de color
   const THEME_PALETTES = {
     light: [
@@ -391,12 +394,21 @@ Estado: --</span>
     if (currentIds !== newIds) {
       listEl.replaceChildren();
       if (filtered.length === 0) {
-        const empty = document.createElement("div");
-        empty.className = "webmatic-macro-empty";
-        empty.textContent = macros.length === 0 ? "Sin macros guardadas" : "Sin resultados";
+        const text = macros.length === 0 ? "Sin macros guardadas" : "Sin resultados";
+        const empty = uiComponents.createMacroEmpty
+          ? uiComponents.createMacroEmpty(text)
+          : document.createElement("div");
+        if (!uiComponents.createMacroEmpty) {
+          empty.className = "webmatic-macro-empty";
+          empty.textContent = text;
+        }
         listEl.appendChild(empty);
       } else {
         filtered.forEach((m) => {
+          if (uiComponents.createMacroItem) {
+            listEl.appendChild(uiComponents.createMacroItem(m));
+            return;
+          }
           const item = document.createElement("div");
           item.className = "webmatic-macro-item";
           item.dataset.macroId = m.id;
@@ -414,7 +426,7 @@ Estado: --</span>
           editBtn.dataset.macroId = m.id;
           editBtn.setAttribute("aria-label", "Editar macro");
           editBtn.setAttribute("title", "Editar script");
-          editBtn.textContent = "✏️";
+          editBtn.textContent = "\u270F\uFE0F";
           item.appendChild(nameSpan);
           item.appendChild(countSpan);
           item.appendChild(editBtn);
@@ -515,39 +527,47 @@ Estado: --</span>
       return;
     }
 
-    panel.style.display = state.ui.panelVisible ? "block" : "none";
-    panel.style.width = `${state.ui.panelWidth}px`;
-    panel.style.opacity = String(state.settings.panelOpacity ?? 1);
-    panel.classList.toggle("webmatic-left", state.ui.panelSide === "left");
-    panel.classList.toggle("webmatic-right", state.ui.panelSide === "right");
-    panel.classList.toggle("webmatic-floating-mode", state.ui.isFloatingRecorderVisible);
-    panel.classList.toggle("webmatic-dark", state.settings.themeMode === "dark");
+    if (uiShellState.applyPanelState) {
+      uiShellState.applyPanelState(panel, state);
+    } else {
+      panel.style.display = state.ui.panelVisible ? "block" : "none";
+      panel.style.width = `${state.ui.panelWidth}px`;
+      panel.style.opacity = String(state.settings.panelOpacity ?? 1);
+      panel.classList.toggle("webmatic-left", state.ui.panelSide === "left");
+      panel.classList.toggle("webmatic-right", state.ui.panelSide === "right");
+      panel.classList.toggle("webmatic-floating-mode", state.ui.isFloatingRecorderVisible);
+      panel.classList.toggle("webmatic-dark", state.settings.themeMode === "dark");
+    }
 
     // Aplicar paleta completa según modo y variante
     const _mode = state.settings.themeMode === "dark" ? "dark" : "light";
     const _vi = Number(state.settings.themeVariant);
     const _pi = Number.isFinite(_vi) && _vi >= 1 && _vi <= 4 ? _vi - 1 : 0;
     const _p = THEME_PALETTES[_mode][_pi];
-    panel.style.setProperty("--webmatic-accent",        _p.accent);
-    panel.style.setProperty("--webmatic-accent-fg",     _p.accentFg);
-    panel.style.setProperty("--webmatic-surface",       _p.surface);
-    panel.style.setProperty("--webmatic-surface-2",     _p.surface2);
-    panel.style.setProperty("--webmatic-btn-bg",        _p.btnBg);
-    panel.style.setProperty("--webmatic-btn-hover",     _p.btnHover);
-    panel.style.setProperty("--webmatic-border",        _p.border);
-    panel.style.setProperty("--webmatic-swatch-border", _p.swatchBorder);
-    panel.style.setProperty("--webmatic-text",          _p.text);
-    panel.style.setProperty("--webmatic-text-muted",    _p.textMuted);
-    panel.style.setProperty("--webmatic-card-bg",       _p.cardBg);
-    panel.style.setProperty("--webmatic-scrollbar",     _p.scrollbar);
-    panel.style.setProperty("--webmatic-header-from",   _p.headerFrom);
-    panel.style.setProperty("--webmatic-header-to",     _p.headerTo);
-    panel.style.setProperty("--webmatic-header-text",   _p.headerText);
+    if (uiStyleUtils.applyThemePalette) {
+      uiStyleUtils.applyThemePalette(panel, _p);
+    } else {
+      panel.style.setProperty("--webmatic-accent",        _p.accent);
+      panel.style.setProperty("--webmatic-accent-fg",     _p.accentFg);
+      panel.style.setProperty("--webmatic-surface",       _p.surface);
+      panel.style.setProperty("--webmatic-surface-2",     _p.surface2);
+      panel.style.setProperty("--webmatic-btn-bg",        _p.btnBg);
+      panel.style.setProperty("--webmatic-btn-hover",     _p.btnHover);
+      panel.style.setProperty("--webmatic-border",        _p.border);
+      panel.style.setProperty("--webmatic-swatch-border", _p.swatchBorder);
+      panel.style.setProperty("--webmatic-text",          _p.text);
+      panel.style.setProperty("--webmatic-text-muted",    _p.textMuted);
+      panel.style.setProperty("--webmatic-card-bg",       _p.cardBg);
+      panel.style.setProperty("--webmatic-scrollbar",     _p.scrollbar);
+      panel.style.setProperty("--webmatic-header-from",   _p.headerFrom);
+      panel.style.setProperty("--webmatic-header-to",     _p.headerTo);
+      panel.style.setProperty("--webmatic-header-text",   _p.headerText);
+    }
 
     const modeButtons = panel.querySelectorAll(".webmatic-mode-btn");
     const views = panel.querySelectorAll(".webmatic-view");
 
-    const _applyModeBtnStyle = (btn, palette) => {
+    const _applyModeBtnStyle = uiStyleUtils.applyModeButtonStyle || ((btn, palette) => {
       if (!btn) return;
       const isActive = btn.classList.contains("active");
       btn.style.background = isActive ? palette.activeBg : palette.bg;
@@ -570,11 +590,15 @@ Estado: --</span>
         ? (palette.activeFilter || "saturate(1.15) brightness(1.02)")
         : "saturate(0.9)";
       btn.style.transform = isActive ? (palette.activeTransform || "translateY(0)") : "translateY(0)";
-    };
-
-    modeButtons.forEach((button) => {
-      button.classList.toggle("active", button.dataset.mode === state.ui.mode);
     });
+
+    if (uiShellState.syncModeButtons) {
+      uiShellState.syncModeButtons(modeButtons, state.ui.mode);
+    } else {
+      modeButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.mode === state.ui.mode);
+      });
+    }
 
     const recBtn = panel.querySelector(".webmatic-record-tab");
     const playBtnMode = panel.querySelector(".webmatic-play-tab");
@@ -599,17 +623,23 @@ Estado: --</span>
       activeTransform: "translateY(-1px)"
     });
 
-    views.forEach((view) => {
-      view.classList.toggle("active", view.dataset.view === state.ui.mode);
-    });
+    if (uiShellState.syncViews) {
+      uiShellState.syncViews(views, state.ui.mode);
+    } else {
+      views.forEach((view) => {
+        view.classList.toggle("active", view.dataset.view === state.ui.mode);
+      });
+    }
 
     const sideLeftButton = panel.querySelector('[data-action="settings-side-left"]');
     const sideRightButton = panel.querySelector('[data-action="settings-side-right"]');
     if (sideLeftButton) {
-      sideLeftButton.classList.toggle("active", state.ui.panelSide === "left");
+      if (uiShellState.setActiveByPredicate) uiShellState.setActiveByPredicate(sideLeftButton, state.ui.panelSide === "left");
+      else sideLeftButton.classList.toggle("active", state.ui.panelSide === "left");
     }
     if (sideRightButton) {
-      sideRightButton.classList.toggle("active", state.ui.panelSide === "right");
+      if (uiShellState.setActiveByPredicate) uiShellState.setActiveByPredicate(sideRightButton, state.ui.panelSide === "right");
+      else sideRightButton.classList.toggle("active", state.ui.panelSide === "right");
     }
 
     const darkToggle = panel.querySelector("#webmatic-dark-toggle");
@@ -624,13 +654,17 @@ Estado: --</span>
       swatchRow.replaceChildren();
       THEME_PALETTES[mode].forEach((color, index) => {
         const variant = index + 1;
-        const button = document.createElement("button");
-        button.className = `webmatic-swatch${variant === state.settings.themeVariant ? " active" : ""}`;
-        button.dataset.action = "settings-theme-variant";
-        button.dataset.variant = String(variant);
-        button.dataset.color = color.accent;
-        button.title = `Variante ${variant}`;
-        button.style.background = color.accent;
+        const button = uiComponents.createThemeSwatch
+          ? uiComponents.createThemeSwatch(color, variant, state.settings.themeVariant)
+          : document.createElement("button");
+        if (!uiComponents.createThemeSwatch) {
+          button.className = `webmatic-swatch${variant === state.settings.themeVariant ? " active" : ""}`;
+          button.dataset.action = "settings-theme-variant";
+          button.dataset.variant = String(variant);
+          button.dataset.color = color.accent;
+          button.title = `Variante ${variant}`;
+          button.style.background = color.accent;
+        }
         swatchRow.appendChild(button);
       });
     }
@@ -772,9 +806,13 @@ Estado: --</span>
 
     const folderDisplay = panel.querySelector("[data-folder-display]");
     if (folderDisplay) {
-      const val = String(state.settings.downloadFolder || "");
-      folderDisplay.textContent = val || "Sin carpeta";
-      folderDisplay.classList.toggle("webmatic-folder-empty", !val);
+      if (uiComponents.updateFolderDisplay) {
+        uiComponents.updateFolderDisplay(folderDisplay, state.settings.downloadFolder);
+      } else {
+        const val = String(state.settings.downloadFolder || "");
+        folderDisplay.textContent = val || "Sin carpeta";
+        folderDisplay.classList.toggle("webmatic-folder-empty", !val);
+      }
     }
 
     renderLibrary(panel, state);
@@ -782,12 +820,16 @@ Estado: --</span>
     // Record tab button: red when recording
     const recordTabBtn = panel.querySelector("[data-record-btn]");
     if (recordTabBtn) {
-      if (state.recorder.isRecording) {
-        recordTabBtn.textContent = `\u23F9 Detener (${state.draft.steps.length})`;
-        recordTabBtn.dataset.recording = "true";
+      if (uiComponents.updateRecordTabButton) {
+        uiComponents.updateRecordTabButton(recordTabBtn, state.recorder.isRecording, state.draft.steps.length);
       } else {
-        recordTabBtn.textContent = "\u25CF Grabar";
-        delete recordTabBtn.dataset.recording;
+        if (state.recorder.isRecording) {
+          recordTabBtn.textContent = `\u23F9 Detener (${state.draft.steps.length})`;
+          recordTabBtn.dataset.recording = "true";
+        } else {
+          recordTabBtn.textContent = "\u25CF Grabar";
+          delete recordTabBtn.dataset.recording;
+        }
       }
     }
 
