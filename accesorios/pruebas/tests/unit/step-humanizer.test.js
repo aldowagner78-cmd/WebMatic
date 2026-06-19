@@ -48,6 +48,11 @@ test("humanizeTarget: limpia identificadores tecnicos simples", () => {
   assert.equal(humanizer.humanizeTarget({ selector: "#vATTRIBUTESELECTED_0006" }), "Atributo 0006");
 });
 
+test("humanizeStep: defaults se presentan como Estado inicial", () => {
+  assert.equal(humanizer.humanizeStep({ type: "capture_defaults" }), "Estado inicial");
+  assert.equal(humanizer.humanizeStep({ type: "input", selector: "#nombre", _baselineDefault: true }), "Estado inicial");
+});
+
 test("humanizeTarget: normaliza prefijo Btn sin mostrarlo crudo", () => {
   assert.equal(humanizer.humanizeTarget({ controlRef: { label: "Btn Enviar" } }), "Enviar");
   assert.equal(humanizer.humanizeTarget({ selector: "#BTN_ENVIAR" }), "Enviar");

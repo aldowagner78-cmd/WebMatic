@@ -39,8 +39,8 @@
     const defaultBadge = config.isBaselineDefault ? doc.createElement("span") : null;
     if (defaultBadge) {
       defaultBadge.className = "wm-sved-default-badge";
-      defaultBadge.textContent = "Preparacion inicial";
-      defaultBadge.title = "Paso capturado automáticamente desde el estado inicial de la página";
+      defaultBadge.textContent = "Estado inicial";
+      defaultBadge.title = "Campo detectado automáticamente como parte del estado inicial de la página.";
     }
 
     const desc = doc.createElement("span");

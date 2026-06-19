@@ -157,7 +157,7 @@
       if_exists: "Si aparece",
       loop_until: "Repetir hasta",
       for_each_row: "Para cada fila",
-      capture_defaults: "Preparacion inicial",
+      capture_defaults: "Estado inicial",
       reset_fields: "Limpiar campos",
       try_fallback: "Intentar alternativa"
     };
@@ -170,6 +170,7 @@
     const target = humanizeTarget(s);
     const value = humanizeValue(s);
 
+    if (s.type === "capture_defaults" || s._baselineDefault === true) return "Estado inicial";
     if (s.type === "navigate") return s.url ? `${action}: ${s.url}` : action;
     if (s.type === "input" || s.type === "text") {
       return target ? `${action} ${_quote(value)} en ${_quote(target)}` : `${action} ${_quote(value)}`.trim();
@@ -192,7 +193,6 @@
     if (s.type === "loop_until") return "Repetir hasta que se cumpla la condicion";
     if (s.type === "if_exists") return target ? `Si aparece ${_quote(target)}` : "Si aparece el elemento";
     if (s.type === "for_each_row") return "Para cada fila de la tabla";
-    if (s.type === "capture_defaults" || s._baselineDefault === true) return "Preparacion inicial";
     if (target) return `${action} ${_quote(target)}`;
     return action;
   }
