@@ -22,6 +22,10 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html {
+      scroll-padding-top: 116px;
+    }
+
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: var(--bg);
@@ -84,12 +88,14 @@
     section {
       background: var(--surface);
       border: 1px solid var(--border);
+      border-left: 4px solid rgba(5,150,105,.35);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       overflow: hidden;
+      scroll-margin-top: 116px;
     }
     section > header {
-      background: #f9fafb;
+      background: #f0fdf4;
       border-bottom: 1px solid var(--border);
       padding: 10px 16px;
       position: static;
@@ -698,19 +704,6 @@
 
       <hr class="divider" />
 
-      <p style="font-size:12px;margin-bottom:10px;font-weight:600">Contador con botones:</p>
-      <div class="counter-display" id="counter-val">0</div>
-      <div style="max-width:240px;margin:0 auto">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-      </div>
-      <div class="btn-row" style="justify-content:center;margin-top:12px">
-        <button class="btn btn-danger"    id="btn-decrement" onclick="changeCounter(-1)">−</button>
-        <button class="btn btn-secondary" id="btn-reset-counter" onclick="resetCounter()">Reset</button>
-        <button class="btn btn-primary"   id="btn-increment" onclick="changeCounter(1)">+</button>
-      </div>
-
-      <hr class="divider" />
-
       <div class="field" style="margin-top:8px">
         <label for="extract-target">Texto para extraer <span style="color:var(--muted);font-weight:400">(selecciona y copia con Ctrl+C)</span></label>
         <div id="extract-target" class="output-box" style="cursor:text;user-select:all">
@@ -725,6 +718,20 @@
   <section id="interactivo">
     <header><h2>Interacciones avanzadas <span class="badge">dblclick · hover · contenteditable</span></h2></header>
     <div class="section-body">
+
+      <!-- Contador: usado en EJ12 -->
+      <p style="font-size:12px;font-weight:700;margin-bottom:8px">Contador con botones</p>
+      <div class="counter-display" id="counter-val">0</div>
+      <div style="max-width:240px;margin:0 auto">
+        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      </div>
+      <div class="btn-row" style="justify-content:center;margin-top:12px;margin-bottom:18px">
+        <button class="btn btn-danger"    id="btn-decrement" onclick="changeCounter(-1)">−</button>
+        <button class="btn btn-secondary" id="btn-reset-counter" onclick="resetCounter()">Reset</button>
+        <button class="btn btn-primary"   id="btn-increment" onclick="changeCounter(1)">+</button>
+      </div>
+
+      <hr class="divider" />
 
       <!-- Doble clic -->
       <p style="font-size:12px;font-weight:700;margin-bottom:8px">Doble clic para editar</p>
