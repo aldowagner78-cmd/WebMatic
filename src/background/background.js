@@ -93,10 +93,16 @@ const lastBrowserNavEventByTab = new Map(); // tabId -> { type, url, at }
 // Map<tabId, { tabId, steps, index, vars, speed, macroId }>
 const pendingPlaybackByTab = new Map();
 
+function _tabsNavigation() {
+  if (typeof globalThis !== "undefined" && globalThis.WebMaticTabsNavigation) return globalThis.WebMaticTabsNavigation;
+  if (typeof require === "function") {
+    try { return require("./tabs-navigation.js"); } catch (_e) { /* ignore */ }
+  }
+  throw new Error("WebMaticTabsNavigation no está disponible");
+}
+
 function _isRestrictedUrl(url) {
-  const u = String(url || "").trim();
-  if (!u) return true;
-  return /^(about:|chrome:|moz-extension:|chrome-extension:|data:|blob:)/i.test(u);
+  return _tabsNavigation().isRestrictedUrl(url);
 }
 
 function _rememberTabUrl(tab) {
@@ -365,12 +371,19 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message?.type === "PING") {
+  const backgroundRouter = (typeof globalThis !== "undefined" && globalThis.WebMaticBackgroundRouter)
+    ? globalThis.WebMaticBackgroundRouter
+    : null;
+  const isBackgroundMessage = (type) => backgroundRouter && typeof backgroundRouter.isMessageType === "function"
+    ? backgroundRouter.isMessageType(message, type)
+    : ((message && typeof message === "object" ? String(message.type || "") : "") === String(type || ""));
+
+  if (isBackgroundMessage("PING")) {
     sendResponse({ ok: true, source: "background" });
     return true;
   }
 
-  if (message?.type === "SAVE_PLAYBACK_STATE") {
+  if (isBackgroundMessage("SAVE_PLAYBACK_STATE")) {
     // Called by player just before a navigating click
     if (sender && sender.tab && sender.tab.id) {
       const explicitTabId = Number(message.targetTabId);
@@ -388,7 +401,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "QUERY_PENDING_PLAYBACK") {
+  if (isBackgroundMessage("QUERY_PENDING_PLAYBACK")) {
     const senderTabId = sender && sender.tab && sender.tab.id ? Number(sender.tab.id) : 0;
     if (senderTabId > 0 && pendingPlaybackByTab.has(senderTabId)) {
       const p = pendingPlaybackByTab.get(senderTabId);
@@ -400,7 +413,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "CLEAR_PENDING_PLAYBACK") {
+  if (isBackgroundMessage("CLEAR_PENDING_PLAYBACK")) {
     const explicitTabId = Number(message.tabId);
     if (Number.isFinite(explicitTabId) && explicitTabId > 0) {
       pendingPlaybackByTab.delete(explicitTabId);
@@ -413,20 +426,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "OPEN_OPTIONS_PAGE") {
+  if (isBackgroundMessage("OPEN_OPTIONS_PAGE")) {
     chrome.runtime.openOptionsPage(() => { void chrome.runtime.lastError; });
     sendResponse({ ok: true });
     return true;
   }
 
-  if (message?.type === "GET_FOLDER_NAME") {
+  if (isBackgroundMessage("GET_FOLDER_NAME")) {
     chrome.storage.local.get("webmaticExportFolder", (r) => {
       sendResponse({ name: (r && r.webmaticExportFolder) || null });
     });
     return true;
   }
 
-  if (message?.type === "EXPORT_FILE") {
+  if (isBackgroundMessage("EXPORT_FILE")) {
     chrome.storage.local.get("webmaticExportFolder", (r) => {
       const fsHandle = (typeof globalThis !== "undefined" && globalThis.WebMaticFsHandle)
         ? globalThis.WebMaticFsHandle
@@ -457,7 +470,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "DOWNLOAD_FILE") {
+  if (isBackgroundMessage("DOWNLOAD_FILE")) {
     try {
       // Decode the base64 data URL to a Blob so Firefox saveAs dialog works reliably
       const dataUrl = String(message.url || "");
@@ -481,7 +494,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "PANEL_STATE_CHANGED") {
+  if (isBackgroundMessage("PANEL_STATE_CHANGED")) {
     if (sender && sender.tab && sender.tab.id) {
       if (message.visible) {
         panelOpenTabs.add(sender.tab.id);
@@ -493,17 +506,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "QUERY_RECORDING_STATE") {
+  if (isBackgroundMessage("QUERY_RECORDING_STATE")) {
     sendResponse({ isRecording });
     return true;
   }
 
-  if (message?.type === "QUERY_RECORDED_STEPS") {
+  if (isBackgroundMessage("QUERY_RECORDED_STEPS")) {
     sendResponse({ steps: recordedSteps.slice() });
     return true;
   }
 
-  if (message?.type === "RECORDING_STATE") {
+  if (isBackgroundMessage("RECORDING_STATE")) {
     isRecording = message.active === true;
     if (isRecording) {
       recordedSteps = [];
@@ -541,35 +554,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "PLAYBACK_NAVIGATE") {
+  if (isBackgroundMessage("PLAYBACK_NAVIGATE")) {
     const currentTabId = sender && sender.tab && sender.tab.id ? Number(sender.tab.id) : 0;
     if (!currentTabId) {
       sendResponse({ ok: false, error: "missing_sender_tab" });
       return true;
     }
 
-    const rawUrl = String(message.url || "").trim();
-    if (!rawUrl) {
-      sendResponse({ ok: false, error: "navigate_missing_url" });
+    const resolvedNavigation = _tabsNavigation().resolveNavigationUrl(message.url, sender.tab.url || "about:blank");
+    if (!resolvedNavigation.ok) {
+      sendResponse({ ok: false, error: resolvedNavigation.error });
       return true;
     }
 
-    let targetUrl = rawUrl;
-    try {
-      targetUrl = new URL(rawUrl, String(sender.tab.url || "about:blank")).href;
-    } catch (_e) {
-      sendResponse({ ok: false, error: "navigate_invalid_url" });
-      return true;
-    }
+    const targetUrl = resolvedNavigation.url;
 
-    const _pendingState = Array.isArray(message.steps) ? {
-      tabId: currentTabId,
-      steps: message.steps,
-      index: Number.isFinite(Number(message.index)) ? Number(message.index) : 0,
-      vars: message.vars || {},
-      speed: message.speed || 1,
-      macroId: message.macroId || null
-    } : null;
+    const _pendingState = _tabsNavigation().buildPendingPlaybackState(currentTabId, message);
 
     if (_pendingState) {
       pendingPlaybackByTab.set(currentTabId, _pendingState);
@@ -590,10 +590,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       chrome.tabs.create({ url: targetUrl, active: true }, (newTab) => {
         if (chrome.runtime.lastError || !newTab || !newTab.id) {
           const createErrorMsg = (chrome.runtime.lastError && chrome.runtime.lastError.message) || "unknown";
-          let hint = "";
-          if (_isFileUrl) {
-            hint = " | SOLUCIÓN: En Firefox ve a about:addons → WebMatic → habilitar 'Permitir acceso a URLs de archivo'. Alternativa: sirve el archivo con 'python -m http.server 8787' y usa http://127.0.0.1:8787/testindex.html";
-          }
+          const hint = _isFileUrl ? _tabsNavigation().fileAccessHint(targetUrl) : "";
           sendResponse({
             ok: false,
             error: "navigate_tab_update_failed",
@@ -614,7 +611,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "PLAYBACK_TAB_ACTION") {
+  if (isBackgroundMessage("PLAYBACK_TAB_ACTION")) {
     const action = String(message.action || "");
     const step = message.step || {};
     const currentTabId = sender && sender.tab && sender.tab.id ? sender.tab.id : null;
@@ -629,14 +626,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ ok: false, error: "invalid_target_tab" });
         return;
       }
-      pendingPlaybackByTab.set(targetId, {
-        tabId: targetId,
-        steps: Array.isArray(message.steps) ? message.steps : [],
-        index: Number.isFinite(Number(message.index)) ? Number(message.index) : 0,
-        vars: message.vars || {},
-        speed: message.speed || 1,
-        macroId: message.macroId || null
-      });
+      pendingPlaybackByTab.set(targetId, _tabsNavigation().buildPendingPlaybackState(targetId, {
+        ...message,
+        steps: Array.isArray(message.steps) ? message.steps : []
+      }));
 
       chrome.tabs.update(targetId, { active: true }, () => {
         void chrome.runtime.lastError;
@@ -657,13 +650,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ ok: true, handoff: true, tabId: targetId });
         });
       });
-    };
-
-    const urlMatches = (tabUrl, desired) => {
-      const a = String(tabUrl || "").trim();
-      const b = String(desired || "").trim();
-      if (!a || !b) return false;
-      return a === b || a.startsWith(b);
     };
 
     if (action === "open_tab") {
@@ -687,7 +673,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const desiredUrl = String(step.url || "").trim();
       const openIfMissing = String(step.openIfMissing || "true") !== "false";
       chrome.tabs.query({}, (tabs) => {
-        const found = tabs.find((t) => t && t.id && desiredUrl && urlMatches(t.url || t.pendingUrl || "", desiredUrl));
+        const found = tabs.find((t) => t && t.id && desiredUrl && _tabsNavigation().urlMatches(t.url || t.pendingUrl || "", desiredUrl));
         if (found && found.id) {
           resumeInTab(found.id);
           return;
@@ -713,7 +699,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (target === "match_url") {
         const desiredUrl = String(step.url || "").trim();
         chrome.tabs.query({}, (tabs) => {
-          const found = tabs.find((t) => t && t.id && desiredUrl && urlMatches(t.url || t.pendingUrl || "", desiredUrl));
+          const found = tabs.find((t) => t && t.id && desiredUrl && _tabsNavigation().urlMatches(t.url || t.pendingUrl || "", desiredUrl));
           if (!found || !found.id) {
             sendResponse({ ok: false, error: "close_tab_not_found" });
             return;
@@ -756,7 +742,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "RECORD_STEP") {
+  if (isBackgroundMessage("RECORD_STEP")) {
     if (isRecording && message.step) {
       const step = message.step;
       if (step._merge && recordedSteps.length > 0) {
@@ -770,7 +756,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  if (message?.type === "FRAME_STEP_CAPTURED") {
+  if (isBackgroundMessage("FRAME_STEP_CAPTURED")) {
     if (isRecording && sender && sender.tab && sender.tab.id) {
       chrome.tabs.sendMessage(
         sender.tab.id,
@@ -782,7 +768,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  if (message?.type === "OPEN_HELP_PAGE") {
+  if (isBackgroundMessage("OPEN_HELP_PAGE")) {
     const helpTheme = { themeMode: message.themeMode || "light", themeVariant: message.themeVariant || 1 };
     chrome.storage.local.set({ webmaticHelpTheme: helpTheme }, () => {
       chrome.tabs.create({ url: chrome.runtime.getURL("src/help/help.html") }, () => {
@@ -794,7 +780,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // ── Grabación inline ──
-  if (message?.type === "INLINE_RECORDING_STARTED") {
+  if (isBackgroundMessage("INLINE_RECORDING_STARTED")) {
     if (sender && sender.tab && sender.tab.id) {
       inlineRecordingTabId = sender.tab.id;
       inlineBuffer = []; // buffer fresco para esta sesión
@@ -807,7 +793,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // Cada paso capturado en content.js se envía aquí para persistir entre navegaciones
-  if (message?.type === "INLINE_RECORD_STEP") {
+  if (isBackgroundMessage("INLINE_RECORD_STEP")) {
     if (inlineRecordingTabId !== null && message.step) {
       const step = message.step;
       if (step._merge && inlineBuffer.length > 0) {
@@ -822,7 +808,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   // Solicitud de detención desde content.js: devolver todos los pasos acumulados y el contexto del editor
-  if (message?.type === "INLINE_RECORDING_STOP_REQUEST") {
+  if (isBackgroundMessage("INLINE_RECORDING_STOP_REQUEST")) {
     const steps = inlineBuffer.slice();
     const editorContext = inlineEditorContext;
     inlineBuffer = [];
@@ -835,7 +821,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "INLINE_RECORDING_STOPPED") {
+  if (isBackgroundMessage("INLINE_RECORDING_STOPPED")) {
     inlineRecordingTabId = null;
     inlineBuffer = [];
     inlineEditorContext = null;
@@ -846,12 +832,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message?.type === "QUERY_INLINE_RECORDING_STATE") {
+  if (isBackgroundMessage("QUERY_INLINE_RECORDING_STATE")) {
     sendResponse({ active: inlineRecordingTabId !== null, tabId: inlineRecordingTabId });
     return true;
   }
 
-  if (message?.type === "STOP_INLINE_RECORDING") {
+  if (isBackgroundMessage("STOP_INLINE_RECORDING")) {
     if (inlineRecordingTabId !== null) {
       chrome.tabs.sendMessage(inlineRecordingTabId, { type: "STOP_INLINE_RECORDING" }, () => {
         void chrome.runtime.lastError;

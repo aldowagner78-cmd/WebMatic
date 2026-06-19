@@ -1,28 +1,26 @@
 (function initMacrosGlobal(globalScope) {
-  const MACROS_STORAGE_KEY = "webmaticMacros";
-
-  function _normalizeMacros(value) {
-    return Array.isArray(value) ? value : [];
+  function _macroStorage() {
+    if (globalScope && globalScope.WebMaticMacroStorage) return globalScope.WebMaticMacroStorage;
+    if (typeof require === "function") {
+      try { return require("./macro-storage.js"); } catch (_e) { /* ignore */ }
+    }
+    throw new Error("WebMaticMacroStorage no está disponible");
   }
 
   function getMacrosStorageKey() {
-    return MACROS_STORAGE_KEY;
+    return _macroStorage().getMacrosStorageKey();
   }
 
   function buildMacrosStoragePatch(macros) {
-    return { [MACROS_STORAGE_KEY]: _normalizeMacros(macros) };
+    return _macroStorage().buildMacrosStoragePatch(macros);
   }
 
   function readMacrosFromStorageSnapshot(snapshot) {
-    if (!snapshot || typeof snapshot !== "object") return [];
-    return _normalizeMacros(snapshot[MACROS_STORAGE_KEY]);
+    return _macroStorage().readMacrosFromStorageSnapshot(snapshot);
   }
 
   function extractMacrosFromStorageChange(changes, areaName) {
-    if (areaName !== "local" || !changes || typeof changes !== "object") return null;
-    if (!Object.prototype.hasOwnProperty.call(changes, MACROS_STORAGE_KEY)) return null;
-    const change = changes[MACROS_STORAGE_KEY] || {};
-    return _normalizeMacros(change.newValue);
+    return _macroStorage().extractMacrosFromStorageChange(changes, areaName);
   }
 
   const api = {

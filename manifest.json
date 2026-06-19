@@ -20,6 +20,8 @@
   "background": {
     "scripts": [
       "src/modules/storage/fs-handle.js",
+      "src/background/background-router.js",
+      "src/background/tabs-navigation.js",
       "src/background/background.js"
     ]
   },
@@ -92,6 +94,7 @@
         "src/modules/player/actions/action-input-text.js",
         "src/modules/player/actions/action-check-runner.js",
         "src/modules/player/player.js",
+        "src/modules/storage/macro-storage.js",
         "src/modules/storage/macros-global.js",
         "src/modules/storage/iim-adapter.js",
         "src/modules/storage/macro-json.js",
