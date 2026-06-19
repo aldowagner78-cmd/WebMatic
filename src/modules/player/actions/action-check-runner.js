@@ -1,4 +1,12 @@
 (function initActionCheckRunner(globalScope) {
+  function isInputElementLike(el, HTMLInputElementCtor) {
+    if (!el || typeof el !== "object") return false;
+    if (HTMLInputElementCtor && el instanceof HTMLInputElementCtor) return true;
+
+    const tagName = typeof el.tagName === "string" ? el.tagName.toLowerCase() : "";
+    return tagName === "input" && typeof el.checked === "boolean";
+  }
+
   function runCheckAction(context, deps) {
     const ctx = context && typeof context === "object" ? context : {};
     const options = deps && typeof deps === "object" ? deps : {};
@@ -20,7 +28,7 @@
 
     if (!silentStep && typeof highlightElement === "function") highlightElement(el);
 
-    if (!HTMLInputElementCtor || !(el instanceof HTMLInputElementCtor)) {
+    if (!isInputElementLike(el, HTMLInputElementCtor)) {
       simulateClick(el);
       resolve();
       return;

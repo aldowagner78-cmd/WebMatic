@@ -20,6 +20,41 @@ const actionCheckRunner = require("../../../../src/modules/player/actions/action
 const actionInputValue = require("../../../../src/modules/player/actions/action-input-value.js");
 const actionSimpleEvents = require("../../../../src/modules/player/actions/action-simple-events.js");
 
+test("check false ejecutado dos veces sobre checkbox no debe volver a tildarlo", async () => {
+  const otherWin = new Window({ url: "https://example.com/iframe" });
+  const foreignCheckbox = otherWin.document.createElement("input");
+  foreignCheckbox.type = "checkbox";
+  foreignCheckbox.checked = false;
+
+  let clicks = 0;
+  const runOnce = () => new Promise((resolve, reject) => {
+    actionCheckRunner.runCheckAction(
+      { step: { checked: false }, el: foreignCheckbox, selector: "input[type=checkbox][name='vATTRIBUTESELECTED_0006']" },
+      {
+        resolve,
+        reject,
+        highlightElement: () => {},
+        simulateClick: (el) => {
+          clicks += 1;
+          el.checked = !el.checked;
+        },
+        findCheckActivator: () => null,
+        setCheckedNative: actionCheck.setCheckedNative,
+        isInteractable: () => true,
+        setTimeout: (fn) => fn(),
+        HTMLInputElement
+      }
+    );
+  });
+
+  await runOnce();
+  assert.equal(foreignCheckbox.checked, false);
+
+  await runOnce();
+  assert.equal(foreignCheckbox.checked, false);
+  assert.equal(clicks, 0);
+});
+
 test("player action helpers preserve checkbox, radio, input and simple event behavior", async () => {
   document.body.innerHTML = `
     <label id="accept-label" for="accept">Aceptar</label>
