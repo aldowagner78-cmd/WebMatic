@@ -1891,7 +1891,6 @@
 .wm-sved-type {
   font-size: 10px;
   font-weight: 700;
-  font-family: "Cascadia Code", "Fira Mono", monospace;
   background: color-mix(in srgb, var(--webmatic-accent) 14%, var(--webmatic-card-bg) 86%);
   color: var(--webmatic-accent, #059669);
   padding: 2px 5px;
@@ -1903,12 +1902,11 @@
 .wm-sved-desc {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--webmatic-text, #1e293b);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: "Cascadia Code", "Fira Mono", monospace;
 }
 
 .wm-sved-ctrl {

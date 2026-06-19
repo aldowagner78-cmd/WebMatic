@@ -33,20 +33,25 @@
 
     const typeTag = doc.createElement("span");
     typeTag.className = "wm-sved-type";
-    typeTag.textContent = config.stepType || "";
+    typeTag.textContent = config.actionLabel || config.stepType || "";
+    typeTag.title = config.stepType || "";
 
     const defaultBadge = config.isBaselineDefault ? doc.createElement("span") : null;
     if (defaultBadge) {
       defaultBadge.className = "wm-sved-default-badge";
-      defaultBadge.textContent = "default";
+      defaultBadge.textContent = "Preparacion inicial";
       defaultBadge.title = "Paso capturado automáticamente desde el estado inicial de la página";
     }
 
     const desc = doc.createElement("span");
     desc.className = "wm-sved-desc";
-    const lbl = config.shortLabel || "";
-    desc.textContent = config.isCollapsedSummary ? `${lbl} (+${config.blockSize - 1} ocultos)` : lbl;
-    desc.title = lbl;
+    const humanLabel = config.humanLabel || config.shortLabel || "";
+    const technicalLabel = config.shortLabel || "";
+    desc.textContent = config.isCollapsedSummary ? `${humanLabel} (+${config.blockSize - 1} ocultos)` : humanLabel;
+    desc.title = technicalLabel && technicalLabel !== humanLabel ? `Detalle tecnico: ${technicalLabel}` : humanLabel;
+    if (config.showTechnicalDetails && technicalLabel) {
+      desc.dataset.technicalLabel = technicalLabel;
+    }
 
     const ctrl = doc.createElement("div");
     ctrl.className = "wm-sved-ctrl";

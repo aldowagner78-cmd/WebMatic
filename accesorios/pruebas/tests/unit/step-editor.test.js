@@ -378,7 +378,8 @@ test("editor visual: pasos _baselineDefault conservan marca visual de default", 
 
   const row = container.querySelector(".wm-sved-row");
   assert.ok(row.classList.contains("wm-sved-row-default"));
-  assert.equal(row.querySelector(".wm-sved-default-badge").textContent, "default");
+  assert.equal(row.querySelector(".wm-sved-default-badge").textContent, "Preparacion inicial");
+  assert.equal(row.querySelector(".wm-sved-desc").textContent, 'Escribir "Ana" en "Nombre"');
 });
 
 test("bloques por contexto: macros viejas sin _wmBlockKey siguen renderizando", () => {

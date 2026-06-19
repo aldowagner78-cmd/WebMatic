@@ -76,6 +76,17 @@
     throw new Error("WebMaticStepRowRenderer no esta disponible");
   }
 
+  function _stepHumanizer() {
+    if (typeof WebMaticStepHumanizer !== "undefined") return WebMaticStepHumanizer;
+    if (globalScope && globalScope.WebMaticStepHumanizer) return globalScope.WebMaticStepHumanizer;
+
+    if (typeof require === "function") {
+      return require("./presentation/step-humanizer.js");
+    }
+
+    throw new Error("WebMaticStepHumanizer no esta disponible");
+  }
+
   function _formFieldsRenderer() {
     if (typeof WebMaticFormFieldsRenderer !== "undefined") return WebMaticFormFieldsRenderer;
     if (globalScope && globalScope.WebMaticFormFieldsRenderer) return globalScope.WebMaticFormFieldsRenderer;
@@ -705,7 +716,10 @@
               rowIdx,
               stepType: step.type,
               typeIcon: _stepDefinitions().TYPE_ICONS[step.type] || "\u25B8",
+              actionLabel: _stepHumanizer().humanizeAction(step),
+              humanLabel: _stepHumanizer().humanizeStep(step),
               shortLabel: _shortLabel(step),
+              showTechnicalDetails: _stepHumanizer().shouldShowTechnicalDetails(step),
               blockOrdinal,
               blockSize,
               isBaselineDefault,
