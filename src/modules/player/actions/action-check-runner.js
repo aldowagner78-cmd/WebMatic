@@ -44,6 +44,9 @@
             simulateClick(el);
           } else if (activator) {
             simulateClick(activator);
+            if (el.checked !== true) {
+              setCheckedNative(el, true);
+            }
           } else {
             setCheckedNative(el, true);
           }

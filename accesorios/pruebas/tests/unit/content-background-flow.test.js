@@ -1,0 +1,91 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+
+const {
+  createChromeMock,
+  freshRequire
+} = require("../helpers/browser-harness.js");
+
+const contentRouter = require("../../../../src/modules/content/message-router.js");
+const backgroundRouter = require("../../../../src/background/background-router.js");
+const tabsNavigation = require("../../../../src/background/tabs-navigation.js");
+const macroStorage = require("../../../../src/modules/storage/macro-storage.js");
+
+test("content/background flow: routing preserva nombres y payload", () => {
+  const payload = { type: "PLAYBACK_NAVIGATE", url: "https://example.test/", steps: [{ type: "click" }] };
+  assert.equal(contentRouter.messageType(payload), "PLAYBACK_NAVIGATE");
+  assert.equal(contentRouter.isMessageType(payload, "PLAYBACK_NAVIGATE"), true);
+  assert.equal(contentRouter.isMessageType({ type: "UNKNOWN" }, "PLAYBACK_NAVIGATE"), false);
+  assert.deepEqual(backgroundRouter.ok({ payload }), { ok: true, payload });
+  assert.deepEqual(backgroundRouter.error("unknown_message", { type: "UNKNOWN" }), {
+    ok: false,
+    error: "unknown_message",
+    type: "UNKNOWN"
+  });
+});
+
+test("background flow: tabs-navigation cubre restricted, openIfMissing y pending playback", () => {
+  assert.equal(tabsNavigation.isRestrictedUrl("chrome://extensions"), true);
+  assert.equal(tabsNavigation.isRestrictedUrl("https://example.test/"), false);
+  assert.equal(tabsNavigation.urlMatches("https://example.test/path?a=1", "https://example.test/path"), true);
+  assert.deepEqual(tabsNavigation.resolveNavigationUrl("../next", "https://example.test/a/b/"), {
+    ok: true,
+    url: "https://example.test/a/next"
+  });
+  assert.deepEqual(
+    tabsNavigation.buildPendingPlaybackState(4, { steps: [{ type: "input" }], index: "3", vars: { X: "1" }, speed: 2 }),
+    { tabId: 4, steps: [{ type: "input" }], index: 3, vars: { X: "1" }, speed: 2, macroId: null }
+  );
+});
+
+test("background flow: mock chrome.tabs abre, cambia y cierra tabs sin chrome real", () => {
+  const h = createChromeMock({ tabs: [{ id: 1, url: "https://a.test/", active: true }] });
+  let created;
+  h.chrome.tabs.create({ url: "https://b.test/", active: true }, (tab) => { created = tab; });
+  assert.equal(created.id, 2);
+  assert.equal(h.tabsMap.get(2).url, "https://b.test/");
+
+  let switched;
+  h.chrome.tabs.update(1, { active: true }, (tab) => { switched = tab; });
+  assert.equal(switched.active, true);
+
+  h.chrome.tabs.remove(2, () => {});
+  assert.equal(h.tabsMap.has(2), false);
+});
+
+test("storage flow: mock chrome.storage guarda, lista, carga, borra y conserva legacy", () => {
+  const h = createChromeMock();
+  const legacyMacro = { name: "Legacy", steps: [{ type: "click", selector: "#go" }] };
+  const macros = [{ id: "m1", name: "Demo", steps: [] }, legacyMacro];
+
+  h.chrome.storage.local.set(macroStorage.buildMacrosStoragePatch(macros));
+  h.chrome.storage.local.get(macroStorage.getMacrosStorageKey(), (snapshot) => {
+    assert.deepEqual(macroStorage.readMacrosFromStorageSnapshot(snapshot), macros);
+  });
+
+  const updated = macros.filter((macro) => macro.id !== "m1");
+  h.chrome.storage.local.set(macroStorage.buildMacrosStoragePatch(updated));
+  assert.deepEqual(h.storageData.webmaticMacros, [legacyMacro]);
+
+  h.chrome.storage.local.remove(macroStorage.getMacrosStorageKey());
+  h.chrome.storage.local.get(macroStorage.getMacrosStorageKey(), (snapshot) => {
+    assert.deepEqual(macroStorage.readMacrosFromStorageSnapshot(snapshot), []);
+  });
+});
+
+test("background flow: background.js responde PLAYBACK_NAVIGATE con mock tabs", () => {
+  const h = createChromeMock({ tabs: [{ id: 10, url: "https://origin.test/", active: true }] });
+  freshRequire("../../../../src/background/background.js");
+
+  const response = h.emitRuntimeMessage({
+    type: "PLAYBACK_NAVIGATE",
+    url: "https://destino.test/",
+    steps: [{ type: "click", selector: "#go" }],
+    index: 1,
+    vars: { A: "1" },
+    speed: 1
+  }, { tab: { id: 10, url: "https://origin.test/" } });
+
+  assert.equal(response && response.ok, true);
+  assert.equal(h.tabsMap.get(10).url, "https://destino.test/");
+});

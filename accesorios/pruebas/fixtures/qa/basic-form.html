@@ -1,0 +1,22 @@
+<form id="basic-form">
+  <label for="basic-name">Nombre</label>
+  <input id="basic-name" name="name" type="text" value="">
+
+  <label for="basic-notes">Notas</label>
+  <textarea id="basic-notes" name="notes"></textarea>
+
+  <label for="basic-city">Ciudad</label>
+  <select id="basic-city" name="city">
+    <option value="">Elegir</option>
+    <option value="ba">Buenos Aires</option>
+    <option value="mdz">Mendoza</option>
+  </select>
+
+  <label><input id="basic-check" type="checkbox"> Acepto</label>
+  <label><input id="basic-radio-a" type="radio" name="kind" value="a"> A</label>
+  <label><input id="basic-radio-b" type="radio" name="kind" value="b"> B</label>
+
+  <div id="basic-rich" contenteditable="true"></div>
+  <button id="basic-submit" type="button">Enviar</button>
+  <div id="basic-output" data-value="42">Resultado listo</div>
+</form>
