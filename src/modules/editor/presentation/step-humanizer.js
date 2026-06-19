@@ -7,6 +7,33 @@
     return _cleanText(value).replace(/^["']+|["']+$/g, "");
   }
 
+  function _sentenceCase(value) {
+    const text = _cleanText(value).toLowerCase();
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function _formatHumanWords(value) {
+    const acronymMap = {
+      dni: "DNI",
+      cuil: "CUIL",
+      cuit: "CUIT",
+      cbu: "CBU",
+      cvu: "CVU",
+      url: "URL",
+      id: "ID",
+      html: "HTML",
+      api: "API",
+      nro: "Nro"
+    };
+    const text = _cleanText(value)
+      .split(" ")
+      .map((word) => acronymMap[word.toLowerCase()] || word.toLowerCase())
+      .join(" ");
+    if (!text) return "";
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
   function _humanizeIdentifier(raw) {
     let value = _stripQuotes(raw);
     if (!value) return "";
@@ -17,6 +44,10 @@
       .replace(/^v(?=[A-Z0-9_]+$)/, "")
       .replace(/^GXH_?/i, "")
       .replace(/^CTL_?/i, "");
+
+    value = value
+      .replace(/^t\d+[\s_-]*/i, "")
+      .replace(/^(btn|button|boton|ctl)[\s_-]+/i, "");
 
     const attributeMatch = value.match(/^ATTRIBUTESELECTED[_-]?(\d+)$/i);
     if (attributeMatch) return `Atributo ${attributeMatch[1]}`;
@@ -34,8 +65,7 @@
       .replace(/([a-z])([A-Z])/g, "$1 $2")
       .replace(/\b(ID|URL|HTML|GX|REQ|FLG)\b/g, (m) => m.toLowerCase());
 
-    value = value.toLowerCase().replace(/\b\w/g, (m) => m.toUpperCase());
-    return value.replace(/\bReq\b/g, "Req").replace(/\bFlg\b/g, "Flg");
+    return _formatHumanWords(value);
   }
 
   function _selectorFallback(selector) {
@@ -153,6 +183,8 @@
       const seconds = s.seconds != null ? Number(s.seconds) : Math.round(Number(s.ms || 0) / 1000);
       return `${action} ${seconds || 1} ${Number(seconds) === 1 ? "segundo" : "segundos"}`;
     }
+    if (s.type === "click" || s.type === "dblclick") return target ? `${action} en ${_quote(target)}` : action;
+    if (s.type === "key") return value ? `${action} ${_quote(value)}` : action;
     if (s.type === "wait_for") return target ? `Esperar a que aparezca ${_quote(target)}` : action;
     if (s.type === "extract") return target ? `${action} desde ${_quote(target)}` : action;
     if (s.type === "scroll_to") return target ? `${action} hasta ${_quote(target)}` : action;
