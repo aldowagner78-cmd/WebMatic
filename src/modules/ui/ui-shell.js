@@ -4,6 +4,7 @@
   const uiComponents = globalScope.WebMaticUiComponents || {};
   const uiShellState = globalScope.WebMaticUiShellState || {};
   const uiStyleUtils = globalScope.WebMaticUiStyleUtils || {};
+  const buildInfo = globalScope.WebMaticBuildInfo || {};
   // Paletas completas: cada variante define TODOS los tokens de color
   const THEME_PALETTES = {
     light: [
@@ -47,6 +48,10 @@
       .replace(/>/g, "&gt;")
       .replace(/\"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function getBuildVersionLabel() {
+    return buildInfo.versionLabel || "version no disponible";
   }
 
   function setHtmlContent(element, html) {
@@ -151,7 +156,7 @@
             <summary class="webmatic-play-summary-trigger">+ Info</summary>
             <div class="webmatic-play-summary" data-play-summary>
               <strong>Resumen</strong>
-              <span class="webmatic-version-label">Versión: v0.2.0-modular-rc9</span>
+              <span class="webmatic-version-label">Versión: ${escapeHtml(getBuildVersionLabel())}</span>
               <span data-play-summary-text>Macros: --
 Metadatos: --
 Backups creados: --

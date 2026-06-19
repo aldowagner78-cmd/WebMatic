@@ -7,6 +7,7 @@ const CONTENT_SCRIPT_FILES = [
   "src/core/store.js",
   "src/core/utils.js",
   "src/modules/docking/geometry-manager.js",
+  "src/modules/ui/build-info.js",
   "src/modules/ui/ui-shell.js",
   "src/modules/editor/step-editor.js",
   "src/modules/recorder/recorder.js",
