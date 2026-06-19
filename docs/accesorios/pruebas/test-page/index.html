@@ -473,7 +473,7 @@
   <section id="formulario">
     <header><h2>Formulario de Registro <span class="badge">click · input · check · select · key</span></h2></header>
     <div class="section-body">
-      <form id="form-registro" onsubmit="submitForm(event)">
+      <form id="form-registro" autocomplete="off" onsubmit="submitForm(event)">
 
         <div class="grid" style="margin-bottom:14px">
           <div class="field">
@@ -486,7 +486,7 @@
           </div>
           <div class="field">
             <label for="email">Correo electrónico</label>
-            <input type="email" id="email" name="email" placeholder="usuario@ejemplo.com" autocomplete="off" />
+            <input type="email" id="email" name="email" placeholder="usuario@ejemplo.com" autocomplete="off" autocapitalize="off" spellcheck="false" />
           </div>
           <div class="field">
             <label for="telefono">Teléfono</label>
@@ -506,7 +506,7 @@
           </div>
           <div class="field">
             <label for="password">Contraseña</label>
-            <input type="password" id="password" name="password" placeholder="••••••••" />
+            <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="new-password" autocapitalize="off" spellcheck="false" />
           </div>
         </div>
 
@@ -542,7 +542,7 @@
           </div>
           <div class="field">
             <label for="busqueda">Buscar (Enter para confirmar)</label>
-            <input type="search" id="busqueda" name="busqueda" placeholder="Buscar..." onkeydown="return handleSearch(event)" />
+            <input type="search" id="busqueda" name="busqueda" placeholder="Buscar..." autocomplete="off" autocapitalize="off" spellcheck="false" onkeydown="return handleSearch(event)" />
           </div>
         </div>
 
@@ -1022,6 +1022,35 @@ function updateProvincias() {
     sel.appendChild(o);
   });
 }
+
+let _autofillResetArmed = true;
+function resetAutofillNoise() {
+  if (!_autofillResetArmed) return;
+  ['email', 'password', 'busqueda'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = '';
+  });
+}
+
+(function bindInitialAutofillReset() {
+  function disarmAutofillReset(e) {
+    if (e && e.isTrusted === false) return;
+    _autofillResetArmed = false;
+  }
+  function scheduleAutofillReset() {
+    resetAutofillNoise();
+    [50, 250, 800].forEach((delay) => setTimeout(resetAutofillNoise, delay));
+  }
+
+  document.addEventListener('pointerdown', disarmAutofillReset, true);
+  document.addEventListener('keydown', disarmAutofillReset, true);
+  document.addEventListener('touchstart', disarmAutofillReset, true);
+  document.addEventListener('mousedown', disarmAutofillReset, true);
+  document.addEventListener('DOMContentLoaded', scheduleAutofillReset);
+  window.addEventListener('pageshow', scheduleAutofillReset);
+
+  if (document.readyState !== 'loading') scheduleAutofillReset();
+})();
 
 let _lastSearchEnterAt = 0;
 function stopSearchEnter(e) {
