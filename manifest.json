@@ -58,6 +58,8 @@
         "src/modules/editor/state/inline-recording-state.js",
         "src/modules/editor/step-editor.js",
         "src/common/selectors/selector-builder.js",
+        "src/modules/recorder/normalizer/recording-normalizer.js",
+        "src/modules/recorder/defaults/defaults-capture.js",
         "src/modules/recorder/recorder.js",
         "src/modules/inventory/page-inventory.js",
         "src/common/diagnostics/selector-diagnostics.js",
