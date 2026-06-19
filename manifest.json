@@ -95,6 +95,9 @@
         "src/modules/storage/full-backup.js",
         "src/modules/settings/settings-manager.js",
         "src/modules/controls/genexus-autocomplete.js",
+        "src/modules/recorder/events/recorder-events.js",
+        "src/modules/recorder/events/recording-lifecycle.js",
+        "src/modules/content/message-router.js",
         "src/content/content.js"
       ],
       "run_at": "document_idle"

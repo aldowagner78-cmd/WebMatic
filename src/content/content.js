@@ -5580,6 +5580,8 @@
   }
 
   const RecorderClass = globalScope.WebMaticRecorder;
+  const recorderEventsApi = globalScope.WebMaticRecorderEvents;
+  const recordingLifecycleApi = globalScope.WebMaticRecordingLifecycle;
 
   function buildSelector(element) {
     if (RecorderClass && typeof RecorderClass.buildSelector === "function") {
@@ -5593,85 +5595,56 @@
     return classes ? `${tag}.${classes}` : tag;
   }
 
-  function normalizeCaptureTarget(element) {
-    if (!(element instanceof Element)) return element;
-
-    let target = element;
-    const svgTag = (el) => {
-      const t = String(el && el.tagName ? el.tagName : "").toLowerCase();
-      return t === "path" || t === "svg" || t === "g" || t === "use";
-    };
-
-    if (svgTag(target)) {
-      const promoted = target.closest("button, a[href], [role='button'], [role='link'], input, textarea, select, label, [aria-label]");
-      if (promoted instanceof Element) {
-        target = promoted;
-      } else {
-        let walker = target.parentElement;
-        while (walker && svgTag(walker)) walker = walker.parentElement;
-        if (walker instanceof Element) target = walker;
-      }
+  function _resetRuntimeForNewRecording(locationHref) {
+    if (recordingLifecycleApi && typeof recordingLifecycleApi.resetRuntimeForNewRecording === "function") {
+      recordingLifecycleApi.resetRuntimeForNewRecording(recorderRuntime, locationHref);
+      return;
     }
+    recorderRuntime.recordingStartUrl = String(locationHref || "");
+    recorderRuntime.autocompleteCatalogs = {};
+    recorderRuntime._autocompleteExpansionState = {};
+    recorderRuntime._autocompleteLastTypedBySelector = {};
+    recorderRuntime._autocompleteExpansionPromises = {};
+    recorderRuntime.pageInventories = [];
+  }
 
-    return target;
+  function _resetRecordingPageInventories() {
+    if (recordingLifecycleApi && typeof recordingLifecycleApi.resetPageInventories === "function") {
+      recordingLifecycleApi.resetPageInventories(recorderRuntime);
+      return;
+    }
+    recorderRuntime.pageInventories = [];
+  }
+
+  function normalizeCaptureTarget(element) {
+    return recorderEventsApi.normalizeCaptureTarget(element);
   }
 
   function _isInteractableCaptureTarget(el) {
-    try {
-      if (!(el instanceof Element)) return false;
-      if (el instanceof HTMLElement && el.hidden) return false;
-      const view = (el.ownerDocument && el.ownerDocument.defaultView) || window;
-      const cs = view && typeof view.getComputedStyle === "function"
-        ? view.getComputedStyle(el)
-        : null;
-      if (cs && (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none")) return false;
-      if (el.getClientRects && el.getClientRects().length === 0) return false;
-      return true;
-    } catch (_e) {
-      return false;
-    }
+    return recorderEventsApi.isInteractableCaptureTarget(el);
   }
 
   function _isTextEntryCaptureTarget(el) {
-    if (el instanceof HTMLTextAreaElement) return true;
-    if (el instanceof HTMLInputElement) {
-      const t = String(el.type || "text").toLowerCase();
-      return t === "" || t === "text" || t === "search" || t === "email" || t === "number" || t === "tel" || t === "url";
-    }
-    return false;
+    return recorderEventsApi.isTextEntryCaptureTarget(el);
+  }
+
+  function _isInsideWebMaticUi(el, opts) {
+    return recorderEventsApi && typeof recorderEventsApi.isInsideWebMaticUi === "function"
+      ? recorderEventsApi.isInsideWebMaticUi(el, opts)
+      : false;
   }
 
   function _isRequiredSelectorRecordedStep(step) {
-    if (!step || typeof step !== "object") return false;
-    return step.type === "click" ||
-      step.type === "dblclick" ||
-      step.type === "input" ||
-      step.type === "text" ||
-      step.type === "check" ||
-      step.type === "choose_option" ||
-      step.type === "wait_for" ||
-      step.type === "hover" ||
-      step.type === "scroll_to" ||
-      step.type === "extract";
+    return recorderEventsApi.isRequiredSelectorRecordedStep(step);
   }
 
   function _isInvalidCapturedStep(step) {
-    if (!step || typeof step !== "object") return true;
-    if (_isRequiredSelectorRecordedStep(step)) {
-      return !String(step.selector || "").trim();
-    }
-    if (step.type === "drag_drop") {
-      return !String(step.from || "").trim() || !String(step.to || "").trim();
-    }
-    return false;
+    return recorderEventsApi.isInvalidCapturedStep(step);
   }
 
   function _captureCurrentTextValueForRecording(target, emitStep, copiedText, copiedVar) {
     if (!(target instanceof Element)) return false;
-    if (target.closest("#webmatic-panel-root") ||
-        target.closest("#webmatic-floating-recorder-global") ||
-        target.closest("#webmatic-floating-player-global") ||
-        target.closest("#" + INLINE_REC_PANEL_ID)) {
+    if (_isInsideWebMaticUi(target, { inlinePanelId: INLINE_REC_PANEL_ID })) {
       return false;
     }
 
@@ -5703,22 +5676,7 @@
   }
 
   function _shouldPreferClickOverCheck(originalTarget, checkTarget) {
-    if (!(originalTarget instanceof Element) || !(checkTarget instanceof HTMLInputElement)) return false;
-
-    // If user directly clicks the control, keep check semantics.
-    if (originalTarget === checkTarget) return false;
-
-    const type = String(checkTarget.type || "").toLowerCase();
-    if (type !== "checkbox" && type !== "radio") return false;
-
-    const normalized = normalizeCaptureTarget(originalTarget);
-    const explicitClickable = normalized instanceof Element
-      && !!normalized.closest("a[href], button, [role='button'], [role='link']");
-    const checkIsHidden = !_isInteractableCaptureTarget(checkTarget);
-
-    // For custom galleries/carousels (visible links controlling hidden radios),
-    // recording click is more robust than recording check on hidden input.
-    return explicitClickable && checkIsHidden;
+    return recorderEventsApi.shouldPreferClickOverCheck(originalTarget, checkTarget);
   }
 
   function _contextKeyFromUrl(rawUrl) {
@@ -5913,7 +5871,7 @@
 
     const onClick = (event) => {
       let target = event.target;
-      if (!(target instanceof Element) || target.closest("#webmatic-panel-root") || target.closest("#webmatic-floating-recorder-global") || target.closest("#webmatic-floating-player-global")) {
+      if (!(target instanceof Element) || _isInsideWebMaticUi(target)) {
         return;
       }
       _flushActiveTextInputForRecording(captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar, target);
@@ -5979,7 +5937,7 @@
       if (!(target instanceof HTMLInputElement) && !(target instanceof HTMLTextAreaElement) && !(target instanceof HTMLSelectElement)) {
         return;
       }
-      if (target.closest("#webmatic-panel-root") || target.closest("#webmatic-floating-recorder-global") || target.closest("#webmatic-floating-player-global")) {
+      if (_isInsideWebMaticUi(target)) {
         return;
       }
       // Skip readonly and disabled fields — value can't be set by user
@@ -6027,7 +5985,7 @@
 
     const onKeydown = (event) => {
       const target = event.target;
-      if (target instanceof Element && (target.closest("#webmatic-panel-root") || target.closest("#webmatic-floating-recorder-global") || target.closest("#webmatic-floating-player-global"))) {
+      if (target instanceof Element && _isInsideWebMaticUi(target)) {
         return;
       }
       // Special navigation keys → capture as key step
@@ -6061,9 +6019,7 @@
     const onTextInput = (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest("#webmatic-panel-root") ||
-          target.closest("#webmatic-floating-recorder-global") ||
-          target.closest("#webmatic-floating-player-global")) {
+      if (_isInsideWebMaticUi(target)) {
         return;
       }
 
@@ -6084,9 +6040,7 @@
     const onTextKeyup = (event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (target.closest("#webmatic-panel-root") ||
-          target.closest("#webmatic-floating-recorder-global") ||
-          target.closest("#webmatic-floating-player-global")) {
+      if (_isInsideWebMaticUi(target)) {
         return;
       }
 
@@ -6463,8 +6417,7 @@
     const _onClick = (e) => {
       let t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
-          t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      if (_isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID })) return;
       _flushActiveTextInputForRecording(addStep, lastCopiedText, lastCopiedVar, t);
       let checkTarget = t instanceof HTMLInputElement && (t.type === "checkbox" || t.type === "radio")
         ? t
@@ -6519,7 +6472,7 @@
     const _onChange = (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement) && !(t instanceof HTMLTextAreaElement) && !(t instanceof HTMLSelectElement)) return;
-      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID)) return;
+      if (_isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID, floating: false })) return;
       if (t.readOnly || t.disabled) return;
       flashElement(t);
       if (t instanceof HTMLInputElement && t.type === "checkbox") {
@@ -6555,7 +6508,7 @@
 
     const _onKeydown = (e) => {
       const t = e.target;
-      if (t instanceof Element && (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID))) return;
+      if (t instanceof Element && _isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID, floating: false })) return;
       if (["Enter", "Tab", "Escape"].includes(e.key)) {
         _flushActiveTextInputForRecording(addStep, lastCopiedText, lastCopiedVar, null);
         if (t instanceof Element) flashElement(t);
@@ -6645,8 +6598,7 @@
     const _onTextInput = (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
-          t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      if (_isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID })) return;
 
       // Contenteditable is handled by _onCeInput below.
       if (t.isContentEditable) return;
@@ -6675,8 +6627,7 @@
     const _onTextKeyup = (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
-      if (t.closest("#webmatic-panel-root") || t.closest("#" + INLINE_REC_PANEL_ID) ||
-          t.closest("#webmatic-floating-recorder-global") || t.closest("#webmatic-floating-player-global")) return;
+      if (_isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID })) return;
       if (t.isContentEditable) return;
       if (!_isTextEntryCaptureTarget(t)) return;
       if (t.readOnly || t.disabled) return;
@@ -7499,12 +7450,7 @@
           }
         } else {
           store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
-          recorderRuntime.recordingStartUrl = window.location.href;
-          recorderRuntime.autocompleteCatalogs = {};
-          recorderRuntime._autocompleteExpansionState = {};
-          recorderRuntime._autocompleteLastTypedBySelector = {};
-          recorderRuntime._autocompleteExpansionPromises = {};
-          recorderRuntime.pageInventories = [];
+          _resetRuntimeForNewRecording(window.location.href);
           recorderRuntime.preRunReset = _captureInitialPreRunReset();
           captureScreenInventory();
           startRecorderSession();
@@ -9408,7 +9354,12 @@
   chrome.storage.onChanged.addListener(onStorageChanged);
 
   const onRuntimeMessage = (message, sender, sendResponse) => {
-    if (message?.type === "STOP_INLINE_RECORDING") {
+    const messageRouter = globalScope.WebMaticContentMessageRouter;
+    const isRuntimeMessage = (type) => messageRouter && typeof messageRouter.isMessageType === "function"
+      ? messageRouter.isMessageType(message, type)
+      : ((message && typeof message === "object" ? String(message.type || "") : "") === String(type || ""));
+
+    if (isRuntimeMessage("STOP_INLINE_RECORDING")) {
       if (typeof _activeInlineStop === "function") {
         _activeInlineStop();
       } else {
@@ -9422,7 +9373,7 @@
     }
 
     // Re-inyección del panel flotante al navegar a una subpágina
-    if (message?.type === "SHOW_INLINE_REC_PANEL") {
+    if (isRuntimeMessage("SHOW_INLINE_REC_PANEL")) {
       if (typeof _activeInlineStop === "function" && document.getElementById(INLINE_REC_PANEL_ID)) {
         // El panel sobrevivió (SPA sin recarga completa) — solo actualizar contador
         const countEl = document.getElementById(INLINE_REC_PANEL_ID + "-count");
@@ -9460,7 +9411,7 @@
       return true;
     }
 
-    if (message?.type === "SHOW_INLINE_REC_MIRROR") {
+    if (isRuntimeMessage("SHOW_INLINE_REC_MIRROR")) {
       // Si somos la pestaña original y el panel ya existe, no hacer nada
       if (typeof _activeInlineStop === "function" && document.getElementById(INLINE_REC_PANEL_ID)) {
         sendResponse({ ok: true }); return true;
@@ -9512,13 +9463,13 @@
       return true;
     }
 
-    if (message?.type === "TOGGLE_PANEL") {
+    if (isRuntimeMessage("TOGGLE_PANEL")) {
       store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
       sendResponse({ ok: true });
       return true;
     }
 
-    if (message?.type === "OPEN_PANEL") {
+    if (isRuntimeMessage("OPEN_PANEL")) {
       if (!store.getState().ui.panelVisible) {
         store.dispatch({ type: contracts.ActionTypes.PANEL_TOGGLED });
       }
@@ -9526,23 +9477,23 @@
       return true;
     }
 
-    if (message?.type === "RESUME_PENDING_PLAYBACK") {
+    if (isRuntimeMessage("RESUME_PENDING_PLAYBACK")) {
       _resumePendingPlaybackIfAny();
       sendResponse({ ok: true });
       return true;
     }
 
-    if (message?.type === "SET_PANEL_SIDE") {
+    if (isRuntimeMessage("SET_PANEL_SIDE")) {
       store.dispatch({ type: contracts.ActionTypes.PANEL_SIDE_SET, payload: message.payload });
       sendResponse({ ok: true });
       return true;
     }
 
-    if (message?.type === "SHOW_FLOATING_BTN") {
+    if (isRuntimeMessage("SHOW_FLOATING_BTN")) {
       // Background signals recording is active (new page load or tab switch during recording).
       // We must (re)start the recorder session on this page so events are captured.
       store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
-      recorderRuntime.pageInventories = [];
+      _resetRecordingPageInventories();
       if (!recorderRuntime.preRunReset) {
         recorderRuntime.preRunReset = _captureInitialPreRunReset();
       }
@@ -9586,13 +9537,13 @@
       return true;
     }
 
-    if (message?.type === "HIDE_FLOATING_BTN") {
+    if (isRuntimeMessage("HIDE_FLOATING_BTN")) {
       removeFloatingBtn();
       sendResponse({ ok: true });
       return true;
     }
 
-    if (message?.type === "FRAME_STEP_CAPTURED") {
+    if (isRuntimeMessage("FRAME_STEP_CAPTURED")) {
       if (store.getState().recorder.isRecording) {
         const step = message.step;
         const currentSteps = store.getState().draft.steps;
