@@ -365,6 +365,22 @@ test("bloques por contexto: defaults mantienen estilo aunque haya reingreso post
   assert.ok(blocks[2].classList.contains("wm-sved-block-reentry"));
 });
 
+test("editor visual: pasos _baselineDefault conservan marca visual de default", () => {
+  resetBody("");
+  const ed = new StepEditor();
+  ed.setSteps([
+    { type: "input", selector: "#nombre", value: "Ana", _baselineDefault: true }
+  ]);
+
+  const container = win.document.createElement("div");
+  win.document.body.appendChild(container);
+  ed.mount(container, () => {});
+
+  const row = container.querySelector(".wm-sved-row");
+  assert.ok(row.classList.contains("wm-sved-row-default"));
+  assert.equal(row.querySelector(".wm-sved-default-badge").textContent, "default");
+});
+
 test("bloques por contexto: macros viejas sin _wmBlockKey siguen renderizando", () => {
   resetBody("");
   const ed = new StepEditor();

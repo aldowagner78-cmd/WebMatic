@@ -4476,112 +4476,22 @@
       .join("\n");
   }
 
-  function _getDefaultScriptLines(sourceScript) {
-    if (!iimAdapter) return [];
-    let steps = [];
-    try {
-      const parsed = iimAdapter.importFromIim(sourceScript || "");
-      steps = Array.isArray(parsed && parsed.steps) ? parsed.steps : [];
-    } catch (_e) {
-      return [];
-    }
-    if (steps.length === 0) return [];
-
-    const lines = [];
-    let lineNo = 2; // VERSION + TAB
-    for (let i = 0; i < steps.length; i += 1) {
-      lineNo += 1; // exportToIim emits one human-readable line per step
-      const step = steps[i];
-      if (step && step._baselineDefault === true) lines.push(lineNo);
-    }
-    return lines;
-  }
-
-  function _ensureScriptDefaultLayer(overlay) {
-    if (!overlay) return null;
-    const area = overlay.querySelector("[data-script-editor-area]");
-    if (!area || !area.parentElement) return null;
-
-    let shell = overlay.querySelector("[data-script-editor-shell]");
-    let layer = overlay.querySelector("[data-script-default-layer]");
-    let inner = overlay.querySelector("[data-script-default-layer-inner]");
-
-    if (!shell) {
-      shell = document.createElement("div");
-      shell.className = "webmatic-script-code-shell";
-      shell.dataset.scriptEditorShell = "1";
-      area.parentElement.insertBefore(shell, area);
-      shell.appendChild(area);
-    }
-
-    if (!layer) {
-      layer = document.createElement("div");
-      layer.className = "webmatic-script-default-layer";
-      layer.dataset.scriptDefaultLayer = "1";
-      shell.insertBefore(layer, area);
-    }
-
-    if (!inner) {
-      inner = document.createElement("div");
-      inner.className = "webmatic-script-default-layer-inner";
-      inner.dataset.scriptDefaultLayerInner = "1";
-      layer.appendChild(inner);
-    }
-
-    if (!area.dataset.wmDefaultLayerBound) {
-      area.dataset.wmDefaultLayerBound = "1";
-      area.addEventListener("scroll", () => {
-        const wrap = _ensureScriptDefaultLayer(overlay);
-        if (!wrap) return;
-        wrap.inner.style.transform = `translateY(${-wrap.area.scrollTop}px)`;
-      });
-      area.addEventListener("input", () => {
-        const fullScript = String(area.dataset.wmFullScript || "");
-        const canKeep = fullScript && _stripWmJsonLine(fullScript).trim() === String(area.value || "").trim();
-        area.dataset.wmDefaultLines = canKeep ? area.dataset.wmDefaultLines || "[]" : "[]";
-        _renderScriptDefaultLayer(overlay);
-      });
-    }
-
-    return { shell, layer, inner, area };
-  }
-
-  function _renderScriptDefaultLayer(overlay) {
-    const wrap = _ensureScriptDefaultLayer(overlay);
-    if (!wrap) return;
-
-    const linesRaw = String(wrap.area.dataset.wmDefaultLines || "[]");
-    let lines = [];
-    try { lines = JSON.parse(linesRaw); } catch (_e) { lines = []; }
-    lines = Array.isArray(lines) ? lines.filter((n) => Number.isFinite(Number(n)) && Number(n) >= 1).map((n) => Number(n)) : [];
-
-    wrap.inner.replaceChildren();
-    const cs = window.getComputedStyle(wrap.area);
-    const lineHeight = Math.max(parseFloat(cs.lineHeight) || 20, 14);
-    const padTop = parseFloat(cs.paddingTop) || 0;
-    const contentHeight = Math.max(wrap.area.scrollHeight, wrap.area.clientHeight);
-    wrap.inner.style.height = `${contentHeight}px`;
-    wrap.inner.style.transform = `translateY(${-wrap.area.scrollTop}px)`;
-
-    if (lines.length === 0) return;
-
-    const unique = Array.from(new Set(lines)).sort((a, b) => a - b);
-    unique.forEach((lineNo) => {
-      const mark = document.createElement("div");
-      mark.className = "webmatic-script-default-line";
-      mark.style.top = `${padTop + (lineNo - 1) * lineHeight}px`;
-      mark.style.height = `${lineHeight}px`;
-      wrap.inner.appendChild(mark);
-    });
-  }
-
-  function _syncScriptDefaultLayer(overlay, sourceScript) {
+  function _syncScriptDefaultLayer(overlay) {
     if (!overlay) return;
-    const wrap = _ensureScriptDefaultLayer(overlay);
-    if (!wrap) return;
-    const lines = _getDefaultScriptLines(sourceScript || "");
-    wrap.area.dataset.wmDefaultLines = JSON.stringify(lines);
-    _renderScriptDefaultLayer(overlay);
+    const area = overlay.querySelector("[data-script-editor-area]");
+    const shell = overlay.querySelector("[data-script-editor-shell]");
+    if (area && area.dataset) {
+      delete area.dataset.wmDefaultLines;
+      delete area.dataset.wmDefaultLayerBound;
+    }
+    if (shell && area && shell.contains(area) && shell.parentElement) {
+      shell.parentElement.insertBefore(area, shell);
+      shell.remove();
+      return;
+    }
+    overlay.querySelectorAll("[data-script-default-layer], [data-script-default-layer-inner]").forEach((node) => {
+      node.remove();
+    });
   }
 
   /** Get steps from the active editor mode (visual or script IIM). */

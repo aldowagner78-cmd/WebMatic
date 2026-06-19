@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 
 const {
   createChromeMock,
@@ -22,6 +24,12 @@ test("content/background flow: routing preserva nombres y payload", () => {
     error: "unknown_message",
     type: "UNKNOWN"
   });
+});
+
+test("script editor IIM: no crea marcas visuales para _baselineDefault", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.equal(/className\s*=\s*["']webmatic-script-default-line["']/.test(source), false);
+  assert.equal(/dataset\.scriptDefaultLayer\s*=/.test(source), false);
 });
 
 test("background flow: tabs-navigation cubre restricted, openIfMissing y pending playback", () => {
