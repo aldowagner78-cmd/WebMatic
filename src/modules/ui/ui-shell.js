@@ -151,6 +151,7 @@
             <summary class="webmatic-play-summary-trigger">+ Info</summary>
             <div class="webmatic-play-summary" data-play-summary>
               <strong>Resumen</strong>
+              <span class="webmatic-version-label">Versión: v0.2.0-modular-rc7</span>
               <span data-play-summary-text>Macros: --
 Metadatos: --
 Backups creados: --
