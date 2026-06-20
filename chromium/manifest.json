@@ -48,6 +48,7 @@
         "src/modules/inventory/page-inventory.js",
         "src/modules/player/player.js",
         "src/modules/storage/macros-global.js",
+        "src/modules/macros/macro-step-compactor.js",
         "src/modules/storage/iim-adapter.js",
         "src/modules/storage/macro-json.js",
         "src/modules/storage/full-backup.js",

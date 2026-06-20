@@ -12,6 +12,7 @@ const CONTENT_SCRIPT_FILES = [
   "src/modules/editor/step-editor.js",
   "src/modules/recorder/recorder.js",
   "src/modules/player/player.js",
+  "src/modules/macros/macro-step-compactor.js",
   "src/modules/storage/iim-adapter.js",
   "src/modules/settings/settings-manager.js",
   "src/content/content.js"

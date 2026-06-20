@@ -1554,6 +1554,15 @@
     _writeSiteSurvivalSnapshot({ settings, settingsSavedAt: Date.now() });
   });
   const iimAdapter = globalScope.WebMaticIimAdapter;
+  const macroStepCompactor = globalScope.WebMaticMacroStepCompactor;
+
+  function _compactRecordedMacroSteps(steps) {
+    if (macroStepCompactor && typeof macroStepCompactor.compactRedundantTextWrites === "function") {
+      return macroStepCompactor.compactRedundantTextWrites(steps);
+    }
+    return Array.isArray(steps) ? steps.map((step) => ({ ...step })) : [];
+  }
+
   const themePalettes = {
     light: [
       { accentColor: "#059669", surfaceColor: "#f0fdf4" },
@@ -7381,7 +7390,7 @@
               ...recorderRuntime.pageInventories,
               ..._resolveReusableMetadataForSteps(processedSteps).inventories
             ];
-            const promotedSteps = _promoteChooseOptionWithInventories(processedSteps, resolvedInv);
+            const promotedSteps = _compactRecordedMacroSteps(_promoteChooseOptionWithInventories(processedSteps, resolvedInv));
             const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: _recordingMeta() });
             store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: promotedSteps, meta: _recordingMeta() } });
           }
@@ -7408,7 +7417,7 @@
                 ...recorderRuntime.pageInventories,
                 ..._resolveReusableMetadataForSteps(processedSteps).inventories
               ];
-              const promotedSteps = _promoteChooseOptionWithInventories(processedSteps, resolvedInv);
+              const promotedSteps = _compactRecordedMacroSteps(_promoteChooseOptionWithInventories(processedSteps, resolvedInv));
               const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: _recordingMeta() });
               store.dispatch({ type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED, payload: { script, macroId: null, draftSteps: promotedSteps, meta: _recordingMeta() } });
             }
@@ -8827,10 +8836,10 @@
         const currentState = store.getState();
         const invList = Array.isArray(recorderRuntime.pageInventories) ? recorderRuntime.pageInventories : [];
         const reusableMeta = _resolveReusableMetadataForSteps(currentState.draft.steps);
-        const promotedSteps = _promoteChooseOptionWithInventories(
+        const promotedSteps = _compactRecordedMacroSteps(_promoteChooseOptionWithInventories(
           currentState.draft.steps,
           [...invList, ...(reusableMeta.inventories || [])]
-        );
+        ));
         const runtimeMeta = _recordingMeta() || {};
         const mergedInventories = [
           ...(Array.isArray(runtimeMeta.pageInventories) ? runtimeMeta.pageInventories : []),
@@ -9501,12 +9510,12 @@
           const allSteps = _cleanupSteps(_withCapturedPageDefaults(recorded));
           const waitedSteps = utils ? utils.injectWaitSteps(allSteps, threshold * 1000) : allSteps;
           const processedSteps = _finalizeWithInventory(waitedSteps);
-              const resolvedInv = [
-                ...recorderRuntime.pageInventories,
-                ..._resolveReusableMetadataForSteps(processedSteps).inventories
-              ];
-                const promotedSteps = _promoteChooseOptionWithInventories(processedSteps, resolvedInv);
-              const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: _recordingMeta() });
+          const resolvedInv = [
+            ...recorderRuntime.pageInventories,
+            ..._resolveReusableMetadataForSteps(processedSteps).inventories
+          ];
+          const promotedSteps = _compactRecordedMacroSteps(_promoteChooseOptionWithInventories(processedSteps, resolvedInv));
+          const script = iimAdapter.exportToIim({ steps: promotedSteps, meta: _recordingMeta() });
           store.dispatch({
             type: contracts.ActionTypes.SCRIPT_EDITOR_OPENED,
             payload: { script, macroId: null, draftSteps: promotedSteps, meta: _recordingMeta() }

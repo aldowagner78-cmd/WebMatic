@@ -15,6 +15,7 @@ const CONTENT_SCRIPT_FILES = [
   "src/modules/recorder/recorder.js",
   "src/modules/inventory/page-inventory.js",
   "src/modules/player/player.js",
+  "src/modules/macros/macro-step-compactor.js",
   "src/modules/storage/iim-adapter.js",
   "src/modules/storage/macro-json.js",
   "src/modules/storage/full-backup.js",
