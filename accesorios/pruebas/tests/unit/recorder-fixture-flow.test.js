@@ -40,6 +40,19 @@ test("recorder fixture: select se representa como choose_option y no altera form
   );
 });
 
+test("recorder fixture: KEY Enter sobre campo editable conserva selector y controlRef", () => {
+  const { Recorder, events } = boot("qa/basic-form.html");
+  const input = document.querySelector("#basic-name");
+  const step = events.buildKeyStepForTarget(input, "Enter", Recorder.buildSelector);
+
+  assert.equal(step.type, "key");
+  assert.equal(step.key, "Enter");
+  assert.equal(step.selector, "#basic-name");
+  assert.ok(step.controlRef);
+  assert.equal(step.controlRef.selector, "#basic-name");
+  assert.equal(step.controlRef.tag, "input");
+});
+
 test("recorder fixture: UI propia de WebMatic se ignora para captura", () => {
   const { events } = boot("qa/basic-form.html");
   document.body.insertAdjacentHTML("beforeend", '<div id="webmatic-panel-root"><button id="wm-internal">Interno</button></div>');

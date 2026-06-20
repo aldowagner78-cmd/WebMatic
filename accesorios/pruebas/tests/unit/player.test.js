@@ -75,6 +75,66 @@ function runStep(step, vars = {}, playerOpts = {}) {
   });
 }
 
+test("key: Enter con selector enfoca y despacha sobre el campo grabado", async () => {
+  resetBody('<form id="f"><input id="busqueda" type="search"><input id="password" type="password"></form>');
+  const busqueda = win.document.getElementById("busqueda");
+  const password = win.document.getElementById("password");
+  const seen = [];
+  const passwordSeen = [];
+  busqueda.addEventListener("keydown", (event) => seen.push({ key: event.key, target: event.target.id }));
+  password.addEventListener("keydown", (event) => passwordSeen.push({ key: event.key, target: event.target.id }));
+  password.focus();
+
+  const result = await runStep({ type: "key", key: "Enter", selector: "#busqueda" });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(seen, [{ key: "Enter", target: "busqueda" }]);
+  assert.deepEqual(passwordSeen, []);
+});
+
+test("key: Enter sin selector conserva fallback legacy hacia password visible", async () => {
+  resetBody('<form id="f"><input id="busqueda" type="search"><input id="password" type="password"></form>');
+  const password = win.document.getElementById("password");
+  const seen = [];
+  password.addEventListener("keydown", (event) => seen.push({ key: event.key, target: event.target.id }));
+
+  const result = await runStep({ type: "key", key: "Enter" });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(seen, [{ key: "Enter", target: "password" }]);
+});
+
+test("play: TYPE busqueda + KEY Enter con selector no mueve foco a password ni fuerza submit", async () => {
+  resetBody('<form id="f"><input id="busqueda" type="search"><input id="password" type="password"></form>');
+  const busqueda = win.document.getElementById("busqueda");
+  const password = win.document.getElementById("password");
+  let submitted = false;
+  const passwordSeen = [];
+  password.addEventListener("keydown", (event) => passwordSeen.push({ key: event.key, target: event.target.id }));
+  win.document.getElementById("f").addEventListener("submit", (event) => {
+    submitted = true;
+    event.preventDefault();
+    password.focus();
+  });
+
+  await new Promise((resolve) => {
+    const p = new Player({ retryMs: 20, timeoutMs: 500 });
+    p.play([
+      { type: "input", selector: "#busqueda", value: "test enter" },
+      { type: "key", key: "Enter", selector: "#busqueda" }
+    ], {
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone: resolve,
+      onError: resolve
+    });
+  });
+
+  assert.equal(busqueda.value, "test enter");
+  assert.equal(submitted, false);
+  assert.deepEqual(passwordSeen, []);
+});
+
 // ── Tests: wait_for ───────────────────────────────────────────────────────────
 
 test("wait_for: resuelve cuando el elemento ya existe en el DOM", async () => {

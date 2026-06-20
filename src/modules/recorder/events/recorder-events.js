@@ -56,6 +56,48 @@
     return false;
   }
 
+  function isEditableKeyTarget(el) {
+    if (!_isInstance(el, "Element")) return false;
+    if (el.isContentEditable) return true;
+    if (_isInstance(el, "HTMLSelectElement")) return true;
+    return isTextEntryCaptureTarget(el);
+  }
+
+  function _labelForKeyTarget(el) {
+    if (!_isInstance(el, "Element")) return "";
+    const aria = String(el.getAttribute("aria-label") || "").trim();
+    if (aria) return aria;
+    const title = String(el.getAttribute("title") || "").trim();
+    if (title) return title;
+    const doc = el.ownerDocument;
+    if (el.id && doc && typeof doc.querySelector === "function") {
+      try {
+        const label = doc.querySelector(`label[for="${String(el.id).replace(/"/g, "\\\"")}"]`);
+        const text = label ? String(label.textContent || "").trim() : "";
+        if (text) return text;
+      } catch (_e) { /* ignore */ }
+    }
+    const closestLabel = typeof el.closest === "function" ? el.closest("label") : null;
+    return closestLabel ? String(closestLabel.textContent || "").trim() : "";
+  }
+
+  function buildKeyStepForTarget(target, key, buildSelector) {
+    const step = { type: "key", key };
+    if (!isEditableKeyTarget(target)) return step;
+    const select = typeof buildSelector === "function" ? buildSelector : null;
+    const selector = select ? String(select(target) || "") : "";
+    if (!selector) return step;
+    const tag = String(target.tagName || "").toLowerCase();
+    const type = _isInstance(target, "HTMLInputElement") ? String(target.type || "text").toLowerCase() : "";
+    const controlRef = { selector, tag };
+    if (type) controlRef.type = type;
+    const label = _labelForKeyTarget(target);
+    if (label) controlRef.label = label;
+    step.selector = selector;
+    step.controlRef = controlRef;
+    return step;
+  }
+
   function isInsideWebMaticUi(el, opts) {
     if (!_isInstance(el, "Element")) return false;
     const options = opts && typeof opts === "object" ? opts : {};
@@ -114,6 +156,8 @@
     normalizeCaptureTarget,
     isInteractableCaptureTarget,
     isTextEntryCaptureTarget,
+    isEditableKeyTarget,
+    buildKeyStepForTarget,
     isInsideWebMaticUi,
     isRequiredSelectorRecordedStep,
     isInvalidCapturedStep,

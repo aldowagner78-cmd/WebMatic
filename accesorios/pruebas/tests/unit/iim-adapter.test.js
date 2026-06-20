@@ -169,6 +169,17 @@ test("exportToIim: key genera KEY CODE", () => {
   assert.ok(script.includes('KEY CODE="Enter"'));
 });
 
+test("exportToIim: key con selector mantiene linea visible y conserva destino en WM_JSON", () => {
+  const script = adapter.exportToIim({ steps: [{ type: "key", key: "Enter", selector: "#busqueda", controlRef: { selector: "#busqueda" } }] });
+  assert.ok(script.includes('KEY CODE="Enter"'));
+
+  const line = script.split("\n").find((l) => l.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(line.slice("// WM_JSON:".length));
+  assert.equal(parsed.steps[0].key, "Enter");
+  assert.equal(parsed.steps[0].selector, "#busqueda");
+  assert.equal(parsed.steps[0].controlRef.selector, "#busqueda");
+});
+
 // ── WM_JSON — round-trip lossless ─────────────────────────────────────────────
 
 test("exportToIim: embebe comentario WM_JSON cuando hay pasos", () => {

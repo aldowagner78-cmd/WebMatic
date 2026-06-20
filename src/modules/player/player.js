@@ -97,6 +97,27 @@
       || /gallery-close/i.test(sel);
   }
 
+  function _isEditableKeyTarget(el) {
+    if (!el || typeof el !== "object") return false;
+    try {
+      if (el.isContentEditable) return true;
+      if (typeof HTMLTextAreaElement !== "undefined" && el instanceof HTMLTextAreaElement) return true;
+      if (typeof HTMLSelectElement !== "undefined" && el instanceof HTMLSelectElement) return true;
+      if (typeof HTMLInputElement !== "undefined" && el instanceof HTMLInputElement) {
+        const type = String(el.type || "text").toLowerCase();
+        return type === "" ||
+          type === "text" ||
+          type === "search" ||
+          type === "email" ||
+          type === "number" ||
+          type === "tel" ||
+          type === "url" ||
+          type === "password";
+      }
+    } catch (_e) { /* ignore */ }
+    return false;
+  }
+
     function _textCompare() {
     if (typeof WebMaticTextCompare !== "undefined") return WebMaticTextCompare;
     if (globalScope && globalScope.WebMaticTextCompare) return globalScope.WebMaticTextCompare;
@@ -622,10 +643,12 @@
 
         if (step.type === "key") {
           const keySelector = expandVariables(step.selector || "", vars);
-          let target = (keySelector && findElement(keySelector)) || document.activeElement || document.body;
+          const explicitKeyTarget = keySelector ? findElement(keySelector) : null;
+          const hasExplicitKeyTarget = !!explicitKeyTarget;
+          let target = explicitKeyTarget || document.activeElement || document.body;
           if (String(step.key || "") === "Enter") {
             const isBodyFocused = !target || target === document.body || target === document.documentElement;
-            if (isBodyFocused) {
+            if (!hasExplicitKeyTarget && isBodyFocused) {
               const pwd = _getFirstVisiblePasswordField();
               if (pwd) target = pwd;
             }
@@ -646,19 +669,22 @@
             cancelable: true
           };
           const _kd = new KeyboardEvent("keydown",  _keyInit);
-          const _kp = new KeyboardEvent("keypress", _keyInit);
+          const skipSyntheticKeypress = _keyName === "Enter" && hasExplicitKeyTarget && _isEditableKeyTarget(target);
+          const _kp = skipSyntheticKeypress ? null : new KeyboardEvent("keypress", _keyInit);
           const _ku = new KeyboardEvent("keyup",    _keyInit);
           target.dispatchEvent(_kd);
-          target.dispatchEvent(_kp);
+          if (_kp) target.dispatchEvent(_kp);
           target.dispatchEvent(_ku);
 
           // Comportamiento nativo del navegador: si Enter no fue preventDefault'd
           // dentro de un input de un <form>, el form se envÃ­a. Replicar eso aquÃ­
           // hace que login (IAPOS / GeneXus / cualquier form clÃ¡sico) funcione.
+          const shouldKeepLegacySubmit = !(hasExplicitKeyTarget && _isEditableKeyTarget(target));
           if (
             _keyName === "Enter" &&
+            shouldKeepLegacySubmit &&
             !_kd.defaultPrevented &&
-            !_kp.defaultPrevented &&
+            !(_kp && _kp.defaultPrevented) &&
             target &&
             typeof target.closest === "function"
           ) {

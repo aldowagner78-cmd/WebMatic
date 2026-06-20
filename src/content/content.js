@@ -5538,6 +5538,13 @@
     return recorderEventsApi.isTextEntryCaptureTarget(el);
   }
 
+  function _buildKeyStepForTarget(target, key) {
+    if (recorderEventsApi && typeof recorderEventsApi.buildKeyStepForTarget === "function") {
+      return recorderEventsApi.buildKeyStepForTarget(target, key, buildSelector);
+    }
+    return { type: "key", key };
+  }
+
   function _isInsideWebMaticUi(el, opts) {
     return recorderEventsApi && typeof recorderEventsApi.isInsideWebMaticUi === "function"
       ? recorderEventsApi.isInsideWebMaticUi(el, opts)
@@ -5902,7 +5909,7 @@
       if (["Enter", "Tab", "Escape"].includes(event.key)) {
         _flushActiveTextInputForRecording(captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar, null);
         if (target instanceof Element) flashElement(target);
-        captureStep({ type: "key", key: event.key });
+        captureStep(_buildKeyStepForTarget(target, event.key));
         return;
       }
       // Printable chars → capture as text step; store will merge via Recorder.mergeKeySteps
@@ -6422,7 +6429,7 @@
       if (["Enter", "Tab", "Escape"].includes(e.key)) {
         _flushActiveTextInputForRecording(addStep, lastCopiedText, lastCopiedVar, null);
         if (t instanceof Element) flashElement(t);
-        addStep({ type: "key", key: e.key }); return;
+        addStep(_buildKeyStepForTarget(t, e.key)); return;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
         if (_isTextEntryCaptureTarget(t)) return;
