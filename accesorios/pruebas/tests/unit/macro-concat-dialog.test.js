@@ -1,9 +1,12 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { Window } = require("happy-dom");
 const { freshRequire } = require("../helpers/browser-harness.js");
 
 const dialog = require("../../../../src/modules/ui/macro-concat-dialog.js");
+const REPO_ROOT = path.resolve(__dirname, "../../../..");
 
 function setup() {
   const win = new Window({ url: "https://example.test/" });
@@ -120,4 +123,16 @@ test("macro concat UI: el panel principal solo conserva el boton y no controles 
   assert.equal(panel.querySelector("[data-macro-concat-search]"), null);
   assert.equal(panel.querySelector("[data-macro-concat-list]"), null);
   assert.equal(panel.querySelector("[data-macro-concat-selected]"), null);
+});
+
+test("macro concat UI: muchas macros usan modal acotado con scroll interno", () => {
+  const css = fs.readFileSync(path.resolve(REPO_ROOT, "src/modules/ui/ui-shell.css"), "utf8");
+
+  assert.match(css, /\.webmatic-concat-overlay\s*\{[\s\S]*position:\s*fixed;/);
+  assert.match(css, /\.webmatic-concat-dialog\s*\{[\s\S]*height:\s*min\(560px,\s*calc\(100vh - 24px\)\);/);
+  assert.match(css, /\.webmatic-concat-dialog\s*\{[\s\S]*max-height:\s*calc\(100vh - 24px\);/);
+  assert.match(css, /\.webmatic-concat-list\s*\{[\s\S]*min-height:\s*120px;/);
+  assert.match(css, /\.webmatic-concat-list\s*\{[\s\S]*overflow:\s*auto;/);
+  assert.match(css, /\.webmatic-concat-selected\s*\{[\s\S]*max-height:\s*84px;/);
+  assert.match(css, /\.webmatic-concat-selected\s*\{[\s\S]*overflow:\s*auto;/);
 });
