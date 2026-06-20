@@ -725,3 +725,128 @@ test("normalizeRecordedSteps: conserva cambio real no progresivo", () => {
   assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
   assert.deepEqual(out.map((s) => s.value).filter((v) => v != null), ["ABC", "XYZ"]);
 });
+
+// ── Tests rc18: KEY Enter selector inference + select nativo atómico ──────────
+
+test("normalizeRecordedSteps [B]: infiere selector de Enter cuando el input previo es editable", () => {
+  const steps = [
+    { type: "input", selector: "#campo", value: "abc" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "key", key: "Enter" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  const keyStep = out.find((s) => s.type === "key");
+  assert.ok(keyStep, "debe existir un step key");
+  assert.equal(keyStep.selector, "#campo", "selector debe ser heredado del input previo");
+  assert.ok(keyStep.controlRef, "debe tener controlRef");
+  assert.equal(keyStep.controlRef.selector, "#campo");
+});
+
+test("normalizeRecordedSteps [D]: KEY Enter sin selector y sin input previo conserva comportamiento legacy", () => {
+  const steps = [
+    { type: "click", selector: "#btn" },
+    { type: "key", key: "Enter" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  const keyStep = out.find((s) => s.type === "key");
+  assert.ok(keyStep, "debe existir el step key");
+  assert.equal(keyStep.selector, undefined, "no debe inferir selector si el paso previo no es un input editable");
+});
+
+test("normalizeRecordedSteps [E]: select nativo click+choose_option+click option se compacta a choose_option", () => {
+  const steps = [
+    { type: "click", selector: "#pais" },
+    { type: "choose_option", selector: "#pais", value: "AR" },
+    { type: "click", selector: "#pais option:nth-of-type(2)" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.length, 1, "debe quedar un solo paso");
+  assert.equal(out[0].type, "choose_option");
+  assert.equal(out[0].selector, "#pais");
+  assert.equal(out[0].value, "AR");
+});
+
+test("normalizeRecordedSteps [E2]: click+choose_option sin click option tambien se compacta", () => {
+  const steps = [
+    { type: "click", selector: "#provincia" },
+    { type: "choose_option", selector: "#provincia", value: "SF" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.length, 1);
+  assert.equal(out[0].type, "choose_option");
+  assert.equal(out[0].selector, "#provincia");
+});
+
+test("normalizeRecordedSteps [F]: dos choose_option dependientes no se eliminan", () => {
+  const steps = [
+    { type: "choose_option", selector: "#pais", value: "AR" },
+    { type: "choose_option", selector: "#provincia", value: "SF" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.length, 2, "ambos choose_option deben conservarse");
+  assert.equal(out[0].selector, "#pais");
+  assert.equal(out[1].selector, "#provincia");
+});
+
+test("normalizeRecordedSteps [H]: custom combobox input+choose_option+click role NO se compacta", () => {
+  const steps = [
+    { type: "input", selector: "#combo", value: "san" },
+    { type: "choose_option", selector: "#combo", value: "Santa Fe", text: "Santa Fe" },
+    { type: "click", selector: "[role='option']" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.length, 3, "no debe compactar combobox custom con input previo");
+  assert.equal(out[0].type, "input");
+  assert.equal(out[1].type, "choose_option");
+  assert.equal(out[2].type, "click");
+});
+
+test("normalizeRecordedSteps [H2]: choose_option con controlRef combobox no se compacta aunque tenga click previo", () => {
+  const steps = [
+    { type: "click", selector: "#autocomplete" },
+    {
+      type: "choose_option",
+      selector: "#autocomplete",
+      value: "op1",
+      controlRef: { selector: "#autocomplete", tag: "input", role: "combobox" }
+    }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.length, 2, "combobox con controlRef.role=combobox no debe compactarse");
+});
+
+test("normalizeRecordedSteps [I]: checkbox y radio no son afectados por la compactacion de selects", () => {
+  const steps = [
+    { type: "check", selector: "#check-a", checked: true },
+    { type: "choose_option", selector: "#pais", value: "AR" },
+    { type: "check", selector: "#check-b", checked: false }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.length, 3);
+  assert.equal(out[0].type, "check");
+  assert.equal(out[1].type, "choose_option");
+  assert.equal(out[2].type, "check");
+});
+
+test("normalizeRecordedSteps [J]: waits automaticos siguen limitados a 1s con las nuevas pasadas", () => {
+  const steps = [
+    { type: "click", selector: "#pais" },
+    { type: "wait", seconds: 5, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "AR" },
+    { type: "wait", seconds: 8, _autoWait: true }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.ok(out.some((s) => s.type === "choose_option"), "choose_option debe estar presente");
+  assert.ok(!out.some((s) => s.type === "click" && s.selector === "#pais"), "click del select no debe estar");
+  const autoWaits = out.filter((s) => s.type === "wait" && s._autoWait === true);
+  autoWaits.forEach((w) => assert.ok(Number(w.seconds) <= 1, `auto-wait debe ser <= 1s, fue ${w.seconds}`));
+});

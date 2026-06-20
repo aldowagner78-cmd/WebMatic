@@ -163,3 +163,28 @@ test("player action helpers preserve checkbox, radio, input and simple event beh
   assert.equal(actionSimpleEvents.handleSimpleElementAction({ type: "scroll_to" }, target), true);
   assert.deepEqual(scrollArgs, { behavior: "instant", block: "center" });
 });
+
+// ── Test G (rc18): player choose_option native select — setea value, dispara input+change, no necesita click ──
+
+test("player [G]: choose_option sobre select nativo setea value y dispara input y change sin click en option", () => {
+  document.body.innerHTML = `
+    <select id="pais">
+      <option value="">-- elegir --</option>
+      <option value="AR">Argentina</option>
+      <option value="BR">Brasil</option>
+    </select>
+  `;
+
+  const sel = document.getElementById("pais");
+  const eventsReceived = [];
+  sel.addEventListener("input", () => eventsReceived.push("input"));
+  sel.addEventListener("change", () => eventsReceived.push("change"));
+
+  // setInputValue simula lo que hace el player al ejecutar choose_option
+  actionInputValue.setInputValue(sel, "AR", { document });
+
+  assert.equal(sel.value, "AR", "valor del select debe ser AR");
+  assert.ok(eventsReceived.includes("change"), "debe disparar change");
+  // No se necesita click en option: el valor se setea directamente
+  assert.ok(!eventsReceived.includes("click"), "no debe requerir click");
+});

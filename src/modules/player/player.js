@@ -918,11 +918,16 @@
             ) || null;
           };
 
-          // Aplica la opción encontrada disparando input + change; falla controlada si no existe.
+          // Aplica la opción encontrada disparando input + change; reintenta si la opción
+          // aún no existe (por ejemplo, select dependiente que carga opciones de forma asíncrona).
           const _selectByNeedle = (needle) => {
             const opt = _findOption(needle);
             if (!opt) {
-              reject(new Error(`choose_option: opción no encontrada "${needle}" en ${selector}`));
+              if (Date.now() - start < timeoutMs) {
+                setTimeout(attempt, retryMs);
+              } else {
+                reject(new Error(`choose_option: opción no encontrada "${needle}" en ${selector}`));
+              }
               return;
             }
             setInputValue(el, opt.value);

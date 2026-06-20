@@ -357,7 +357,93 @@
       return result;
     };
 
-    return compactConsecutiveWaits(compactTextInputsConfirmedByEnter(out));
+    // ── Pasada: inferir selector de Enter cuando falta pero viene de campo editable ──
+    // Si un key Enter no tiene selector, pero el paso real previo (ignorando auto-waits
+    // cortos) es un input sobre un campo editable (no choice-like), heredar su selector.
+    // Esto cubre el caso del sub-frame que no grabó selector (comportamiento legacy).
+    const inferMissingEnterSelector = (arr) => {
+      return arr.map((step, idx) => {
+        if (!(step && step.type === "key" && String(step.key || "").toLowerCase() === "enter" && !step.selector)) {
+          return step;
+        }
+        for (let j = idx - 1; j >= 0; j -= 1) {
+          const prev = arr[j];
+          if (isShortAutoWait(prev) || isAutoWait(prev)) continue;
+          if (isTextEditableInputStep(prev) && prev.selector) {
+            const inferredRef = prev.controlRef
+              ? Object.assign({}, prev.controlRef)
+              : { selector: prev.selector, tag: "input" };
+            return Object.assign({}, step, { selector: prev.selector, controlRef: inferredRef });
+          }
+          break; // cualquier otro paso real detiene la inferencia
+        }
+        return step;
+      });
+    };
+
+    // ── Pasada: compactar click nativo + choose_option + click option ────────
+    // Para selects nativos, el recorder produce: click SELECT → choose_option SELECT → click OPTION
+    // Se compacta a solo choose_option. No se toca si hay controlRef de combobox/listbox/custom.
+    const isCustomWidgetChoose = (step) => {
+      const ref = step && step.controlRef;
+      if (!ref) return false;
+      const kind = String(ref.controlKind || "").toLowerCase();
+      const role = String(ref.role || "").toLowerCase();
+      const ariaAuto = String(ref.ariaAutocomplete || ref["aria-autocomplete"] || "").toLowerCase();
+      const inpMode = String(ref.inputMode || "").toLowerCase();
+      const customKinds = ["combobox", "listbox", "autocomplete", "autocomplete-input"];
+      if (customKinds.some((k) => kind.includes(k))) return true;
+      if (role === "combobox" || role === "listbox" || role === "option") return true;
+      if (ariaAuto) return true;
+      if (inpMode === "autocomplete") return true;
+      return false;
+    };
+
+    const isOptionChildSelector = (parentSel, childSel) => {
+      if (!parentSel || !childSel) return false;
+      const escaped = String(parentSel).replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+      return new RegExp("^" + escaped + "\\s*>?\\s*option\\b").test(String(childSel));
+    };
+
+    const compactNativeSelectClicks = (arr) => {
+      const remove = new Set();
+      for (let i = 0; i < arr.length; i += 1) {
+        const step = arr[i];
+        if (!step || step.type !== "choose_option") continue;
+        if (isCustomWidgetChoose(step)) continue;
+        const sel = step.selector;
+        if (!sel) continue;
+
+        // Buscar el paso real inmediatamente previo (ignorando auto-waits)
+        let prevIdx = -1;
+        for (let j = i - 1; j >= 0; j -= 1) {
+          if (isAutoWait(arr[j])) continue;
+          prevIdx = j;
+          break;
+        }
+        const prevStep = prevIdx >= 0 ? arr[prevIdx] : null;
+        if (!prevStep || prevStep.type !== "click" || prevStep.selector !== sel) continue;
+
+        // Paso previo es click sobre el mismo selector → marcar para eliminar
+        remove.add(prevIdx);
+
+        // Buscar si el paso siguiente (ignorando auto-waits) es click sobre option hijo
+        let nextIdx = -1;
+        for (let j = i + 1; j < arr.length; j += 1) {
+          if (isAutoWait(arr[j])) continue;
+          nextIdx = j;
+          break;
+        }
+        const nextStep = nextIdx >= 0 ? arr[nextIdx] : null;
+        if (nextStep && nextStep.type === "click" && isOptionChildSelector(sel, nextStep.selector)) {
+          remove.add(nextIdx);
+        }
+      }
+      if (remove.size === 0) return arr;
+      return arr.filter((_, idx) => !remove.has(idx));
+    };
+
+    return compactConsecutiveWaits(compactTextInputsConfirmedByEnter(compactNativeSelectClicks(inferMissingEnterSelector(out))));
   }
 
   function dedupeFieldRuns(steps) {

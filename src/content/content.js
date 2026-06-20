@@ -193,7 +193,26 @@
     document.addEventListener("keydown", (e) => {
       if (["Enter", "Tab", "Escape"].includes(e.key)) {
         if (_isRecording && e.target instanceof Element) flashElement(e.target);
-        _send({ type: "key", key: e.key });
+        const _sfKeyStep = { type: "key", key: e.key };
+        const _sfKTarget = e.target;
+        if (_sfKTarget instanceof Element) {
+          const _sfIsEditable = _sfKTarget.isContentEditable
+            || _sfKTarget instanceof HTMLSelectElement
+            || _isTextEntryCaptureTarget(_sfKTarget);
+          if (_sfIsEditable) {
+            const _sfKSel = _sel(_sfKTarget);
+            if (_sfKSel) {
+              _sfKeyStep.selector = _sfKSel;
+              const _sfKTag = String(_sfKTarget.tagName || "").toLowerCase();
+              const _sfKType = _sfKTarget instanceof HTMLInputElement
+                ? String(_sfKTarget.type || "text").toLowerCase() : "";
+              const _sfKRef = { selector: _sfKSel, tag: _sfKTag };
+              if (_sfKType) _sfKRef.type = _sfKType;
+              _sfKeyStep.controlRef = _sfKRef;
+            }
+          }
+        }
+        _send(_sfKeyStep);
         return;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
