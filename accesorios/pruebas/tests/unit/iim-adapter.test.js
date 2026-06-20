@@ -51,6 +51,12 @@ test("exportToIim: wait genera WAIT SECONDS", () => {
   assert.ok(script.includes("WAIT SECONDS=3"));
 });
 
+test("exportToIim: no exporta marca interna _autoWait", () => {
+  const script = adapter.exportToIim({ steps: [{ type: "wait", seconds: 1, _autoWait: true }] });
+  assert.ok(script.includes("WAIT SECONDS=1"));
+  assert.equal(script.includes("_autoWait"), false);
+});
+
 test("exportToIim: extract genera EXTRACT VAR", () => {
   const script = adapter.exportToIim({ steps: [{ type: "extract", selector: "#precio", variable: "PRECIO" }] });
   assert.ok(script.includes('EXTRACT SELECTOR="#precio" VAR="PRECIO"'));

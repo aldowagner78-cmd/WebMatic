@@ -41,6 +41,7 @@
     if (!step || typeof step !== "object") return step;
     const out = Object.assign({}, step);
     delete out._ts;
+    delete out._autoWait;
 
     if (_isSensitiveStep(out)) {
       out.sensitive = true;

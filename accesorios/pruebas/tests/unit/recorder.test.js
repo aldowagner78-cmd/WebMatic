@@ -167,7 +167,8 @@ test("dedupeFieldRuns: conserva filtro escrito y luego borrado tras pausa aunque
   assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
   assert.equal(out[0].selector, "#filtro-tabla");
   assert.equal(out[0].value, "ana");
-  assert.equal(out[1].seconds, 3);
+  assert.equal(out[1].seconds, 1);
+  assert.equal(out[1]._autoWait, true);
   assert.equal(out[2].selector, "#filtro-tabla");
   assert.equal(out[2].value, "");
 });
@@ -181,11 +182,12 @@ test("dedupeFieldRuns: conserva estados intermedios de un filtro separados por p
   const out = Recorder.dedupeFieldRuns(steps);
   assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input"]);
   assert.equal(out[0].value, "ana");
-  assert.equal(out[1].seconds, 3);
+  assert.equal(out[1].seconds, 1);
+  assert.equal(out[1]._autoWait, true);
   assert.equal(out[2].value, "");
 });
 
-test("dedupeFieldRuns: inserta WAIT=2 tras click si pasan 1500ms antes de input", () => {
+test("dedupeFieldRuns: limita WAIT automatico tras click a 1 segundo", () => {
   const steps = [
     { type: "click", selector: "#btn-modal-delay", _ts: 1000 },
     { type: "input", selector: "#modal-motivo", value: "ok", _ts: 2500 }
@@ -193,7 +195,8 @@ test("dedupeFieldRuns: inserta WAIT=2 tras click si pasan 1500ms antes de input"
 
   const out = Recorder.dedupeFieldRuns(steps);
   assert.deepEqual(out.map((s) => s.type), ["click", "wait", "input"]);
-  assert.equal(out[1].seconds, 2);
+  assert.equal(out[1].seconds, 1);
+  assert.equal(out[1]._autoWait, true);
 });
 
 test("dedupeFieldRuns: no inserta WAIT si pasan menos de 1200ms", () => {
@@ -270,6 +273,45 @@ test("normalizeRecordedSteps: conserva input escrito y luego borrado aunque haya
 
   const out = Recorder.normalizeRecordedSteps(steps);
   assert.deepEqual(out, steps);
+});
+
+test("normalizeRecordedSteps: limita solo WAIT automaticos de grabacion", () => {
+  assert.deepEqual(
+    Recorder.normalizeRecordedSteps([{ type: "wait", seconds: 6, _autoWait: true }]),
+    [{ type: "wait", seconds: 1, _autoWait: true }]
+  );
+  assert.deepEqual(
+    Recorder.normalizeRecordedSteps([{ type: "wait", seconds: 10, _autoWait: true }]),
+    [{ type: "wait", seconds: 1, _autoWait: true }]
+  );
+  assert.deepEqual(
+    Recorder.normalizeRecordedSteps([{ type: "wait", seconds: 1, _autoWait: true }]),
+    [{ type: "wait", seconds: 1, _autoWait: true }]
+  );
+  assert.deepEqual(
+    Recorder.normalizeRecordedSteps([{ type: "wait", seconds: 10 }]),
+    [{ type: "wait", seconds: 10 }]
+  );
+  assert.deepEqual(
+    Recorder.normalizeRecordedSteps([{ type: "wait_for", selector: "#modal", timeout: 10000 }]),
+    [{ type: "wait_for", selector: "#modal", timeout: 10000 }]
+  );
+});
+
+test("normalizeRecordedSteps: conserva TYPE reales y limita waits automaticos entre filtros", () => {
+  const steps = [
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "wait", seconds: 10, _autoWait: true },
+    { type: "input", selector: "#filtro-tabla", value: "" },
+    { type: "wait", seconds: 6, _autoWait: true },
+    { type: "input", selector: "#filtro-tabla", value: "mariel" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "input", "wait", "input"]);
+  assert.deepEqual(out.filter((s) => s.type === "input").map((s) => s.value), ["ana", "", "mariel"]);
+  assert.deepEqual(out.filter((s) => s.type === "wait").map((s) => s.seconds), [1, 1]);
+  assert.deepEqual(out.filter((s) => s.type === "wait").map((s) => s._autoWait), [true, true]);
 });
 
 test("selectorResolvesToElement: rechaza selector que apunta a descendiente inválido", () => {
@@ -383,9 +425,9 @@ test("normalizeRecordedSteps: elimina flush redundante despues de Enter", () => 
 test("normalizeRecordedSteps: elimina TYPE igual despues de KEY Enter aunque haya WAIT", () => {
   const steps = [
     { type: "input", selector: "#busqueda", value: "test enter" },
-    { type: "wait", seconds: 2 },
+    { type: "wait", seconds: 2, _autoWait: true },
     { type: "key", key: "Enter" },
-    { type: "wait", seconds: 2 },
+    { type: "wait", seconds: 2, _autoWait: true },
     { type: "input", selector: "#busqueda", value: "test enter" }
   ];
 
@@ -393,9 +435,9 @@ test("normalizeRecordedSteps: elimina TYPE igual despues de KEY Enter aunque hay
   assert.deepEqual(out.map((s) => s.type), ["input", "wait", "key", "wait"]);
   assert.equal(out[0].selector, "#busqueda");
   assert.equal(out[0].value, "test enter");
-  assert.equal(out[1].seconds, 2);
+  assert.equal(out[1].seconds, 1);
   assert.equal(out[2].key, "Enter");
-  assert.equal(out[3].seconds, 2);
+  assert.equal(out[3].seconds, 1);
 });
 
 test("normalizeRecordedSteps: conserva input distinto y borrado real en el mismo selector", () => {

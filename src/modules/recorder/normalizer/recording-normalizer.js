@@ -1,4 +1,6 @@
 (function initRecordingNormalizer(globalScope) {
+  const MAX_RECORDED_IDLE_WAIT_SECONDS = 1;
+
   function mergeKeySteps(steps) {
     const merged = [];
     for (const step of steps) {
@@ -21,6 +23,7 @@
     const list = Array.isArray(steps) ? steps : [];
     const isInputLike = (s) => !!(s && (s.type === "input" || s.type === "text") && s.selector);
     const isWait = (s) => !!(s && s.type === "wait");
+    const isAutoWait = (s) => !!(s && s.type === "wait" && s._autoWait === true);
     const isBaselineOrAuto = (s) => !!(s && (s._baselineDefault || s._fast));
     const stepValue = (s) => String(s && s.value == null ? "" : s.value);
     const sameInputSnapshot = (a, b) => !!(
@@ -102,11 +105,22 @@
     const compactConsecutiveWaits = (arr) => {
       const out = [];
       for (const step of arr) {
-        if (isWait(step) && out.length > 0 && isWait(out[out.length - 1])) {
+        if (isWait(step) && out.length > 0 && isWait(out[out.length - 1]) && isAutoWait(step) === isAutoWait(out[out.length - 1])) {
           const prev = out[out.length - 1];
           const a = Number(prev.seconds);
           const b = Number(step.seconds);
           prev.seconds = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
+          if (isAutoWait(prev) && prev.seconds > MAX_RECORDED_IDLE_WAIT_SECONDS) {
+            prev.seconds = MAX_RECORDED_IDLE_WAIT_SECONDS;
+          }
+          continue;
+        }
+        if (isAutoWait(step)) {
+          const seconds = Number(step.seconds);
+          out.push({
+            ...step,
+            seconds: Math.min(MAX_RECORDED_IDLE_WAIT_SECONDS, Number.isFinite(seconds) ? Math.max(0, seconds) : MAX_RECORDED_IDLE_WAIT_SECONDS)
+          });
           continue;
         }
         out.push(step);
@@ -281,7 +295,7 @@
           if (Number.isFinite(prevTs) && Number.isFinite(curTs)) {
             const deltaMs = Math.max(0, curTs - prevTs);
             if (deltaMs >= 1200) {
-              withRealWaits.push({ type: "wait", seconds: Math.min(10, Math.ceil(deltaMs / 1000)) });
+              withRealWaits.push({ type: "wait", seconds: Math.ceil(deltaMs / 1000), _autoWait: true });
             }
           }
         }
