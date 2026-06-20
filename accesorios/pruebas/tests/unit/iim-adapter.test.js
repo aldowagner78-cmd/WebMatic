@@ -18,6 +18,14 @@ function roundTrip(steps) {
   return adapter.importFromIim(script).steps;
 }
 
+function visibleIimLines(script) {
+  return script.split("\n").filter((line) => line && !line.startsWith("// WM_JSON:"));
+}
+
+function countVisibleLines(lines, expected) {
+  return lines.filter((line) => line === expected).length;
+}
+
 // ── Tipos estándar ────────────────────────────────────────────────────────────
 
 test("exportToIim: emite encabezado VERSION y TAB", () => {
@@ -55,6 +63,100 @@ test("exportToIim: no exporta marca interna _autoWait", () => {
   const script = adapter.exportToIim({ steps: [{ type: "wait", seconds: 1, _autoWait: true }] });
   assert.ok(script.includes("WAIT SECONDS=1"));
   assert.equal(script.includes("_autoWait"), false);
+});
+
+test("exportToIim: limpia bootstrap NAVIGATE/WAIT_FOR redundante antes del primer selector real", () => {
+  const url = "https://example.test/form#tabla";
+  const script = adapter.exportToIim({
+    steps: [
+      { type: "navigate", url },
+      { type: "wait_for", selector: "#nombre", timeout: 10000 },
+      { type: "navigate", url },
+      { type: "wait_for", selector: "#filtro-tabla", timeout: 10000 },
+      { type: "input", selector: "#filtro-tabla", value: "ana" },
+      { type: "wait", seconds: 1 },
+      { type: "input", selector: "#filtro-tabla", value: "" },
+      { type: "wait", seconds: 1 },
+      { type: "input", selector: "#filtro-tabla", value: "mariel" }
+    ]
+  });
+  const lines = visibleIimLines(script);
+
+  assert.equal(countVisibleLines(lines, `NAVIGATE URL="${url}"`), 1);
+  assert.equal(lines.some((line) => line.includes('WAIT_FOR SELECTOR="#nombre"')), false);
+  assert.ok(lines.includes('// WAIT_FOR SELECTOR="#filtro-tabla" TIMEOUT=10000'));
+  assert.ok(lines.includes('TYPE SELECTOR="#filtro-tabla" CONTENT="ana"'));
+  assert.ok(lines.includes('TYPE SELECTOR="#filtro-tabla" CONTENT=""'));
+  assert.ok(lines.includes('TYPE SELECTOR="#filtro-tabla" CONTENT="mariel"'));
+
+  const wmJsonLine = script.split("\n").find((line) => line.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(wmJsonLine.slice("// WM_JSON:".length));
+  assert.equal(parsed.steps.length, 9, "WM_JSON debe conservar los pasos originales");
+});
+
+test("exportToIim: conserva NAVIGATE si las URLs son diferentes", () => {
+  const firstUrl = "https://example.test/form#inicio";
+  const secondUrl = "https://example.test/form#tabla";
+  const script = adapter.exportToIim({
+    steps: [
+      { type: "navigate", url: firstUrl },
+      { type: "wait_for", selector: "#nombre", timeout: 10000 },
+      { type: "navigate", url: secondUrl },
+      { type: "wait_for", selector: "#filtro-tabla", timeout: 10000 },
+      { type: "input", selector: "#filtro-tabla", value: "ana" }
+    ]
+  });
+  const lines = visibleIimLines(script);
+
+  assert.equal(countVisibleLines(lines, `NAVIGATE URL="${firstUrl}"`), 1);
+  assert.equal(countVisibleLines(lines, `NAVIGATE URL="${secondUrl}"`), 1);
+  assert.ok(lines.includes('// WAIT_FOR SELECTOR="#nombre" TIMEOUT=10000'));
+});
+
+test("exportToIim: conserva cambio de hash si hay accion real entre navegaciones", () => {
+  const firstUrl = "https://example.test/form#datos";
+  const secondUrl = "https://example.test/form#tabla";
+  const script = adapter.exportToIim({
+    steps: [
+      { type: "navigate", url: firstUrl },
+      { type: "input", selector: "#nombre", value: "Ana" },
+      { type: "navigate", url: secondUrl },
+      { type: "wait_for", selector: "#filtro-tabla", timeout: 10000 },
+      { type: "input", selector: "#filtro-tabla", value: "ana" }
+    ]
+  });
+  const lines = visibleIimLines(script);
+
+  assert.equal(countVisibleLines(lines, `NAVIGATE URL="${firstUrl}"`), 1);
+  assert.equal(countVisibleLines(lines, `NAVIGATE URL="${secondUrl}"`), 1);
+  assert.ok(lines.includes('TYPE SELECTOR="#nombre" CONTENT="Ana"'));
+});
+
+test("exportToIim: conserva WAIT_FOR unico antes del primer paso real", () => {
+  const script = adapter.exportToIim({
+    steps: [
+      { type: "wait_for", selector: "#filtro-tabla", timeout: 10000 },
+      { type: "input", selector: "#filtro-tabla", value: "ana" }
+    ]
+  });
+  const lines = visibleIimLines(script);
+
+  assert.ok(lines.includes('// WAIT_FOR SELECTOR="#filtro-tabla" TIMEOUT=10000'));
+  assert.ok(lines.includes('TYPE SELECTOR="#filtro-tabla" CONTENT="ana"'));
+});
+
+test("exportToIim: conserva WAIT_FOR modal antes de una accion dinamica", () => {
+  const script = adapter.exportToIim({
+    steps: [
+      { type: "click", selector: "#abrir-modal" },
+      { type: "wait_for", selector: "#modal-confirmacion", timeout: 10000 },
+      { type: "click", selector: "#modal-confirmacion .aceptar" }
+    ]
+  });
+  const lines = visibleIimLines(script);
+
+  assert.ok(lines.includes('// WAIT_FOR SELECTOR="#modal-confirmacion" TIMEOUT=10000'));
+  assert.ok(lines.includes('CLICK SELECTOR="#modal-confirmacion .aceptar"'));
 });
 
 test("exportToIim: extract genera EXTRACT VAR", () => {

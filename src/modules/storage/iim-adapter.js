@@ -60,6 +60,71 @@
     return !!(step && step._baselineDefault === true);
   }
 
+  function _selectorForVisibleAction(step) {
+    if (!step || typeof step !== "object") return "";
+    const type = String(step.type || "");
+    if (
+      type === "navigate" ||
+      type === "wait" ||
+      type === "wait_for" ||
+      type === "capture_defaults" ||
+      type === "browser_back" ||
+      type === "browser_forward" ||
+      type === "browser_history" ||
+      type === "browser_reload" ||
+      type === "open_bookmark" ||
+      type === "open_tab" ||
+      type === "switch_tab" ||
+      type === "close_tab"
+    ) {
+      return "";
+    }
+    return String(step.selector || "");
+  }
+
+  function _cleanHumanStepsForIim(steps) {
+    const list = Array.isArray(steps) ? steps : [];
+    const out = [];
+
+    for (let i = 0; i < list.length; i += 1) {
+      const step = list[i];
+      const next = list[i + 1];
+      const next2 = list[i + 2];
+      const next3 = list[i + 3];
+      const next4 = list[i + 4];
+
+      if (
+        step &&
+        step.type === "navigate" &&
+        next &&
+        next.type === "wait_for" &&
+        next2 &&
+        next2.type === "navigate" &&
+        String(step.url || "") === String(next2.url || "") &&
+        next3 &&
+        next3.type === "wait_for" &&
+        _selectorForVisibleAction(next4) === String(next3.selector || "")
+      ) {
+        i += 1;
+        continue;
+      }
+
+      if (
+        step &&
+        step.type === "navigate" &&
+        next &&
+        next.type === "navigate" &&
+        String(step.url || "") === String(next.url || "")
+      ) {
+        continue;
+      }
+
+      out.push(step);
+    }
+
+    return out;
+  }
+
   function _sanitizeMetaForExport(meta) {
     if (!meta || typeof meta !== "object") return null;
     const out = Object.assign({}, meta);
@@ -121,7 +186,7 @@
       lines.push("// WM_JSON:" + JSON.stringify(payload));
     }
 
-    const humanSteps = steps.filter((step) => !_isBaselineDefaultStep(step));
+    const humanSteps = _cleanHumanStepsForIim(steps.filter((step) => !_isBaselineDefaultStep(step)));
 
     humanSteps.forEach((step) => {
       // ── Standard IIM instructions (human-readable) ──────────────────────
