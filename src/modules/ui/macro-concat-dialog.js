@@ -1,6 +1,6 @@
 (function initWebMaticMacroConcatDialog(globalScope) {
-  function createButton(label, className) {
-    const btn = document.createElement("button");
+  function createButton(label, className, hostDocument) {
+    const btn = (hostDocument || document).createElement("button");
     btn.type = "button";
     btn.className = className || "webmatic-action-btn";
     btn.textContent = label;
@@ -9,26 +9,28 @@
 
   function openMacroConcatDialog(options) {
     const opts = options || {};
-    const panel = opts.panel || document.getElementById("webmatic-panel-root");
+    const hostDocument = opts.document || document;
+    const panel = opts.panel || hostDocument.getElementById("webmatic-panel-root");
+    const mountRoot = hostDocument.body || panel;
     const baseMacro = opts.baseMacro || null;
     const macros = Array.isArray(opts.macros) ? opts.macros : [];
-    if (!panel || !baseMacro) return Promise.resolve(null);
+    if (!mountRoot || !baseMacro) return Promise.resolve(null);
 
     const available = macros.filter((macro) => macro && macro.id !== baseMacro.id);
 
     return new Promise((resolve) => {
-      const overlay = document.createElement("div");
+      const overlay = hostDocument.createElement("div");
       overlay.className = "webmatic-concat-overlay";
       overlay.setAttribute("data-macro-concat-dialog", "true");
 
-      const dialog = document.createElement("div");
+      const dialog = hostDocument.createElement("div");
       dialog.className = "webmatic-concat-dialog";
 
-      const title = document.createElement("h3");
+      const title = hostDocument.createElement("h3");
       title.className = "webmatic-concat-title";
       title.textContent = "Concatenar macros";
 
-      const nameInput = document.createElement("input");
+      const nameInput = hostDocument.createElement("input");
       nameInput.className = "webmatic-concat-name";
       nameInput.type = "text";
       nameInput.autocomplete = "off";
@@ -36,26 +38,26 @@
       nameInput.value = baseMacro.name || "";
       nameInput.setAttribute("data-macro-concat-name", "true");
 
-      const searchInput = document.createElement("input");
+      const searchInput = hostDocument.createElement("input");
       searchInput.className = "webmatic-concat-search";
       searchInput.type = "text";
       searchInput.autocomplete = "off";
       searchInput.placeholder = "Buscar macro para agregar";
       searchInput.setAttribute("data-macro-concat-search", "true");
 
-      const list = document.createElement("div");
+      const list = hostDocument.createElement("div");
       list.className = "webmatic-concat-list";
       list.setAttribute("data-macro-concat-list", "true");
 
-      const selectedWrap = document.createElement("div");
+      const selectedWrap = hostDocument.createElement("div");
       selectedWrap.className = "webmatic-concat-selected";
       selectedWrap.setAttribute("data-macro-concat-selected", "true");
 
-      const actions = document.createElement("div");
+      const actions = hostDocument.createElement("div");
       actions.className = "webmatic-concat-actions";
-      const okBtn = createButton("Concatenar", "webmatic-action-btn");
+      const okBtn = createButton("Concatenar", "webmatic-action-btn", hostDocument);
       okBtn.setAttribute("data-macro-concat-ok", "true");
-      const cancelBtn = createButton("Cancelar", "webmatic-action-btn webmatic-btn-ghost");
+      const cancelBtn = createButton("Cancelar", "webmatic-action-btn webmatic-btn-ghost", hostDocument);
       cancelBtn.setAttribute("data-macro-concat-cancel", "true");
       actions.appendChild(okBtn);
       actions.appendChild(cancelBtn);
@@ -67,7 +69,7 @@
       dialog.appendChild(selectedWrap);
       dialog.appendChild(actions);
       overlay.appendChild(dialog);
-      panel.appendChild(overlay);
+      mountRoot.appendChild(overlay);
 
       const selected = [];
       let nameEdited = false;
@@ -92,7 +94,7 @@
       function renderSelected() {
         selectedWrap.replaceChildren();
         if (selected.length === 0) {
-          const empty = document.createElement("p");
+          const empty = hostDocument.createElement("p");
           empty.className = "webmatic-concat-empty";
           empty.textContent = "Sin macros seleccionadas";
           selectedWrap.appendChild(empty);
@@ -101,12 +103,12 @@
         }
         okBtn.disabled = false;
         selected.forEach((macro) => {
-          const chip = document.createElement("span");
+          const chip = hostDocument.createElement("span");
           chip.className = "webmatic-concat-chip";
           chip.setAttribute("data-macro-concat-chip", macro.id);
-          const label = document.createElement("span");
+          const label = hostDocument.createElement("span");
           label.textContent = macro.name || "(sin nombre)";
-          const remove = createButton("Quitar", "webmatic-concat-remove");
+          const remove = createButton("Quitar", "webmatic-concat-remove", hostDocument);
           remove.setAttribute("data-macro-concat-remove", macro.id);
           remove.addEventListener("click", () => {
             const idx = selected.findIndex((item) => item.id === macro.id);
@@ -128,14 +130,14 @@
           : available;
         list.replaceChildren();
         if (filtered.length === 0) {
-          const empty = document.createElement("p");
+          const empty = hostDocument.createElement("p");
           empty.className = "webmatic-concat-empty";
           empty.textContent = available.length === 0 ? "No hay otras macros disponibles" : "Sin resultados";
           list.appendChild(empty);
           return;
         }
         filtered.forEach((macro) => {
-          const row = createButton(macro.name || "(sin nombre)", "webmatic-concat-row");
+          const row = createButton(macro.name || "(sin nombre)", "webmatic-concat-row", hostDocument);
           row.setAttribute("data-macro-concat-option", macro.id);
           row.disabled = picked.has(macro.id);
           row.addEventListener("click", () => {

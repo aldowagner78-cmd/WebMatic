@@ -221,7 +221,7 @@
 }
 
 .webmatic-concat-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 2147483647;
   display: flex;
@@ -234,34 +234,35 @@
 
 .webmatic-concat-dialog {
   width: min(100%, 360px);
-  max-height: calc(100% - 24px);
+  max-height: calc(100vh - 24px);
   display: grid;
   grid-template-rows: auto auto auto minmax(92px, 1fr) auto auto;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--webmatic-border);
+  border: 1px solid var(--webmatic-border, #a7f3d0);
   border-radius: 8px;
-  background: var(--webmatic-card-bg);
+  background: var(--webmatic-card-bg, #ffffff);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
   box-sizing: border-box;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .webmatic-concat-title {
   margin: 0;
   font-size: 15px;
   line-height: 1.2;
-  color: var(--webmatic-text);
+  color: var(--webmatic-text, #064e3b);
 }
 
 .webmatic-concat-name,
 .webmatic-concat-search {
   width: 100%;
   min-height: 34px;
-  border: 1px solid var(--webmatic-border);
+  border: 1px solid var(--webmatic-border, #a7f3d0);
   border-radius: 6px;
   padding: 7px 9px;
-  color: var(--webmatic-text);
-  background: var(--webmatic-surface);
+  color: var(--webmatic-text, #064e3b);
+  background: var(--webmatic-surface, #f0fdf4);
   font: inherit;
   box-sizing: border-box;
 }
@@ -269,30 +270,30 @@
 .webmatic-concat-list {
   min-height: 92px;
   overflow: auto;
-  border: 1px solid var(--webmatic-border);
+  border: 1px solid var(--webmatic-border, #a7f3d0);
   border-radius: 6px;
-  background: var(--webmatic-surface);
+  background: var(--webmatic-surface, #f0fdf4);
 }
 
 .webmatic-concat-row {
   display: block;
   width: 100%;
   border: 0;
-  border-bottom: 1px solid var(--webmatic-border);
+  border-bottom: 1px solid var(--webmatic-border, #a7f3d0);
   padding: 8px 9px;
   background: transparent;
-  color: var(--webmatic-text);
+  color: var(--webmatic-text, #064e3b);
   text-align: left;
   font: inherit;
   cursor: pointer;
 }
 
 .webmatic-concat-row:hover:not(:disabled) {
-  background: var(--webmatic-btn-hover);
+  background: var(--webmatic-btn-hover, #d1fae5);
 }
 
 .webmatic-concat-row:disabled {
-  color: var(--webmatic-text-muted);
+  color: var(--webmatic-text-muted, #065f46);
   cursor: default;
   opacity: 0.65;
 }
@@ -309,11 +310,11 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  border: 1px solid var(--webmatic-border);
+  border: 1px solid var(--webmatic-border, #a7f3d0);
   border-radius: 6px;
   padding: 4px 5px 4px 8px;
-  background: var(--webmatic-btn-bg);
-  color: var(--webmatic-text);
+  background: var(--webmatic-btn-bg, #ecfdf5);
+  color: var(--webmatic-text, #064e3b);
   font-size: 12px;
 }
 
@@ -321,8 +322,8 @@
   border: 0;
   border-radius: 5px;
   padding: 3px 5px;
-  background: var(--webmatic-btn-hover);
-  color: var(--webmatic-text);
+  background: var(--webmatic-btn-hover, #d1fae5);
+  color: var(--webmatic-text, #064e3b);
   font: inherit;
   font-size: 11px;
   cursor: pointer;
@@ -337,7 +338,7 @@
 .webmatic-concat-empty {
   margin: 0;
   padding: 9px;
-  color: var(--webmatic-text-muted);
+  color: var(--webmatic-text-muted, #065f46);
   font-size: 12px;
 }
 
