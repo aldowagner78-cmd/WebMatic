@@ -380,6 +380,55 @@ test("normalizeRecordedSteps: elimina flush redundante despues de Enter", () => 
   assert.equal(out[2].key, "Enter");
 });
 
+test("normalizeRecordedSteps: elimina TYPE igual despues de KEY Enter aunque haya WAIT", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "test enter" },
+    { type: "wait", seconds: 2 },
+    { type: "key", key: "Enter" },
+    { type: "wait", seconds: 2 },
+    { type: "input", selector: "#busqueda", value: "test enter" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out.map((s) => s.type), ["input", "wait", "key", "wait"]);
+  assert.equal(out[0].selector, "#busqueda");
+  assert.equal(out[0].value, "test enter");
+  assert.equal(out[1].seconds, 2);
+  assert.equal(out[2].key, "Enter");
+  assert.equal(out[3].seconds, 2);
+});
+
+test("normalizeRecordedSteps: conserva input distinto y borrado real en el mismo selector", () => {
+  const typed = Recorder.normalizeRecordedSteps([
+    { type: "input", selector: "#busqueda", value: "test" },
+    { type: "input", selector: "#busqueda", value: "test enter" }
+  ]);
+  assert.deepEqual(typed, [
+    { type: "input", selector: "#busqueda", value: "test enter" }
+  ]);
+
+  const cleared = Recorder.normalizeRecordedSteps([
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "input", selector: "#filtro-tabla", value: "" }
+  ]);
+  assert.deepEqual(cleared, [
+    { type: "input", selector: "#filtro-tabla", value: "ana" },
+    { type: "input", selector: "#filtro-tabla", value: "" }
+  ]);
+});
+
+test("normalizeRecordedSteps: no elimina defaults _baselineDefault", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "test enter", _baselineDefault: true },
+    { type: "input", selector: "#busqueda", value: "test enter" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.length, 2);
+  assert.equal(out[0]._baselineDefault, true);
+  assert.equal(out[1]._baselineDefault, undefined);
+});
+
 test("normalizeRecordedSteps: compacta escritura progresiva del mismo campo", () => {
   const steps = [
     { type: "input", selector: "#diagnostico", value: "D" },

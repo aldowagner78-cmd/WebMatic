@@ -21,10 +21,13 @@
     const list = Array.isArray(steps) ? steps : [];
     const isInputLike = (s) => !!(s && (s.type === "input" || s.type === "text") && s.selector);
     const isWait = (s) => !!(s && s.type === "wait");
+    const isBaselineOrAuto = (s) => !!(s && (s._baselineDefault || s._fast));
     const stepValue = (s) => String(s && s.value == null ? "" : s.value);
     const sameInputSnapshot = (a, b) => !!(
       isInputLike(a) &&
       isInputLike(b) &&
+      !isBaselineOrAuto(a) &&
+      !isBaselineOrAuto(b) &&
       a.selector === b.selector &&
       stepValue(a) === stepValue(b)
     );
@@ -125,10 +128,9 @@
         // Caso seguro: TYPE X -> KEY Enter -> TYPE X inmediato.
         // Ese TYPE posterior suele ser un flush tardio del mismo valor.
         if (prev && prev.type === "key" && String(prev.key || "").toLowerCase() === "enter") {
-          const hasWaitAfterEnter = compacted.slice(prevIdx + 1).some((s) => isWait(s));
           const beforeKeyIdx = findPrevNonWaitIndex(compacted, prevIdx - 1);
           const beforeKey = beforeKeyIdx >= 0 ? compacted[beforeKeyIdx] : null;
-          if (!hasWaitAfterEnter && sameInputSnapshot(beforeKey, step)) {
+          if (sameInputSnapshot(beforeKey, step)) {
             continue;
           }
         }
@@ -141,6 +143,7 @@
 
     const shouldCompactInputRun = (inputSteps) => {
       if (!Array.isArray(inputSteps) || inputSteps.length < 2) return false;
+      if (inputSteps.some((s) => isBaselineOrAuto(s))) return false;
       const values = inputSteps.map((s) => stepValue(s));
       const finalValue = values[values.length - 1];
 

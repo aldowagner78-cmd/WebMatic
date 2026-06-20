@@ -28,7 +28,7 @@ test("build info: expone la version visible centralizada", () => {
   const sandbox = { window: {} };
   vm.runInNewContext(readRepoFile(BUILD_INFO_FILE), sandbox);
 
-  assert.equal(sandbox.window.WebMaticBuildInfo.versionLabel, "v0.2.0-modular-rc11");
+  assert.equal(sandbox.window.WebMaticBuildInfo.versionLabel, "v0.2.0-modular-rc12");
 });
 
 test("ui shell: usa WebMaticBuildInfo para mostrar la version", () => {
