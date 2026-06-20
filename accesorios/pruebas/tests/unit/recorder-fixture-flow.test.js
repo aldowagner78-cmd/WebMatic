@@ -97,7 +97,7 @@ test("recorder fixture: normalizer compacta tipeo progresivo y preserva cambios 
   assert.deepEqual(
     normalizer.normalizeRecordedSteps([
       { type: "input", selector: "#basic-name", value: "A" },
-      { type: "wait", seconds: 1 },
+      { type: "wait", seconds: 1, _autoWait: true },
       { type: "input", selector: "#basic-name", value: "Ana" },
       { type: "click", selector: "#basic-submit" }
     ]),

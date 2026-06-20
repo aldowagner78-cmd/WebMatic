@@ -80,6 +80,17 @@
       if (from === to) return true;
       if (to.startsWith(from) || from.startsWith(to)) return true;
 
+      const fromIsSubsequenceOfTo = (() => {
+        let j = 0;
+        for (let i = 0; i < to.length && j < from.length; i += 1) {
+          if (to[i] === from[j]) j += 1;
+        }
+        return j === from.length;
+      })();
+      if (from.length >= 3 && to.length > from.length && from[0] === to[0] && fromIsSubsequenceOfTo) {
+        return true;
+      }
+
       const shortest = Math.min(from.length, to.length);
       const longest = Math.max(from.length, to.length);
       const prefix = commonPrefixLength(from, to);
@@ -203,6 +214,16 @@
           // Solo absorber WAIT si despues viene otro snapshot del mismo campo.
           // Si el WAIT separa el ultimo TYPE de otra accion/campo, se conserva fuera del run.
           if (isInputLike(nextReal) && nextReal.selector === selector) {
+            let allShortAutoWaits = true;
+            for (let w = j; w < k; w += 1) {
+              const waitStep = withoutDuplicateWaits[w];
+              const seconds = Number(waitStep && waitStep.seconds);
+              if (!isAutoWait(waitStep) || (Number.isFinite(seconds) && seconds > MAX_RECORDED_IDLE_WAIT_SECONDS)) {
+                allShortAutoWaits = false;
+                break;
+              }
+            }
+            if (!allShortAutoWaits) break;
             while (j < k) {
               runItems.push(withoutDuplicateWaits[j]);
               j += 1;

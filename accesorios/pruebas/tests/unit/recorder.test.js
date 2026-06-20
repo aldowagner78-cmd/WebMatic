@@ -239,7 +239,7 @@ test("dedupeFieldRuns: no duplica WAIT si luego ya existe wait_for o wait", () =
 
 
 
-test("normalizeRecordedSteps: compacta snapshots del mismo campo separados por WAIT aunque haya correccion de tipeo", () => {
+test("normalizeRecordedSteps: no compacta snapshots separados por WAIT manual largo", () => {
   const steps = [
     { type: "wait", seconds: 10 },
     { type: "input", selector: "#ce-diagnostico", value: "DIA" },
@@ -256,11 +256,36 @@ test("normalizeRecordedSteps: compacta snapshots del mismo campo separados por W
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out, steps);
+});
+
+test("normalizeRecordedSteps: compacta correccion rapida antes de KEY Enter", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "TET" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#busqueda", value: "TEST ENTER" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "key", key: "Enter", selector: "#busqueda" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
   assert.deepEqual(out, [
-    { type: "wait", seconds: 10 },
-    { type: "input", selector: "#ce-diagnostico", value: "DIAGNOSTICO EJ 12 FINAL" },
-    { type: "wait", seconds: 1 },
-    { type: "input", selector: "#ce-observaciones", value: "OBSERVACIONES EJ 12 FINAL" }
+    { type: "input", selector: "#busqueda", value: "TEST ENTER" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "key", key: "Enter", selector: "#busqueda" }
+  ]);
+});
+
+test("normalizeRecordedSteps: compacta correccion rapida simple del mismo campo", () => {
+  const steps = [
+    { type: "input", selector: "#nombre", value: "ALD" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#nombre", value: "ALDO" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out, [
+    { type: "input", selector: "#nombre", value: "ALDO" }
   ]);
 });
 
@@ -312,6 +337,59 @@ test("normalizeRecordedSteps: conserva TYPE reales y limita waits automaticos en
   assert.deepEqual(out.filter((s) => s.type === "input").map((s) => s.value), ["ana", "", "mariel"]);
   assert.deepEqual(out.filter((s) => s.type === "wait").map((s) => s.seconds), [1, 1]);
   assert.deepEqual(out.filter((s) => s.type === "wait").map((s) => s._autoWait), [true, true]);
+});
+
+test("normalizeRecordedSteps: no compacta correcciones si hay click entre medio", () => {
+  const steps = [
+    { type: "input", selector: "#filtro-tabla", value: "ANA" },
+    { type: "click", selector: 'button[text="+ Agregar fila"]' },
+    { type: "input", selector: "#filtro-tabla", value: "" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta correcciones si hay navigate entre medio", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "TEST" },
+    { type: "navigate", url: "https://example.test/otra" },
+    { type: "input", selector: "#busqueda", value: "TEST ENTER" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta correcciones si hay wait_for entre medio", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "TEST" },
+    { type: "wait_for", selector: "#resultado", timeout: 10000 },
+    { type: "input", selector: "#busqueda", value: "TEST ENTER" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta inputs de selectores distintos", () => {
+  const steps = [
+    { type: "input", selector: "#campoA", value: "uno" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#campoB", value: "dos" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta checkbox radio ni select", () => {
+  const steps = [
+    { type: "check", selector: "#chk-tecnologia", checked: true },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "check", selector: "#chk-tecnologia", checked: false },
+    { type: "choose_option", selector: "#pais", value: "ar" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "uy" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
 });
 
 test("selectorResolvesToElement: rechaza selector que apunta a descendiente inválido", () => {
@@ -440,6 +518,16 @@ test("normalizeRecordedSteps: elimina TYPE igual despues de KEY Enter aunque hay
   assert.equal(out[3].seconds, 1);
 });
 
+test("normalizeRecordedSteps: no compacta inputs si hay KEY Enter entre medio", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "TEST" },
+    { type: "key", key: "Enter", selector: "#busqueda" },
+    { type: "input", selector: "#busqueda", value: "TEST ENTER" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
 test("normalizeRecordedSteps: conserva input distinto y borrado real en el mismo selector", () => {
   const typed = Recorder.normalizeRecordedSteps([
     { type: "input", selector: "#busqueda", value: "test" },
@@ -474,7 +562,7 @@ test("normalizeRecordedSteps: no elimina defaults _baselineDefault", () => {
 test("normalizeRecordedSteps: compacta escritura progresiva del mismo campo", () => {
   const steps = [
     { type: "input", selector: "#diagnostico", value: "D" },
-    { type: "wait", seconds: 10 },
+    { type: "wait", seconds: 1, _autoWait: true },
     { type: "input", selector: "#diagnostico", value: "DIAGNOSTICO EJ12 FINAL" }
   ];
 
@@ -487,11 +575,11 @@ test("normalizeRecordedSteps: compacta escritura progresiva del mismo campo", ()
 test("normalizeRecordedSteps: compacta multiples parciales progresivos y conserva ultimo", () => {
   const steps = [
     { type: "input", selector: "#observaciones", value: "O" },
-    { type: "wait", seconds: 4 },
+    { type: "wait", seconds: 1, _autoWait: true },
     { type: "input", selector: "#observaciones", value: "OBSERVACIONES" },
-    { type: "wait", seconds: 4 },
+    { type: "wait", seconds: 1, _autoWait: true },
     { type: "input", selector: "#observaciones", value: "OBSERVACIONES EJ" },
-    { type: "wait", seconds: 9 },
+    { type: "wait", seconds: 1, _autoWait: true },
     { type: "input", selector: "#observaciones", value: "OBSERVACIONES EJ12 FINAL" }
   ];
 

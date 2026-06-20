@@ -30,7 +30,7 @@ test("recorder helper modules preserve normalization, defaults and capture guard
   assert.deepEqual(
     normalizer.normalizeRecordedSteps([
       { type: "input", selector: "#q", value: "DIA" },
-      { type: "wait", seconds: 1 },
+      { type: "wait", seconds: 1, _autoWait: true },
       { type: "input", selector: "#q", value: "DIAGNOSTICO" },
       { type: "click", selector: "#save" }
     ]),
