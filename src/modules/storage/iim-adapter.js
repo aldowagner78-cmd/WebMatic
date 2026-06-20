@@ -1,6 +1,84 @@
 (function initIimAdapter(globalScope) {
   const SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
 
+  function isIsoDate(value) {
+    const raw = String(value || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+    const date = new Date(`${raw}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return false;
+    const [yyyy, mm, dd] = raw.split("-").map((part) => Number(part));
+    return date.getUTCFullYear() === yyyy && (date.getUTCMonth() + 1) === mm && date.getUTCDate() === dd;
+  }
+
+  function isArgDate(value) {
+    const raw = String(value || "").trim();
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) return false;
+    const [dd, mm, yyyy] = raw.split("/").map((part) => Number(part));
+    const date = new Date(Date.UTC(yyyy, mm - 1, dd));
+    if (Number.isNaN(date.getTime())) return false;
+    return date.getUTCFullYear() === yyyy && (date.getUTCMonth() + 1) === mm && date.getUTCDate() === dd;
+  }
+
+  function isoToArgDate(value) {
+    if (!isIsoDate(value)) return String(value == null ? "" : value);
+    const [yyyy, mm, dd] = String(value).trim().split("-");
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  function argDateToIso(value) {
+    if (!isArgDate(value)) return String(value == null ? "" : value);
+    const [dd, mm, yyyy] = String(value).trim().split("/");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function _isDateLikeType(rawType) {
+    return String(rawType || "").toLowerCase() === "date";
+  }
+
+  function _looksDateControlKind(rawKind) {
+    return /(^|[-_\s])date($|[-_\s])/i.test(String(rawKind || ""));
+  }
+
+  function _matchesSelectorRef(control, selector) {
+    const target = String(selector || "");
+    if (!target) return false;
+    if (String(control && control.selector || "") === target) return true;
+    if (Array.isArray(control && control.altSelectors) && control.altSelectors.includes(target)) return true;
+    return false;
+  }
+
+  function _isDateInputByMeta(meta, selector) {
+    const inventories = Array.isArray(meta && meta.pageInventories) ? meta.pageInventories : [];
+    for (const inv of inventories) {
+      const controls = Array.isArray(inv && inv.controls) ? inv.controls : [];
+      for (const ctrl of controls) {
+        if (!_matchesSelectorRef(ctrl, selector)) continue;
+        if (_isDateLikeType(ctrl && ctrl.type)) return true;
+        if (_isDateLikeType(ctrl && ctrl.inputType)) return true;
+        if (_looksDateControlKind(ctrl && ctrl.controlKind)) return true;
+      }
+    }
+    return false;
+  }
+
+  function _isDateInputStep(step, meta) {
+    if (!step || typeof step !== "object") return false;
+    if (step.type !== "input" && step.type !== "text") return false;
+    if (_isDateLikeType(step.inputType) || _isDateLikeType(step.typeAttr)) return true;
+    if (step.controlRef && typeof step.controlRef === "object") {
+      if (_isDateLikeType(step.controlRef.type) || _isDateLikeType(step.controlRef.inputType)) return true;
+      if (_looksDateControlKind(step.controlRef.controlKind)) return true;
+    }
+    return _isDateInputByMeta(meta, step.selector);
+  }
+
+  function _toHumanInputValue(step, rawValue, meta) {
+    const value = String(rawValue == null ? "" : rawValue);
+    if (!_isDateInputStep(step, meta)) return value;
+    if (!isIsoDate(value)) return value;
+    return isoToArgDate(value);
+  }
+
   // Quotes a value for iim format, escaping backslashes and double quotes
   function _quote(val) {
     return '"' + String(val || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
@@ -199,7 +277,8 @@
           lines.push(`// SENSITIVE_INPUT SELECTOR=${_quote(step.selector)} CONTENT=${_quote("[REDACTED]")}`);
           return;
         }
-        lines.push(`TYPE SELECTOR=${_quote(step.selector)} CONTENT=${_quote(step.value)}`);
+        const humanValue = _toHumanInputValue(step, step.value, meta);
+        lines.push(`TYPE SELECTOR=${_quote(step.selector)} CONTENT=${_quote(humanValue)}`);
         return;
       }
       if (step.type === "check") {
@@ -512,7 +591,11 @@
 
   const api = Object.freeze({
     exportToIim,
-    importFromIim
+    importFromIim,
+    isIsoDate,
+    isArgDate,
+    isoToArgDate,
+    argDateToIso
   });
 
   globalScope.WebMaticIimAdapter = api;

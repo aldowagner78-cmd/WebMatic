@@ -20,6 +20,15 @@ const actionCheckRunner = require("../../../../src/modules/player/actions/action
 const actionInputValue = require("../../../../src/modules/player/actions/action-input-value.js");
 const actionSimpleEvents = require("../../../../src/modules/player/actions/action-simple-events.js");
 
+test("action-input-value date helpers: validan y convierten fechas", () => {
+  assert.equal(actionInputValue.isIsoDate("1990-05-20"), true);
+  assert.equal(actionInputValue.isIsoDate("1990-15-20"), false);
+  assert.equal(actionInputValue.isArgDate("20/05/1990"), true);
+  assert.equal(actionInputValue.isArgDate("40/05/1990"), false);
+  assert.equal(actionInputValue.isoToArgDate("1990-05-20"), "20/05/1990");
+  assert.equal(actionInputValue.argDateToIso("20/05/1990"), "1990-05-20");
+});
+
 test("check false ejecutado dos veces sobre checkbox no debe volver a tildarlo", async () => {
   const otherWin = new Window({ url: "https://example.com/iframe" });
   const foreignCheckbox = otherWin.document.createElement("input");
@@ -187,4 +196,73 @@ test("player [G]: choose_option sobre select nativo setea value y dispara input 
   assert.ok(eventsReceived.includes("change"), "debe disparar change");
   // No se necesita click en option: el valor se setea directamente
   assert.ok(!eventsReceived.includes("click"), "no debe requerir click");
+});
+
+test("player input[type=date]: acepta ISO y setea 1990-05-20", () => {
+  document.body.innerHTML = '<input id="fecha" type="date">';
+  const el = document.getElementById("fecha");
+
+  actionInputValue.setInputValue(el, "1990-05-20", { document });
+  assert.equal(el.value, "1990-05-20");
+});
+
+test("player input[type=date]: acepta DD/MM/YYYY y convierte a ISO", () => {
+  document.body.innerHTML = '<input id="fecha" type="date">';
+  const el = document.getElementById("fecha");
+
+  actionInputValue.setInputValue(el, "20/05/1990", { document });
+  assert.equal(el.value, "1990-05-20");
+});
+
+test("player input[type=date]: dispara input y change", () => {
+  document.body.innerHTML = '<input id="fecha" type="date">';
+  const el = document.getElementById("fecha");
+  const events = [];
+  el.addEventListener("input", () => events.push("input"));
+  el.addEventListener("change", () => events.push("change"));
+
+  actionInputValue.setInputValue(el, "20/05/1990", { document });
+
+  assert.ok(events.includes("input"));
+  assert.ok(events.includes("change"));
+});
+
+test("player input text normal con 1990-05-20 NO se convierte", () => {
+  document.body.innerHTML = '<input id="nombre" type="text">';
+  const el = document.getElementById("nombre");
+
+  actionInputValue.setInputValue(el, "1990-05-20", { document });
+  assert.equal(el.value, "1990-05-20");
+});
+
+test("player input text normal con 20/05/1990 NO se convierte", () => {
+  document.body.innerHTML = '<input id="nombre" type="text">';
+  const el = document.getElementById("nombre");
+
+  actionInputValue.setInputValue(el, "20/05/1990", { document });
+  assert.equal(el.value, "20/05/1990");
+});
+
+test("player input email/tel/url/number no se rompen con soporte date", () => {
+  document.body.innerHTML = `
+    <input id="mail" type="email">
+    <input id="tel" type="tel">
+    <input id="url" type="url">
+    <input id="num" type="number">
+  `;
+
+  const mail = document.getElementById("mail");
+  const tel = document.getElementById("tel");
+  const url = document.getElementById("url");
+  const num = document.getElementById("num");
+
+  actionInputValue.setInputValue(mail, "ana@test.com", { document });
+  actionInputValue.setInputValue(tel, "+54911223344", { document });
+  actionInputValue.setInputValue(url, "https://example.com", { document });
+  actionInputValue.setInputValue(num, "42", { document });
+
+  assert.equal(mail.value, "ana@test.com");
+  assert.equal(tel.value, "+54911223344");
+  assert.equal(url.value, "https://example.com");
+  assert.equal(num.value, "42");
 });

@@ -1,4 +1,34 @@
 (function initActionInputValue(globalScope) {
+  function isIsoDate(value) {
+    const raw = String(value || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return false;
+    const date = new Date(`${raw}T00:00:00Z`);
+    if (Number.isNaN(date.getTime())) return false;
+    const [yyyy, mm, dd] = raw.split("-").map((part) => Number(part));
+    return date.getUTCFullYear() === yyyy && (date.getUTCMonth() + 1) === mm && date.getUTCDate() === dd;
+  }
+
+  function isArgDate(value) {
+    const raw = String(value || "").trim();
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) return false;
+    const [dd, mm, yyyy] = raw.split("/").map((part) => Number(part));
+    const date = new Date(Date.UTC(yyyy, mm - 1, dd));
+    if (Number.isNaN(date.getTime())) return false;
+    return date.getUTCFullYear() === yyyy && (date.getUTCMonth() + 1) === mm && date.getUTCDate() === dd;
+  }
+
+  function isoToArgDate(value) {
+    if (!isIsoDate(value)) return String(value == null ? "" : value);
+    const [yyyy, mm, dd] = String(value).trim().split("-");
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  function argDateToIso(value) {
+    if (!isArgDate(value)) return String(value == null ? "" : value);
+    const [dd, mm, yyyy] = String(value).trim().split("/");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
   function setInputValue(el, value, deps) {
     const options = deps && typeof deps === "object" ? deps : {};
     const doc = options.document || (typeof document !== "undefined" ? document : null);
@@ -41,6 +71,18 @@
         if (opt) setV(opt.value);
       }
 
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+      return;
+    }
+
+    if (tag === "input" && String(el.type || "").toLowerCase() === "date") {
+      const normalized = isArgDate(str) ? argDateToIso(str) : str;
+      const proto = el.constructor.prototype || HTMLInputElement.prototype;
+      const desc = Object.getOwnPropertyDescriptor(proto, "value");
+      const nativeSet = (desc && desc.set) ? desc.set.bind(el) : (v) => { el.value = v; };
+
+      nativeSet(normalized);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
       el.dispatchEvent(new Event("change", { bubbles: true }));
       return;
     }
@@ -95,7 +137,11 @@
   }
 
   const api = {
-    setInputValue
+    setInputValue,
+    isIsoDate,
+    isArgDate,
+    isoToArgDate,
+    argDateToIso
   };
 
   globalScope.WebMaticActionInputValue = api;

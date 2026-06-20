@@ -49,6 +49,58 @@ test("exportToIim: input genera TYPE CONTENT", () => {
   assert.ok(script.includes('TYPE SELECTOR="#n" CONTENT="Juan"'));
 });
 
+test("date helpers: isIsoDate/isArgDate/isoToArgDate/argDateToIso validan y convierten formatos canonicos", () => {
+  assert.equal(adapter.isIsoDate("1990-05-20"), true);
+  assert.equal(adapter.isIsoDate("1990-13-20"), false);
+  assert.equal(adapter.isArgDate("20/05/1990"), true);
+  assert.equal(adapter.isArgDate("32/05/1990"), false);
+  assert.equal(adapter.isoToArgDate("1990-05-20"), "20/05/1990");
+  assert.equal(adapter.argDateToIso("20/05/1990"), "1990-05-20");
+  assert.equal(adapter.isoToArgDate("hola"), "hola");
+  assert.equal(adapter.argDateToIso("hola"), "hola");
+});
+
+test("exportToIim: input date ISO se muestra DD/MM/YYYY y WM_JSON conserva ISO", () => {
+  const script = adapter.exportToIim({
+    steps: [{ type: "input", selector: "#fecha-nac", value: "1990-05-20", inputType: "date" }]
+  });
+
+  assert.ok(script.includes('TYPE SELECTOR="#fecha-nac" CONTENT="20/05/1990"'));
+
+  const wmJsonLine = script.split("\n").find((line) => line.startsWith("// WM_JSON:"));
+  const parsed = JSON.parse(wmJsonLine.slice("// WM_JSON:".length));
+  assert.equal(parsed.steps[0].value, "1990-05-20", "WM_JSON debe conservar valor canónico ISO");
+});
+
+test("exportToIim: date por metadata equivalente se muestra DD/MM/YYYY", () => {
+  const script = adapter.exportToIim({
+    steps: [{ type: "input", selector: "#fecha-nac", value: "1990-05-20" }],
+    meta: {
+      pageInventories: [{
+        url: "https://example.com/",
+        controls: [{ selector: "#fecha-nac", type: "date" }]
+      }]
+    }
+  });
+
+  assert.ok(script.includes('TYPE SELECTOR="#fecha-nac" CONTENT="20/05/1990"'));
+});
+
+test("exportToIim: input text normal con 1990-05-20 NO se convierte si no es date", () => {
+  const script = adapter.exportToIim({
+    steps: [{ type: "input", selector: "#nombre", value: "1990-05-20", inputType: "text" }]
+  });
+  assert.ok(script.includes('TYPE SELECTOR="#nombre" CONTENT="1990-05-20"'));
+  assert.equal(script.includes('TYPE SELECTOR="#nombre" CONTENT="20/05/1990"'), false);
+});
+
+test("exportToIim: input text normal con 20/05/1990 NO se altera", () => {
+  const script = adapter.exportToIim({
+    steps: [{ type: "input", selector: "#nombre", value: "20/05/1990", inputType: "text" }]
+  });
+  assert.ok(script.includes('TYPE SELECTOR="#nombre" CONTENT="20/05/1990"'));
+});
+
 test("exportToIim: check genera CHECK CHECKED", () => {
   const script = adapter.exportToIim({ steps: [{ type: "check", selector: "#ok", checked: true }] });
   assert.ok(script.includes('CHECK SELECTOR="#ok" CHECKED="true"'));
@@ -253,6 +305,30 @@ test("importFromIim: parser legacy reconoce // WAIT_FOR como paso ejecutable", (
   assert.equal(steps[0].selector, "#nombre");
   assert.equal(steps[0].timeout, 7500);
   assert.equal(steps[1].type, "input");
+});
+
+test("importFromIim: TYPE con fecha ISO se mantiene compatible", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    'TYPE SELECTOR="#fecha-nac" CONTENT="1990-05-20"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(script);
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0].type, "input");
+  assert.equal(steps[0].value, "1990-05-20");
+});
+
+test("importFromIim: TYPE con fecha DD/MM/YYYY se parsea para ejecución posterior", () => {
+  const script = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    'TYPE SELECTOR="#fecha-nac" CONTENT="20/05/1990"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(script);
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0].type, "input");
+  assert.equal(steps[0].value, "20/05/1990");
 });
 
 test("importFromIim: parser legacy reconoce comentarios extendidos exportados por WebMatic", () => {
