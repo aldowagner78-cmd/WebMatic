@@ -373,6 +373,7 @@
   const fullBackupApi = globalScope.WebMaticFullBackup;
   const macroJsonApi = globalScope.WebMaticMacroJson;
   const macrosGlobalApi = globalScope.WebMaticMacrosGlobal;
+  const macroRenameApi = globalScope.WebMaticMacroRenameService;
 
   if (!contracts || !storeFactory || !uiShell || !geometry || !settingsApi) {
     console.error("[WebMatic] Modulos base incompletos.");
@@ -8260,8 +8261,21 @@
         }
         const newName = await uiShell.wmModal("prompt", { message: "Nuevo nombre para la macro:", defaultValue: macro.name, okLabel: "Renombrar" });
         if (newName && newName.trim()) {
-          store.dispatch({ type: contracts.ActionTypes.MACRO_RENAMED, payload: { id: selectedId, name: newName.trim() } });
-          chrome.storage.local.set({ webmaticMacros: store.getState().library.macros });
+          const prepared = macroRenameApi && typeof macroRenameApi.buildRenamedMacros === "function"
+            ? macroRenameApi.buildRenamedMacros(currentState.library.macros, selectedId, newName)
+            : { ok: true, id: selectedId, name: newName.trim(), macros: currentState.library.macros };
+          if (!prepared.ok) {
+            await uiShell.wmModal("alert", { message: "No se pudo renombrar la macro." });
+            return;
+          }
+          chrome.storage.local.set({ [MACROS_STORAGE_KEY]: prepared.macros }, async () => {
+            if (chrome.runtime.lastError) {
+              await uiShell.wmModal("alert", { message: `No se pudo guardar el nuevo nombre: ${chrome.runtime.lastError.message || "error de almacenamiento"}` });
+              return;
+            }
+            store.dispatch({ type: contracts.ActionTypes.MACRO_RENAMED, payload: { id: prepared.id, name: prepared.name } });
+            store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: prepared.id });
+          });
         }
       }
 

@@ -5,6 +5,7 @@
   const uiShellState = globalScope.WebMaticUiShellState || {};
   const uiStyleUtils = globalScope.WebMaticUiStyleUtils || {};
   const buildInfo = globalScope.WebMaticBuildInfo || {};
+  const macroListState = globalScope.WebMaticMacroListState || {};
   // Paletas completas: cada variante define TODOS los tokens de color
   const THEME_PALETTES = {
     light: [
@@ -372,15 +373,19 @@ Estado: --</span>
   }
 
   function filterMacros(macros, query) {
+    if (macroListState.filterMacros) {
+      return macroListState.filterMacros(macros, query);
+    }
+    const list = Array.isArray(macros) ? macros : [];
     if (!query || !query.trim()) {
-      return macros;
+      return list;
     }
     const q = query.trim().toLowerCase();
-    const prefix = macros.filter((m) => m.name.toLowerCase().startsWith(q));
+    const prefix = list.filter((m) => String(m.name || "").toLowerCase().startsWith(q));
     if (prefix.length > 0) {
       return prefix;
     }
-    return macros.filter((m) => m.name.toLowerCase().includes(q));
+    return list.filter((m) => String(m.name || "").toLowerCase().includes(q));
   }
 
   function renderLibrary(panel, state) {
@@ -392,12 +397,17 @@ Estado: --</span>
     const { macros, selectedMacroId } = state.library;
     const filtered = filterMacros(macros, state.library.searchQuery);
 
-    const currentIds = Array.from(listEl.querySelectorAll(".webmatic-macro-item[data-macro-id]"))
-      .map((el) => el.dataset.macroId)
-      .join(",");
-    const newIds = filtered.map((m) => m.id).join(",");
+    const currentSignature = listEl.dataset.macroListSignature || "";
+    const visibleSignature = macroListState.getVisibleSignature
+      ? macroListState.getVisibleSignature(filtered)
+      : filtered.map((m) => `${m.id}:${m.name}:${Array.isArray(m.steps) ? m.steps.length : 0}`).join(",");
+    const newSignature = [
+      visibleSignature,
+      String(macros.length),
+      String(state.library.searchQuery || "")
+    ].join("\u001d");
 
-    if (currentIds !== newIds) {
+    if (currentSignature !== newSignature) {
       listEl.replaceChildren();
       if (filtered.length === 0) {
         const text = macros.length === 0 ? "Sin macros guardadas" : "Sin resultados";
@@ -439,6 +449,7 @@ Estado: --</span>
           listEl.appendChild(item);
         });
       }
+      listEl.dataset.macroListSignature = newSignature;
     }
 
     listEl.querySelectorAll(".webmatic-macro-item[data-macro-id]").forEach((item) => {
