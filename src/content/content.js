@@ -7767,6 +7767,36 @@
         const macro = currentState.library.macros.find((m) => m.id === selectedId);
         if (!macro) return;
 
+        const concatDialog = globalScope.WebMaticMacroConcatDialog;
+        const concatHelper = globalScope.WebMaticMacroConcat;
+        if (!concatDialog || !concatHelper) return;
+
+        const choice = await concatDialog.openMacroConcatDialog({
+          panel: document.getElementById("webmatic-panel-root"),
+          baseMacro: macro,
+          macros: currentState.library.macros
+        });
+
+        if (!choice || !Array.isArray(choice.macros) || choice.macros.length === 0) return;
+
+        const concatMacro = concatHelper.buildConcatenatedMacro({
+          baseMacro: macro,
+          appendMacros: choice.macros,
+          name: choice.name,
+          iimAdapter
+        });
+
+        if (!concatMacro) {
+          await uiShell.wmModal("alert", { message: "No se pudo crear la macro concatenada." });
+          return;
+        }
+
+        store.dispatch({ type: contracts.ActionTypes.MACRO_SAVED, payload: concatMacro });
+        store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: concatMacro.id });
+        chrome.storage.local.set({ webmaticMacros: store.getState().library.macros });
+        store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Macro "${concatMacro.name}" creada - ${concatMacro.steps.length} pasos` });
+        return;
+
         const availableNames = currentState.library.macros
           .filter((m) => m.id !== selectedId)
           .map((m) => m.name)

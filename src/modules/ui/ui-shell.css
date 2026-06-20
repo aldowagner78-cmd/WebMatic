@@ -220,6 +220,127 @@
   border-color: #b91c1c;
 }
 
+.webmatic-concat-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(2, 44, 34, 0.42);
+  box-sizing: border-box;
+}
+
+.webmatic-concat-dialog {
+  width: min(100%, 360px);
+  max-height: calc(100% - 24px);
+  display: grid;
+  grid-template-rows: auto auto auto minmax(92px, 1fr) auto auto;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 8px;
+  background: var(--webmatic-card-bg);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+}
+
+.webmatic-concat-title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.2;
+  color: var(--webmatic-text);
+}
+
+.webmatic-concat-name,
+.webmatic-concat-search {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 6px;
+  padding: 7px 9px;
+  color: var(--webmatic-text);
+  background: var(--webmatic-surface);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.webmatic-concat-list {
+  min-height: 92px;
+  overflow: auto;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 6px;
+  background: var(--webmatic-surface);
+}
+
+.webmatic-concat-row {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--webmatic-border);
+  padding: 8px 9px;
+  background: transparent;
+  color: var(--webmatic-text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.webmatic-concat-row:hover:not(:disabled) {
+  background: var(--webmatic-btn-hover);
+}
+
+.webmatic-concat-row:disabled {
+  color: var(--webmatic-text-muted);
+  cursor: default;
+  opacity: 0.65;
+}
+
+.webmatic-concat-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.webmatic-concat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  border: 1px solid var(--webmatic-border);
+  border-radius: 6px;
+  padding: 4px 5px 4px 8px;
+  background: var(--webmatic-btn-bg);
+  color: var(--webmatic-text);
+  font-size: 12px;
+}
+
+.webmatic-concat-remove {
+  border: 0;
+  border-radius: 5px;
+  padding: 3px 5px;
+  background: var(--webmatic-btn-hover);
+  color: var(--webmatic-text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.webmatic-concat-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.webmatic-concat-empty {
+  margin: 0;
+  padding: 9px;
+  color: var(--webmatic-text-muted);
+  font-size: 12px;
+}
+
 .webmatic-record-tab[data-recording] {
   background: #7f1d1d;
   border-color: #7f1d1d;
