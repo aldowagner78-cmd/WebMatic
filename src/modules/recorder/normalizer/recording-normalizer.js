@@ -40,6 +40,58 @@
       .trim()
       .toLowerCase();
 
+    const isShortAutoWait = (s) => {
+      if (!isAutoWait(s)) return false;
+      const seconds = Number(s.seconds);
+      return !Number.isFinite(seconds) || seconds <= MAX_RECORDED_IDLE_WAIT_SECONDS;
+    };
+
+    const controlRefText = (step, key) => String(step && step.controlRef && step.controlRef[key] || "").toLowerCase();
+    const hasChoiceLikeControlRef = (step) => {
+      const kind = controlRefText(step, "controlKind");
+      const tag = controlRefText(step, "tag");
+      const type = controlRefText(step, "type");
+      const role = controlRefText(step, "role");
+      const ariaAutocomplete = controlRefText(step, "ariaAutocomplete") || controlRefText(step, "aria-autocomplete");
+      const inputMode = controlRefText(step, "inputMode");
+      const blockedKinds = [
+        "native-select",
+        "select",
+        "checkbox",
+        "radio",
+        "option",
+        "choose-option",
+        "choose_option",
+        "combobox",
+        "listbox",
+        "autocomplete",
+        "autocomplete-input",
+        "datalist"
+      ];
+      if (blockedKinds.includes(kind)) return true;
+      if (tag === "select") return true;
+      if (type === "checkbox" || type === "radio") return true;
+      if (role === "combobox" || role === "listbox" || role === "option") return true;
+      if (ariaAutocomplete || inputMode === "autocomplete") return true;
+      return false;
+    };
+
+    const isTextEditableInputStep = (step) => {
+      if (!isInputLike(step) || isBaselineOrAuto(step) || hasChoiceLikeControlRef(step)) return false;
+      const ref = step.controlRef || null;
+      if (!ref) return true;
+      const kind = controlRefText(step, "controlKind");
+      const tag = controlRefText(step, "tag");
+      const type = controlRefText(step, "type");
+      const contentEditable = controlRefText(step, "contentEditable");
+      const allowedInputTypes = new Set(["", "text", "search", "email", "tel", "url", "number", "password"]);
+      if (kind && kind !== "text-input" && kind !== "textarea" && kind !== "contenteditable") return false;
+      if (tag === "textarea") return true;
+      if (contentEditable === "true" || contentEditable === "plaintext-only") return true;
+      if (!tag || tag === "input") return allowedInputTypes.has(type);
+      return false;
+    };
+
     const commonPrefixLength = (a, b) => {
       const x = normalizeTextForCompare(a);
       const y = normalizeTextForCompare(b);
@@ -218,7 +270,7 @@
             for (let w = j; w < k; w += 1) {
               const waitStep = withoutDuplicateWaits[w];
               const seconds = Number(waitStep && waitStep.seconds);
-              if (!isAutoWait(waitStep) || (Number.isFinite(seconds) && seconds > MAX_RECORDED_IDLE_WAIT_SECONDS)) {
+              if (!isShortAutoWait(waitStep) || (Number.isFinite(seconds) && seconds > MAX_RECORDED_IDLE_WAIT_SECONDS)) {
                 allShortAutoWaits = false;
                 break;
               }
@@ -241,7 +293,14 @@
         break;
       }
 
-      if (shouldCompactInputRun(runInputs)) {
+      const nextAfterRun = withoutDuplicateWaits[j];
+      if (nextAfterRun && nextAfterRun.type === "choose_option") {
+        out.push(...runItems);
+        i = j - 1;
+        continue;
+      }
+
+      if (runInputs.every(isTextEditableInputStep) && shouldCompactInputRun(runInputs)) {
         out.push(runInputs[runInputs.length - 1]);
         i = j - 1;
         continue;
@@ -251,7 +310,54 @@
       i = j - 1;
     }
 
-    return compactConsecutiveWaits(out);
+    const compactTextInputsConfirmedByEnter = (arr) => {
+      const result = [];
+      for (const step of arr) {
+        const keyName = String(step && step.key || "").toLowerCase();
+        if (!(step && step.type === "key" && keyName === "enter" && step.selector)) {
+          result.push(step);
+          continue;
+        }
+
+        const selector = step.selector;
+        let j = result.length - 1;
+        while (j >= 0) {
+          const prev = result[j];
+          if (isShortAutoWait(prev)) {
+            j -= 1;
+            continue;
+          }
+          if (isTextEditableInputStep(prev) && prev.selector === selector) {
+            j -= 1;
+            continue;
+          }
+          break;
+        }
+
+        const start = j + 1;
+        const segment = result.slice(start);
+        const inputs = segment.filter((item) => isInputLike(item));
+        if (
+          inputs.length >= 2 &&
+          inputs.every((item) => item.selector === selector && isTextEditableInputStep(item))
+        ) {
+          let lastInputSegmentIndex = -1;
+          for (let k = segment.length - 1; k >= 0; k -= 1) {
+            if (isInputLike(segment[k])) {
+              lastInputSegmentIndex = k;
+              break;
+            }
+          }
+          const tailWaits = segment.slice(lastInputSegmentIndex + 1).filter(isShortAutoWait);
+          result.splice(start, result.length - start, inputs[inputs.length - 1], ...tailWaits);
+        }
+
+        result.push(step);
+      }
+      return result;
+    };
+
+    return compactConsecutiveWaits(compactTextInputsConfirmedByEnter(out));
   }
 
   function dedupeFieldRuns(steps) {

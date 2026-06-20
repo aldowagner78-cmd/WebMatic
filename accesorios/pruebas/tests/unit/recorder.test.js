@@ -392,6 +392,131 @@ test("normalizeRecordedSteps: no compacta checkbox radio ni select", () => {
   assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
 });
 
+test("normalizeRecordedSteps: compacta texto confirmado por KEY Enter del mismo selector", () => {
+  const steps = [
+    { type: "input", selector: "#campo", value: "abc", controlRef: { selector: "#campo", tag: "input", type: "text", controlKind: "text-input" } },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#campo", value: "abcdef", controlRef: { selector: "#campo", tag: "input", type: "text", controlKind: "text-input" } },
+    { type: "key", key: "Enter", selector: "#campo" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "input", selector: "#campo", value: "abcdef", controlRef: { selector: "#campo", tag: "input", type: "text", controlKind: "text-input" } },
+    { type: "key", key: "Enter", selector: "#campo" }
+  ]);
+});
+
+test("normalizeRecordedSteps: compacta reemplazo confirmado por Enter sin hardcodear busqueda", () => {
+  const steps = [
+    { type: "input", selector: "#busqueda", value: "test", controlRef: { selector: "#busqueda", tag: "input", type: "search", controlKind: "text-input" } },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#busqueda", value: "probando enter", controlRef: { selector: "#busqueda", tag: "input", type: "search", controlKind: "text-input" } },
+    { type: "key", key: "Enter", selector: "#busqueda" },
+    { type: "wait", seconds: 1, _autoWait: true }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "input", selector: "#busqueda", value: "probando enter", controlRef: { selector: "#busqueda", tag: "input", type: "search", controlKind: "text-input" } },
+    { type: "key", key: "Enter", selector: "#busqueda" },
+    { type: "wait", seconds: 1, _autoWait: true }
+  ]);
+});
+
+test("normalizeRecordedSteps: conserva wait automatico entre ultimo texto y Enter", () => {
+  const steps = [
+    { type: "input", selector: "#campo", value: "uno" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#campo", value: "dos" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "key", key: "Enter", selector: "#campo" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "input", selector: "#campo", value: "dos" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "key", key: "Enter", selector: "#campo" }
+  ]);
+});
+
+test("normalizeRecordedSteps: no compacta texto confirmado si Enter es de otro selector", () => {
+  const steps = [
+    { type: "input", selector: "#campoA", value: "uno" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#campoA", value: "dos" },
+    { type: "key", key: "Enter", selector: "#campoB" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta texto confirmado si hay key intermedia distinta", () => {
+  const steps = [
+    { type: "input", selector: "#campo", value: "uno" },
+    { type: "key", key: "Tab", selector: "#campo" },
+    { type: "input", selector: "#campo", value: "dos" },
+    { type: "key", key: "Enter", selector: "#campo" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta native-select aunque termine con Enter", () => {
+  const steps = [
+    { type: "input", selector: "#pais", value: "ar", controlRef: { selector: "#pais", tag: "select", controlKind: "native-select" } },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#pais", value: "uy", controlRef: { selector: "#pais", tag: "select", controlKind: "native-select" } },
+    { type: "key", key: "Enter", selector: "#pais" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta checkbox ni radio aunque terminen con Enter", () => {
+  const steps = [
+    { type: "input", selector: "#chk", value: "true", controlRef: { selector: "#chk", tag: "input", type: "checkbox", controlKind: "checkbox" } },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#chk", value: "false", controlRef: { selector: "#chk", tag: "input", type: "checkbox", controlKind: "checkbox" } },
+    { type: "key", key: "Enter", selector: "#chk" },
+    { type: "input", selector: "#rad", value: "a", controlRef: { selector: "#rad", tag: "input", type: "radio", controlKind: "radio" } },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#rad", value: "b", controlRef: { selector: "#rad", tag: "input", type: "radio", controlKind: "radio" } },
+    { type: "key", key: "Enter", selector: "#rad" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta flujo choose_option antes de Enter", () => {
+  const steps = [
+    { type: "input", selector: "#combo", value: "san" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#combo", value: "santa" },
+    { type: "choose_option", selector: "#combo", value: "sf", text: "Santa Fe" },
+    { type: "key", key: "Enter", selector: "#combo" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no compacta combobox listbox ni autocomplete antes de Enter", () => {
+  const cases = [
+    { selector: "#combo", controlRef: { selector: "#combo", tag: "input", type: "text", role: "combobox", controlKind: "text-input" } },
+    { selector: "#lista", controlRef: { selector: "#lista", tag: "input", type: "text", role: "listbox", controlKind: "text-input" } },
+    { selector: "#auto", controlRef: { selector: "#auto", tag: "input", type: "text", ariaAutocomplete: "list", controlKind: "text-input" } },
+    { selector: "#inventario", controlRef: { selector: "#inventario", tag: "input", type: "text", controlKind: "autocomplete" } }
+  ];
+
+  for (const item of cases) {
+    const steps = [
+      { type: "input", selector: item.selector, value: "san", controlRef: item.controlRef },
+      { type: "wait", seconds: 1, _autoWait: true },
+      { type: "input", selector: item.selector, value: "santa", controlRef: item.controlRef },
+      { type: "key", key: "Enter", selector: item.selector }
+    ];
+    assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+  }
+});
+
 test("selectorResolvesToElement: rechaza selector que apunta a descendiente inválido", () => {
   resetBody('<input id="chk-tecnologia" name="generos" type="checkbox">');
   const el = win.document.getElementById("chk-tecnologia");
