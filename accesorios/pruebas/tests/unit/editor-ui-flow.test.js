@@ -109,3 +109,95 @@ test("editor/ui flow: block, drag-drop e inline recording helpers cubren calculo
   assert.equal(captured[0]._wmBlockStart, true);
   assert.equal(captured[0]._wmCollapsed, true);
 });
+
+// ── Tests rc19: grabador de bloques – las correcciones rc18 llegan al editor ──
+
+test("block recorder: conserva selector en Enter al agregar bloque", () => {
+  const { Window } = require("happy-dom");
+  const win2 = new Window({ url: "https://example.com/" });
+  globalThis.window = win2;
+  globalThis.document = win2.document;
+  globalThis.HTMLSelectElement = win2.HTMLSelectElement;
+  globalThis.HTMLInputElement  = win2.HTMLInputElement;
+  globalThis.HTMLTextAreaElement = win2.HTMLTextAreaElement;
+  const RecorderLocal = require("../../../../src/modules/recorder/recorder.js");
+  const inlineStateLocal = require("../../../../src/modules/editor/state/inline-recording-state.js");
+
+  // Steps ya normalizados por _cleanupSteps (como recibe normalizeInlineRecordedSteps)
+  const capturedSteps = RecorderLocal.dedupeFieldRuns([
+    { type: "input",  selector: "#busqueda", value: "probando enter" },
+    { type: "wait",   seconds: 1, _autoWait: true },
+    { type: "key",    key: "Enter", selector: "#busqueda",
+      controlRef: { selector: "#busqueda", tag: "input" } }
+  ]);
+
+  const result = inlineStateLocal.normalizeInlineRecordedSteps(capturedSteps, true);
+
+  const keyStep = result.find((s) => s.type === "key");
+  assert.ok(keyStep, "key step debe estar presente");
+  assert.equal(keyStep.selector, "#busqueda", "selector debe sobrevivir al merge de bloque");
+  assert.equal(result[0]._wmBlockStart, true,   "primer step debe marcarse como inicio de bloque");
+  assert.equal(result[0]._wmCollapsed,  true,   "primer step debe marcarse como colapsado");
+});
+
+test("block recorder: compacta select nativo al agregar bloque", () => {
+  const inlineStateLocal = require("../../../../src/modules/editor/state/inline-recording-state.js");
+  const RecorderLocal    = require("../../../../src/modules/recorder/recorder.js");
+
+  // click + choose_option + click-option – llegan ya normalizados desde _cleanupSteps
+  const capturedSteps = RecorderLocal.dedupeFieldRuns([
+    { type: "click",         selector: "#pais" },
+    { type: "choose_option", selector: "#pais",      value: "AR" },
+    { type: "click",         selector: "#pais option:nth-of-type(2)" },
+    { type: "click",         selector: "#provincia" },
+    { type: "choose_option", selector: "#provincia",  value: "SF" },
+    { type: "click",         selector: "#provincia option:nth-of-type(4)" }
+  ]);
+
+  const result = inlineStateLocal.normalizeInlineRecordedSteps(capturedSteps, true);
+
+  const chooseOpts = result.filter((s) => s.type === "choose_option");
+  assert.equal(chooseOpts.length, 2, "ambos choose_option deben estar presentes");
+  assert.equal(chooseOpts[0].selector, "#pais");
+  assert.equal(chooseOpts[1].selector, "#provincia");
+  assert.ok(!result.some((s) => s.type === "click" && s.selector === "#pais"),      "sin click en #pais");
+  assert.ok(!result.some((s) => s.type === "click" && s.selector === "#provincia"),  "sin click en #provincia");
+  assert.ok(!result.some((s) => s.type === "click" && /option/.test(s.selector)),   "sin click en options");
+});
+
+test("block recorder: no pierde controlRef en merge (Escenario B completo)", () => {
+  const inlineStateLocal = require("../../../../src/modules/editor/state/inline-recording-state.js");
+  const RecorderLocal    = require("../../../../src/modules/recorder/recorder.js");
+
+  // Escenario B: bloque que se agrega a una macro existente con controlRef en key Enter
+  const capturedSteps = RecorderLocal.dedupeFieldRuns([
+    { type: "input",  selector: "#dni", value: "12345678",
+      controlRef: { selector: "#dni", tag: "input", type: "text" } },
+    { type: "wait",   seconds: 1, _autoWait: true },
+    { type: "key",    key: "Enter", selector: "#dni",
+      controlRef: { selector: "#dni", tag: "input", type: "text" } },
+    { type: "click",         selector: "#pais" },
+    { type: "choose_option", selector: "#pais", value: "AR" },
+    { type: "click",         selector: "#pais option:nth-of-type(2)" }
+  ]);
+
+  // Se agrega como nuevo bloque (asNewBlock = true)
+  const result = inlineStateLocal.normalizeInlineRecordedSteps(capturedSteps, true);
+
+  // controlRef del Enter debe sobrevivir sin alteraciones
+  const keyStep = result.find((s) => s.type === "key");
+  assert.ok(keyStep, "key step debe existir");
+  assert.equal(keyStep.selector,           "#dni",  "selector del Enter no debe perderse");
+  assert.ok(keyStep.controlRef,                     "controlRef no debe perderse");
+  assert.equal(keyStep.controlRef.selector, "#dni",  "controlRef.selector debe conservarse");
+  assert.equal(keyStep.controlRef.type,    "text",   "controlRef.type debe conservarse");
+
+  // choose_option debe ser atómico
+  const co = result.find((s) => s.type === "choose_option");
+  assert.ok(co, "choose_option debe existir");
+  assert.equal(co.selector, "#pais");
+  assert.ok(!result.some((s) => s.type === "click" && /option/.test(s.selector)), "sin click en option");
+
+  // Marcadores de bloque intactos
+  assert.equal(result[0]._wmBlockStart, true);
+});

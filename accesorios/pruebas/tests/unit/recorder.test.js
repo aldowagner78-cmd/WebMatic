@@ -726,6 +726,89 @@ test("normalizeRecordedSteps: conserva cambio real no progresivo", () => {
   assert.deepEqual(out.map((s) => s.value).filter((v) => v != null), ["ABC", "XYZ"]);
 });
 
+// ── Tests rc19: grabador principal – validación de flujos completos ────────────
+
+test("main recorder: conserva selector en Enter (dedupeFieldRuns - flujo grabador principal)", () => {
+  // Secuencia tal como llega desde el grabador principal (main frame con selector ya capturado)
+  const steps = [
+    { type: "navigate", url: "https://example.com" },
+    { type: "input",  selector: "#busqueda", value: "probando enter" },
+    { type: "wait",   seconds: 1, _autoWait: true },
+    { type: "key",    key: "Enter", selector: "#busqueda", controlRef: { selector: "#busqueda", tag: "input" } }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+  const keyStep = out.find((s) => s.type === "key");
+  assert.ok(keyStep, "debe existir un step key");
+  assert.equal(keyStep.selector, "#busqueda", "selector debe conservarse");
+  assert.ok(keyStep.controlRef, "controlRef debe conservarse");
+  assert.equal(keyStep.controlRef.tag, "input");
+});
+
+test("main recorder: compacta select nativo (dedupeFieldRuns - flujo grabador principal)", () => {
+  // click + choose_option + click-option tal como llega del grabador principal
+  const steps = [
+    { type: "click",         selector: "#pais" },
+    { type: "choose_option", selector: "#pais",     value: "AR" },
+    { type: "click",         selector: "#pais option:nth-of-type(2)" },
+    { type: "click",         selector: "#provincia" },
+    { type: "choose_option", selector: "#provincia", value: "SF" },
+    { type: "click",         selector: "#provincia option:nth-of-type(4)" }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+  const chooseOpts = out.filter((s) => s.type === "choose_option");
+  assert.equal(chooseOpts.length, 2, "deben quedar exactamente 2 choose_option");
+  assert.equal(chooseOpts[0].selector, "#pais");
+  assert.equal(chooseOpts[1].selector, "#provincia");
+  assert.ok(!out.some((s) => s.type === "click" && s.selector === "#pais"),      "no debe haber click en #pais");
+  assert.ok(!out.some((s) => s.type === "click" && s.selector === "#provincia"),  "no debe haber click en #provincia");
+  assert.ok(!out.some((s) => s.type === "click" && /option/.test(s.selector)),   "no debe haber click en options");
+});
+
+test("main recorder: secuencia completa (Escenario A) - Enter + dos selects nativos dependientes", () => {
+  // Escenario A completo: simula grabación desde cero con input, Enter y dos selects dependientes
+  const steps = [
+    { type: "navigate",      url: "https://example.com/form" },
+    { type: "input",         selector: "#busqueda", value: "test" },
+    { type: "wait",          seconds: 1, _autoWait: true },
+    { type: "input",         selector: "#busqueda", value: "probando enter" },
+    { type: "wait",          seconds: 1, _autoWait: true },
+    { type: "key",           key: "Enter", selector: "#busqueda" },
+    { type: "click",         selector: "#pais" },
+    { type: "choose_option", selector: "#pais",      value: "AR" },
+    { type: "click",         selector: "#pais option:nth-of-type(2)" },
+    { type: "click",         selector: "#provincia" },
+    { type: "choose_option", selector: "#provincia",  value: "SF" },
+    { type: "click",         selector: "#provincia option:nth-of-type(4)" }
+  ];
+
+  const out = Recorder.dedupeFieldRuns(steps);
+
+  // key Enter debe conservar su selector
+  const keyStep = out.find((s) => s.type === "key");
+  assert.ok(keyStep, "debe existir key step");
+  assert.equal(keyStep.selector, "#busqueda", "key.selector debe conservarse");
+
+  // Solo debe quedar el último valor del input (dedupeFieldRuns elimina el previo)
+  const busquedaInputs = out.filter((s) => s.type === "input" && s.selector === "#busqueda");
+  assert.equal(busquedaInputs.length, 1, "solo debe quedar un step input de #busqueda");
+  assert.equal(busquedaInputs[0].value, "probando enter", "debe conservar el valor final");
+
+  // Selects nativos deben ser atómicos
+  const chooseOpts = out.filter((s) => s.type === "choose_option");
+  assert.equal(chooseOpts.length, 2, "ambos choose_option deben estar presentes");
+  assert.equal(chooseOpts[0].selector, "#pais");
+  assert.equal(chooseOpts[0].value, "AR");
+  assert.equal(chooseOpts[1].selector, "#provincia");
+  assert.equal(chooseOpts[1].value, "SF");
+
+  // Sin clicks ruidosos
+  assert.ok(!out.some((s) => s.type === "click" && s.selector === "#pais"),     "sin click en #pais");
+  assert.ok(!out.some((s) => s.type === "click" && s.selector === "#provincia"), "sin click en #provincia");
+  assert.ok(!out.some((s) => s.type === "click" && /option/.test(s.selector)),  "sin click en option");
+});
+
 // ── Tests rc18: KEY Enter selector inference + select nativo atómico ──────────
 
 test("normalizeRecordedSteps [B]: infiere selector de Enter cuando el input previo es editable", () => {
