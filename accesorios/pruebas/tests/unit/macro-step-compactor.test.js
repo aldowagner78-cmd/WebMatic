@@ -57,6 +57,32 @@ test("compacta con auto-waits cortos y elimina waits intermedios redundantes", (
   assert.deepEqual(out, [textInput("#ce-observaciones", "Observaciones 12 final")]);
 });
 
+test("compacta con vacio intermedio si el ultimo valor no es vacio", () => {
+  const out = compact([
+    textInput("#ce-observaciones", "l"),
+    { type: "wait", seconds: 1, _autoWait: true },
+    textInput("#ce-observaciones", "0"),
+    { type: "wait", seconds: 1, _autoWait: true },
+    textInput("#ce-observaciones", ""),
+    { type: "wait", seconds: 1, _autoWait: true },
+    textInput("#ce-observaciones", "OBSERVACIONES 12 FINAL")
+  ]);
+
+  assert.deepEqual(out, [textInput("#ce-observaciones", "OBSERVACIONES 12 FINAL")]);
+});
+
+test("compacta con auto-waits intermedios de hasta 5 segundos", () => {
+  const out = compact([
+    textInput("#ce-observaciones", "l"),
+    { type: "wait", seconds: 5, _autoWait: true },
+    textInput("#ce-observaciones", ""),
+    { type: "wait", seconds: 4, _autoWait: true },
+    textInput("#ce-observaciones", "OBSERVACIONES 12 FINAL")
+  ]);
+
+  assert.deepEqual(out, [textInput("#ce-observaciones", "OBSERVACIONES 12 FINAL")]);
+});
+
 test("no compacta si hay key o Enter entre escrituras", () => {
   const withKey = [
     textInput("#busqueda", "test"),
@@ -98,7 +124,7 @@ test("no compacta si cambia selector, bloque o wait no seguro", () => {
   ];
   const longWait = [
     textInput("#a", "uno"),
-    { type: "wait", seconds: 2, _autoWait: true },
+    { type: "wait", seconds: 6, _autoWait: true },
     textInput("#a", "dos")
   ];
   const manualWait = [
@@ -151,12 +177,24 @@ test("no compacta TYPE vacio ni defaults baseline", () => {
   assert.deepEqual(compact(baseline), baseline);
 });
 
+test("no compacta filtro si el ultimo valor queda vacio", () => {
+  const steps = [
+    textInput("#filtro-tabla", "ana"),
+    { type: "wait", seconds: 1, _autoWait: true },
+    textInput("#filtro-tabla", "")
+  ];
+
+  assert.deepEqual(compact(steps), steps);
+});
+
 test("macro grabada compactada exporta IIM visible y WM_JSON consistentes", () => {
   const steps = compact([
     textInput("#ce-observaciones", "|"),
-    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "wait", seconds: 3, _autoWait: true },
     textInput("#ce-observaciones", "O"),
-    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "wait", seconds: 2, _autoWait: true },
+    textInput("#ce-observaciones", ""),
+    { type: "wait", seconds: 4, _autoWait: true },
     textInput("#ce-observaciones", "Observaciones 12 final")
   ]);
   const script = adapter.exportToIim({ steps });

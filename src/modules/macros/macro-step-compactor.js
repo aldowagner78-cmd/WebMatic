@@ -1,5 +1,5 @@
 (function initWebMaticMacroStepCompactor(globalScope) {
-  const MAX_SAFE_AUTO_WAIT_SECONDS = 1;
+  const MAX_SAFE_AUTO_WAIT_SECONDS = 5;
   const SENSITIVE_RE = /(pass|password|passwd|pwd|token|secret|cvv|cvc|card|tarjeta|otp|pin|seguridad|security|clave|contrasen|contrasenia|api[-_]?key|authorization|auth)/i;
 
   function text(value) {
@@ -132,7 +132,7 @@
   function shouldCompactRun(inputs) {
     if (!Array.isArray(inputs) || inputs.length < 2) return false;
     if (!inputs.every(isSafeEditableWrite)) return false;
-    if (inputs.some((step) => text(step.value) === "")) return false;
+    if (text(inputs[inputs.length - 1].value) === "") return false;
     for (let i = 1; i < inputs.length; i += 1) {
       if (!sameField(inputs[0], inputs[i])) return false;
     }
