@@ -75,6 +75,20 @@ function runStep(step, vars = {}, playerOpts = {}) {
   });
 }
 
+function runSteps(steps, vars = {}, playerOpts = {}) {
+  return new Promise((resolve) => {
+    const opts = { retryMs: 20, timeoutMs: 500, ...playerOpts };
+    const p = new Player(opts);
+    p.play(steps, {
+      vars,
+      speed: 1,
+      bootstrapToFirstNavigate: false,
+      onDone:  ()    => resolve({ ok: true }),
+      onError: (err) => resolve({ ok: false, error: err.message })
+    });
+  });
+}
+
 test("key: Enter con selector enfoca y despacha sobre el campo grabado", async () => {
   resetBody('<form id="f"><input id="busqueda" type="search"><input id="password" type="password"></form>');
   const busqueda = win.document.getElementById("busqueda");
@@ -181,6 +195,85 @@ test("wait_for: omite login faltante cuando no hay formulario de password visibl
     { retryMs: 20, timeoutMs: 200 }
   );
   assert.equal(result.ok, true, result.error || "deberia omitir login si ya hay sesion");
+});
+
+test("input: espera a que un selector existente quede visible antes de escribir", async () => {
+  resetBody('<div id="modal" style="display:none"><input id="modal-motivo"></div>');
+  const modal = win.document.getElementById("modal");
+  const input = win.document.getElementById("modal-motivo");
+  const writes = [];
+  input.addEventListener("input", () => {
+    writes.push({ value: input.value, visible: win.getComputedStyle(modal).display !== "none" });
+  });
+
+  setTimeout(() => {
+    modal.style.display = "block";
+  }, 80);
+
+  const result = await runStep(
+    { type: "input", selector: "#modal-motivo", value: "modal demorado EJ15" },
+    {},
+    { retryMs: 20, timeoutMs: 500 }
+  );
+
+  assert.equal(result.ok, true, result.error || "deberia esperar visibilidad antes de escribir");
+  assert.equal(input.value, "modal demorado EJ15");
+  assert.ok(writes.length > 0, "deberia disparar input al escribir");
+  assert.equal(writes.every((entry) => entry.visible), true, "no debe escribir mientras el modal esta oculto");
+});
+
+test("play: modal demorado espera input visible antes de confirmar", async () => {
+  resetBody(`
+    <button id="btn-modal-delay">Abrir modal demorado</button>
+    <div id="modal-delay" style="display:none">
+      <input id="modal-motivo">
+      <button id="btn-modal-confirmar">Confirmar</button>
+    </div>
+  `);
+  const modal = win.document.getElementById("modal-delay");
+  const input = win.document.getElementById("modal-motivo");
+  let confirmedValue = null;
+
+  win.document.getElementById("btn-modal-delay").addEventListener("click", () => {
+    setTimeout(() => {
+      modal.style.display = "block";
+    }, 80);
+  });
+  win.document.getElementById("btn-modal-confirmar").addEventListener("click", () => {
+    confirmedValue = input.value;
+  });
+
+  const result = await runSteps([
+    { type: "click", selector: "#btn-modal-delay" },
+    { type: "wait_for", selector: "#modal-motivo", timeout: 500 },
+    { type: "input", selector: "#modal-motivo", value: "modal demorado EJ15" },
+    { type: "click", selector: "#btn-modal-confirmar" }
+  ], {}, { retryMs: 20, timeoutMs: 600 });
+
+  assert.equal(result.ok, true, result.error || "deberia completar el flujo del modal demorado");
+  assert.equal(confirmedValue, "modal demorado EJ15");
+});
+
+test("play: modal simple visible sigue escribiendo y confirmando", async () => {
+  resetBody(`
+    <div id="modal-simple">
+      <input id="modal-motivo">
+      <button id="btn-modal-confirmar">Confirmar</button>
+    </div>
+  `);
+  const input = win.document.getElementById("modal-motivo");
+  let confirmedValue = null;
+  win.document.getElementById("btn-modal-confirmar").addEventListener("click", () => {
+    confirmedValue = input.value;
+  });
+
+  const result = await runSteps([
+    { type: "input", selector: "#modal-motivo", value: "modal simple" },
+    { type: "click", selector: "#btn-modal-confirmar" }
+  ]);
+
+  assert.equal(result.ok, true, result.error || "modal simple no debe romperse");
+  assert.equal(confirmedValue, "modal simple");
 });
 
 test("click: omite login faltante cuando no hay formulario de password visible", async () => {

@@ -351,11 +351,22 @@
     const htmlEl = /** @type {HTMLElement} */ (el);
     if ("disabled" in htmlEl && htmlEl.disabled) return false;
     const view = (htmlEl.ownerDocument && htmlEl.ownerDocument.defaultView) || window;
-    const cs = view && typeof view.getComputedStyle === "function"
-      ? view.getComputedStyle(htmlEl)
-      : { display: "", visibility: "", pointerEvents: "" };
-    if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return false;
+    let current = htmlEl;
+    while (current && current instanceof Element) {
+      const cs = view && typeof view.getComputedStyle === "function"
+        ? view.getComputedStyle(current)
+        : { display: "", visibility: "", pointerEvents: "" };
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return false;
+      current = current.parentElement;
+    }
     return htmlEl.getClientRects && htmlEl.getClientRects().length > 0;
+  }
+
+  function _isInputReadyForPlayback(el) {
+    if (!_isInteractable(el)) return false;
+    if (el instanceof HTMLInputElement && String(el.type || "").toLowerCase() === "hidden") return false;
+    if ("readOnly" in el && el.readOnly) return false;
+    return true;
   }
 
     function _actionCheck() {
@@ -1023,6 +1034,14 @@
           setTimeout(() => { try { _sel.focus(); } catch (e) { /* ignore */ } }, 50);
           return;
         } else if (step.type === "input" || step.type === "text") {
+          if (!_isInputReadyForPlayback(el)) {
+            if (Date.now() - start < timeoutMs) {
+              setTimeout(attempt, retryMs);
+            } else {
+              reject(new Error(`input: elemento no interactuable: ${selector}`));
+            }
+            return;
+          }
           _actionInputText().runInputText({
             step,
             el,
