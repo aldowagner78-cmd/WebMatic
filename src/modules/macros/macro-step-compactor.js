@@ -19,7 +19,8 @@
   }
 
   function isShortAutoWait(step) {
-    if (!step || step.type !== "wait" || step._autoWait !== true) return false;
+    if (!step || step.type !== "wait") return false;
+    if (step._manual === true || step.manual === true || step._significant === true || step.significant === true) return false;
     const seconds = Number(step.seconds);
     return !Number.isFinite(seconds) || seconds <= MAX_SAFE_AUTO_WAIT_SECONDS;
   }
@@ -124,7 +125,7 @@
     if (contentEditable === "true" || contentEditable === "plaintext-only") return true;
     if (tag === "textarea") return true;
     if ((!tag || tag === "input") && allowedTypes.has(type)) {
-      return !kind || kind === "text-input" || kind === "textarea" || kind === "contenteditable";
+      return !kind || kind === "unknown" || kind === "text-input" || kind === "textarea" || kind === "contenteditable";
     }
     return false;
   }

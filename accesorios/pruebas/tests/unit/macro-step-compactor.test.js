@@ -19,6 +19,16 @@ function textInput(selector, value, extra = {}) {
   };
 }
 
+function unknownInput(selector, value, extra = {}) {
+  return {
+    type: "input",
+    selector,
+    value,
+    controlRef: { selector, controlKind: "unknown", label: "Observaciones" },
+    ...extra
+  };
+}
+
 function compact(steps) {
   return compactor.compactRedundantTextWrites(steps);
 }
@@ -83,6 +93,20 @@ test("compacta con auto-waits intermedios de hasta 5 segundos", () => {
   assert.deepEqual(out, [textInput("#ce-observaciones", "OBSERVACIONES 12 FINAL")]);
 });
 
+test("compacta controlKind unknown seguro con vacio intermedio y waits simples", () => {
+  const out = compact([
+    unknownInput("#ce-observaciones", "1"),
+    { type: "wait", seconds: 1 },
+    unknownInput("#ce-observaciones", "0"),
+    { type: "wait", seconds: 1 },
+    unknownInput("#ce-observaciones", ""),
+    { type: "wait", seconds: 1 },
+    unknownInput("#ce-observaciones", "OBSERVACIONES MINI FINAL")
+  ]);
+
+  assert.deepEqual(out, [unknownInput("#ce-observaciones", "OBSERVACIONES MINI FINAL")]);
+});
+
 test("no compacta si hay key o Enter entre escrituras", () => {
   const withKey = [
     textInput("#busqueda", "test"),
@@ -102,6 +126,7 @@ test("no compacta si hay key o Enter entre escrituras", () => {
 test("no compacta si hay acciones semanticas entre medio", () => {
   const blockers = [
     { type: "click", selector: "#x" },
+    { type: "dblclick", selector: "#x" },
     { type: "hover", selector: "#x" },
     { type: "choose_option", selector: "#pais", value: "ar" },
     { type: "check", selector: "#ok", checked: true },
@@ -129,7 +154,7 @@ test("no compacta si cambia selector, bloque o wait no seguro", () => {
   ];
   const manualWait = [
     textInput("#a", "uno"),
-    { type: "wait", seconds: 1 },
+    { type: "wait", seconds: 1, manual: true },
     textInput("#a", "dos")
   ];
 
@@ -187,6 +212,55 @@ test("no compacta filtro si el ultimo valor queda vacio", () => {
   assert.deepEqual(compact(steps), steps);
 });
 
+test("unknown no compacta si ultimo valor queda vacio", () => {
+  const steps = [
+    unknownInput("#ce-observaciones", "ana"),
+    { type: "wait", seconds: 1 },
+    unknownInput("#ce-observaciones", "")
+  ];
+
+  assert.deepEqual(compact(steps), steps);
+});
+
+test("unknown no compacta con Enter ni acciones semanticas intermedias", () => {
+  const blockers = [
+    { type: "key", key: "Enter", selector: "#ce-observaciones" },
+    { type: "click", selector: "#x" },
+    { type: "dblclick", selector: "#x" },
+    { type: "hover", selector: "#x" },
+    { type: "navigate", url: "https://example.test" },
+    { type: "wait_for", selector: "#ready" },
+    { type: "choose_option", selector: "#pais", value: "ar" },
+    { type: "check", selector: "#ok", checked: true }
+  ];
+
+  for (const blocker of blockers) {
+    const steps = [unknownInput("#ce-observaciones", "1"), blocker, unknownInput("#ce-observaciones", "final")];
+    assert.deepEqual(compact(steps), steps, `unknown no debe compactar con ${blocker.type}`);
+  }
+});
+
+test("unknown no compacta si cambia selector, bloque, sensitive o baseline", () => {
+  const changeSelector = [unknownInput("#ce-observaciones", "1"), unknownInput("#otra", "final")];
+  const changeBlock = [
+    unknownInput("#ce-observaciones", "1", { _wmBlockKey: "a.local/" }),
+    unknownInput("#ce-observaciones", "final", { _wmBlockKey: "b.local/" })
+  ];
+  const sensitive = [
+    unknownInput("#ce-observaciones", "1"),
+    unknownInput("#ce-observaciones", "final", { sensitive: true })
+  ];
+  const baseline = [
+    unknownInput("#ce-observaciones", "1", { _baselineDefault: true }),
+    unknownInput("#ce-observaciones", "final")
+  ];
+
+  assert.deepEqual(compact(changeSelector), changeSelector);
+  assert.deepEqual(compact(changeBlock), changeBlock);
+  assert.deepEqual(compact(sensitive), sensitive);
+  assert.deepEqual(compact(baseline), baseline);
+});
+
 test("macro grabada compactada exporta IIM visible y WM_JSON consistentes", () => {
   const steps = compact([
     textInput("#ce-observaciones", "|"),
@@ -207,6 +281,30 @@ test("macro grabada compactada exporta IIM visible y WM_JSON consistentes", () =
   assert.equal(parsedSteps.length, 1);
   assert.equal(parsedSteps[0].selector, "#ce-observaciones");
   assert.equal(parsedSteps[0].value, "Observaciones 12 final");
+});
+
+test("unknown compactado no deja TYPE intermedios en IIM visible ni WM_JSON", () => {
+  const steps = compact([
+    unknownInput("#ce-observaciones", "1"),
+    { type: "wait", seconds: 1 },
+    unknownInput("#ce-observaciones", "0"),
+    { type: "wait", seconds: 1 },
+    unknownInput("#ce-observaciones", ""),
+    { type: "wait", seconds: 1 },
+    unknownInput("#ce-observaciones", "OBSERVACIONES MINI FINAL")
+  ]);
+  const script = adapter.exportToIim({ steps });
+
+  assert.deepEqual(steps, [unknownInput("#ce-observaciones", "OBSERVACIONES MINI FINAL")]);
+  assert.equal(script.includes('TYPE SELECTOR="#ce-observaciones" CONTENT="1"'), false);
+  assert.equal(script.includes('TYPE SELECTOR="#ce-observaciones" CONTENT="0"'), false);
+  assert.equal(script.includes('TYPE SELECTOR="#ce-observaciones" CONTENT=""'), false);
+  assert.ok(script.includes('TYPE SELECTOR="#ce-observaciones" CONTENT="OBSERVACIONES MINI FINAL"'));
+
+  const parsedSteps = wmJsonSteps(script);
+  assert.equal(parsedSteps.length, 1);
+  assert.equal(parsedSteps[0].selector, "#ce-observaciones");
+  assert.equal(parsedSteps[0].value, "OBSERVACIONES MINI FINAL");
 });
 
 test("manifiestos cargan macro-step-compactor antes de content.js", () => {
