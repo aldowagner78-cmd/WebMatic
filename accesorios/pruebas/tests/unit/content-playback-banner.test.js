@@ -56,9 +56,11 @@ test("content playback banner: exito queda visible 2s y cierra con animacion", (
   assert.match(animatedCloseBody, /opacity 220ms ease, transform 220ms ease/);
   assert.match(animatedCloseBody, /translateY\(-6px\)/);
   assert.match(animatedCloseBody, /setTimeout\(\(\) =>[\s\S]*?removePlaybackFloating\(opts\)[\s\S]*?, 220\)/);
+  assert.match(successBody, /animateAndRemovePlaybackFloating\(\{ restoreSidebar: true \}\)/);
   assert.match(errorBody, /PLAYBACK_ERROR/);
-  assert.match(errorBody, /clearPlaybackSuccessCloseTimer\(\)/);
+  assert.match(errorBody, /clearPlaybackTransientCloseTimers\(\)/);
   assert.doesNotMatch(errorBody, /PANEL_SHOWN/);
+  assert.doesNotMatch(errorBody, /openSidebarFromPlaybackFloating|openEditorAtPlaybackFailure/);
   assert.match(updateBody, /if \(errorMessage\)/);
   assert.match(updateBody, /Error en reproduccion/);
   assert.match(updateBody, /Paso: \$\{Math\.min\(currentStepIndex \+ 1, total\)\}\/\$\{total\}/);
@@ -70,9 +72,12 @@ test("content playback banner: stop manual queda visible y no abre sidebar autom
   const source = readContent();
   const summaryBody = functionBody(source, "summarizeManualPlaybackStop");
   const stopBody = functionBody(source, "stopPlaybackFromUser");
+  const onDoneBody = functionBody(source, "_startMacroPlay");
   const updateBody = functionBody(source, "updatePlaybackFloating");
 
-  assert.match(stopBody, /clearPlaybackSuccessCloseTimer\(\)/);
+  assert.match(stopBody, /clearPlaybackTransientCloseTimers\(\)/);
+  assert.match(stopBody, /manualStopRequested = true/);
+  assert.doesNotMatch(stopBody, /setTimeout\(|animateAndRemovePlaybackFloating\(/);
   assert.match(summaryBody, /Ejecucion detenida por el usuario/);
   assert.match(summaryBody, /index \+ 1/);
   assert.match(summaryBody, /_stepLabel\(step\)/);
@@ -82,11 +87,34 @@ test("content playback banner: stop manual queda visible y no abre sidebar autom
   assert.match(stopBody, /PLAYBACK_STOP_SUMMARY_SET/);
   assert.doesNotMatch(stopBody, /PANEL_SHOWN/);
   assert.doesNotMatch(stopBody, /removePlaybackFloating/);
+  assert.match(onDoneBody, /if \(playerRuntime\.manualStopRequested\)/);
   assert.match(updateBody, /Ejecucion detenida por el usuario/);
   assert.match(updateBody, /Paso: \$\{stopSummary\.index \+ 1\}\/\$\{stopSummary\.total\}/);
   assert.match(updateBody, /Accion: \$\{stopSummary\.action\}/);
   assert.match(updateBody, /Selector: \$\{stopSummary\.selector\}/);
   assert.match(updateBody, /Macro: \$\{stopSummary\.macroName\}/);
+});
+
+test("content playback banner: error muestra Editar macro y abre editor en paso fallido", () => {
+  const source = readContent();
+  const createBody = functionBody(source, "createPlaybackFloating");
+  const updateBody = functionBody(source, "updatePlaybackFloating");
+  const openEditBody = functionBody(source, "openEditorAtPlaybackFailure");
+  const focusBody = functionBody(source, "_focusPlaybackFailureInOpenEditor");
+  const pickLineBody = functionBody(source, "_pickIimLineForStep");
+
+  assert.match(createBody, /wm-play-edit-macro/);
+  assert.match(createBody, /onEditMacro/);
+  assert.match(createBody, /openEditorAtPlaybackFailure\(\)/);
+  assert.match(updateBody, /_setNodeDisplay\(editMacroEl, "inline-flex"\)/);
+  assert.match(openEditBody, /animateAndRemovePlaybackFloating\(\{ restoreSidebar: true \}\)/);
+  assert.match(openEditBody, /_openSelectedMacroInEditorWithReusableMetadata/);
+  assert.match(focusBody, /_seActiveTab = "visual"/);
+  assert.match(focusBody, /seEditor\._editIdx = boundedIndex/);
+  assert.match(focusBody, /scrollIntoView/);
+  assert.match(focusBody, /setSelectionRange\(/);
+  assert.match(pickLineBody, /VERSION\\b/);
+  assert.match(pickLineBody, /TAB\\b/);
 });
 
 test("content playback banner: no cambia visualmente por waits ni pasos internos", () => {

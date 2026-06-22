@@ -4456,7 +4456,12 @@
     runtimeAutoFillLocks: new Map(),
     lastFallbacks: [],
     lastDurationMs: null,
-    playStartedAtMs: null
+    playStartedAtMs: null,
+    successCloseTimer: null,
+    floatingCloseTimer: null,
+    manualStopRequested: false,
+    lastPlaybackErrorStepIndex: null,
+    lastPlaybackErrorMacroId: null
   };
   const PLAY_START_VAR = "__WEBMATIC_PLAY_START_MS__";
 
@@ -5120,7 +5125,7 @@
     return s.type;
   }
 
-  function createPlaybackFloating(onStop, onAddWait, onReplay, onClose, onLoopReplay, onOpenSidebar, onCopyDiagnostic) {
+  function createPlaybackFloating(onStop, onAddWait, onReplay, onClose, onLoopReplay, onOpenSidebar, onCopyDiagnostic, onEditMacro) {
     if (document.getElementById(FLOATING_PLAYER_ID)) return;
     const PANEL_HEIGHT = 52;
     const panel = document.createElement("div");
@@ -5385,6 +5390,33 @@
     });
     panel.appendChild(copyEl);
 
+    const editMacroEl = document.createElement("button");
+    editMacroEl.id = "wm-play-edit-macro";
+    editMacroEl.style.cssText = [
+      "all:initial",
+      "display:none",
+      "align-items:center",
+      "flex-shrink:0",
+      "border:1px solid rgba(220,38,38,0.35)",
+      "background:rgba(220,38,38,0.07)",
+      "color:#b91c1c",
+      "border-radius:6px",
+      "padding:3px 9px",
+      "font-size:11px",
+      "font-weight:700",
+      "font-family:system-ui,sans-serif",
+      "cursor:pointer",
+      "white-space:nowrap"
+    ].join(";");
+    editMacroEl.textContent = "Editar macro";
+    editMacroEl.title = "Abrir editor en el paso fallido";
+    editMacroEl.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (typeof onEditMacro === "function") onEditMacro();
+      else openEditorAtPlaybackFailure();
+    });
+    panel.appendChild(editMacroEl);
+
     document.documentElement.style.marginTop = PANEL_HEIGHT + "px";
     document.documentElement.appendChild(panel);
   }
@@ -5410,6 +5442,29 @@
       clearTimeout(playerRuntime.successCloseTimer);
       playerRuntime.successCloseTimer = null;
     }
+  }
+
+  function clearPlaybackFloatingCloseTimer() {
+    if (playerRuntime.floatingCloseTimer) {
+      clearTimeout(playerRuntime.floatingCloseTimer);
+      playerRuntime.floatingCloseTimer = null;
+    }
+    const el = document.getElementById(FLOATING_PLAYER_ID);
+    if (!el) return;
+    if (el.dataset.wmClosing === "1") {
+      delete el.dataset.wmClosing;
+      try {
+        el.style.transition = "";
+        el.style.opacity = "1";
+        el.style.transform = "";
+        el.style.pointerEvents = "";
+      } catch (_e) { /* ignore */ }
+    }
+  }
+
+  function clearPlaybackTransientCloseTimers() {
+    clearPlaybackSuccessCloseTimer();
+    clearPlaybackFloatingCloseTimer();
   }
 
   function isPlaybackBannerStepRelevant(step) {
@@ -5460,6 +5515,7 @@
     const closeEl = panel.querySelector("#wm-play-close");
     const sidebarEl = panel.querySelector("#wm-play-open-sidebar");
     const copyEl = panel.querySelector("#wm-play-copy-diagnostic");
+    const editMacroEl = panel.querySelector("#wm-play-edit-macro");
     const stopSummary = state.runtime && state.runtime.playbackStopSummary;
 
     if (errorMessage) {
@@ -5489,6 +5545,7 @@
       _setNodeDisplay(loopReplayEl, "none");
       _setNodeDisplay(sidebarEl, "inline-flex");
       _setNodeDisplay(copyEl, "inline-flex");
+      _setNodeDisplay(editMacroEl, "inline-flex");
       _setNodeDisplay(closeEl, "inline-flex");
     } else if (isPlaying) {
       // Playing — show current step
@@ -5504,6 +5561,7 @@
         _setNodeDisplay(loopReplayEl, "none");
         _setNodeDisplay(sidebarEl, "none");
         _setNodeDisplay(copyEl, "none");
+        _setNodeDisplay(editMacroEl, "none");
         _setNodeDisplay(closeEl, "none");
         return;
       }
@@ -5524,6 +5582,7 @@
       _setNodeDisplay(loopReplayEl, "none");
       _setNodeDisplay(sidebarEl, "none");
       _setNodeDisplay(copyEl, "none");
+      _setNodeDisplay(editMacroEl, "none");
       _setNodeDisplay(closeEl, "none");
     } else if (!isPlaying && stopSummary) {
       _setNodeStyle(dot, "background", "#b45309");
@@ -5547,6 +5606,7 @@
       _setNodeDisplay(loopReplayEl, "none");
       _setNodeDisplay(sidebarEl, "inline-flex");
       _setNodeDisplay(copyEl, "inline-flex");
+      _setNodeDisplay(editMacroEl, "none");
       _setNodeDisplay(closeEl, "inline-flex");
     } else if (!isPlaying && currentStepIndex >= total && total > 0) {
       // Completed successfully
@@ -5583,6 +5643,7 @@
       _setNodeDisplay(loopReplayEl, "none");
       _setNodeDisplay(sidebarEl, "none");
       _setNodeDisplay(copyEl, "none");
+      _setNodeDisplay(editMacroEl, "none");
       _setNodeDisplay(closeEl, "none");
     } else {
       // Idle / initial
@@ -5598,6 +5659,7 @@
       _setNodeDisplay(loopReplayEl, "none");
       _setNodeDisplay(sidebarEl, "none");
       _setNodeDisplay(copyEl, "none");
+      _setNodeDisplay(editMacroEl, "none");
       _setNodeDisplay(closeEl, "none");
     }
   }
@@ -5617,6 +5679,7 @@
 
   function animateAndRemovePlaybackFloating(options) {
     const opts = options && typeof options === "object" ? options : {};
+    clearPlaybackFloatingCloseTimer();
     const el = document.getElementById(FLOATING_PLAYER_ID);
     if (!el) {
       removePlaybackFloating(opts);
@@ -5630,19 +5693,134 @@
       el.style.transform = "translateY(-6px)";
       el.style.pointerEvents = "none";
     } catch (_e) { /* ignore */ }
-    setTimeout(() => {
+    playerRuntime.floatingCloseTimer = setTimeout(() => {
+      playerRuntime.floatingCloseTimer = null;
       removePlaybackFloating(opts);
     }, 220);
   }
 
   function openSidebarFromPlaybackFloating() {
-    clearPlaybackSuccessCloseTimer();
+    clearPlaybackTransientCloseTimers();
     animateAndRemovePlaybackFloating({ restoreSidebar: true });
   }
 
   function closePlaybackFloatingOnly() {
-    clearPlaybackSuccessCloseTimer();
+    clearPlaybackTransientCloseTimers();
     animateAndRemovePlaybackFloating({ restoreSidebar: false });
+  }
+
+  function _pickIimLineForStep(scriptText, stepIndex) {
+    const lines = String(scriptText || "").split("\n");
+    let logical = 0;
+    for (let i = 0; i < lines.length; i += 1) {
+      const trimmed = String(lines[i] || "").trim();
+      if (!trimmed) continue;
+      if (/^\/\/\s*WM_JSON:/i.test(trimmed)) continue;
+      if (/^VERSION\b/i.test(trimmed)) continue;
+      if (/^TAB\b/i.test(trimmed)) continue;
+      if (logical === stepIndex) return i;
+      logical += 1;
+    }
+    return -1;
+  }
+
+  function _focusPlaybackFailureInOpenEditor(stepIndex) {
+    const panel = document.getElementById("webmatic-panel-root");
+    const overlay = panel && panel.querySelector("[data-script-editor]");
+    if (!overlay) return false;
+
+    const state = store.getState();
+    const playback = state && state.playback ? state.playback : {};
+    const steps = Array.isArray(playback.currentSteps) ? playback.currentSteps : [];
+    const maxIndex = Math.max(0, steps.length - 1);
+    const boundedIndex = Number.isFinite(Number(stepIndex))
+      ? Math.max(0, Math.min(Number(stepIndex), maxIndex))
+      : 0;
+
+    _seActiveTab = "visual";
+    _applyScriptTab(overlay, "visual");
+
+    if (seEditor && typeof seEditor._render === "function") {
+      seEditor._addFormOpen = false;
+      seEditor._editIdx = boundedIndex;
+      seEditor._render();
+      const visualRow = overlay.querySelector(`.wm-sved-row[data-step-idx="${boundedIndex}"]`);
+      if (visualRow) {
+        try { visualRow.scrollIntoView({ block: "center", behavior: "smooth" }); } catch (_e) { /* ignore */ }
+        try {
+          visualRow.style.outline = "2px solid #dc2626";
+          visualRow.style.outlineOffset = "2px";
+          setTimeout(() => {
+            try {
+              visualRow.style.outline = "";
+              visualRow.style.outlineOffset = "";
+            } catch (_x) { /* ignore */ }
+          }, 1600);
+        } catch (_e) { /* ignore */ }
+      }
+    }
+
+    const area = overlay.querySelector("[data-script-editor-area]");
+    if (area) {
+      const fullScript = area.dataset && area.dataset.wmFullScript
+        ? String(area.dataset.wmFullScript)
+        : String(area.value || "");
+      const displayScript = String(fullScript || "").split("\n")
+        .filter((line) => !line.trimStart().startsWith("// WM_JSON:"))
+        .join("\n");
+      const targetLine = _pickIimLineForStep(displayScript, boundedIndex);
+      if (targetLine >= 0) {
+        const lines = displayScript.split("\n");
+        let start = 0;
+        for (let i = 0; i < targetLine; i += 1) start += lines[i].length + 1;
+        const end = start + (lines[targetLine] ? lines[targetLine].length : 0);
+        try {
+          area.focus();
+          area.setSelectionRange(start, end);
+        } catch (_e) { /* ignore */ }
+      }
+    }
+
+    return true;
+  }
+
+  function openEditorAtPlaybackFailure() {
+    clearPlaybackTransientCloseTimers();
+    animateAndRemovePlaybackFloating({ restoreSidebar: true });
+
+    const state = store.getState();
+    const fallbackIndex = Number(state && state.playback ? state.playback.currentStepIndex : 0);
+    const targetIndex = Number.isFinite(Number(playerRuntime.lastPlaybackErrorStepIndex))
+      ? Number(playerRuntime.lastPlaybackErrorStepIndex)
+      : (Number.isFinite(fallbackIndex) ? fallbackIndex : 0);
+    const targetMacroId = playerRuntime.lastPlaybackErrorMacroId || (state && state.library ? state.library.selectedMacroId : null);
+
+    const opened = _openSelectedMacroInEditorWithReusableMetadata(targetMacroId || null);
+    if (!opened) {
+      store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "No hay macro seleccionada para editar." });
+      return;
+    }
+
+    let tries = 0;
+    const maxTries = 12;
+    const tick = () => {
+      if (_focusPlaybackFailureInOpenEditor(targetIndex)) {
+        store.dispatch({
+          type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+          payload: `Editor abierto en paso fallido ${Math.max(1, targetIndex + 1)} (Visual + referencia en Script IIM).`
+        });
+        return;
+      }
+      tries += 1;
+      if (tries < maxTries) setTimeout(tick, 50);
+      else {
+        store.dispatch({
+          type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+          payload: `Editor abierto. No se pudo resaltar el paso ${Math.max(1, targetIndex + 1)} en Script IIM todavía.`
+        });
+      }
+    };
+    setTimeout(tick, 0);
   }
 
   function getPlaybackDiagnosticText() {
@@ -5693,6 +5871,7 @@
   }
 
   function schedulePlaybackSuccessClose() {
+    playerRuntime.manualStopRequested = false;
     clearPlaybackSuccessCloseTimer();
     playerRuntime.successCloseTimer = setTimeout(() => {
       playerRuntime.successCloseTimer = null;
@@ -5702,6 +5881,8 @@
 
   function finishPlaybackSuccessfully(steps, statusMessage) {
     const list = Array.isArray(steps) ? steps : [];
+    playerRuntime.lastPlaybackErrorStepIndex = null;
+    playerRuntime.lastPlaybackErrorMacroId = null;
     store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: list.length, steps: list } });
     store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
     store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: statusMessage || "Reproduccion completada" });
@@ -5709,9 +5890,12 @@
   }
 
   function handlePlaybackError(err) {
-    clearPlaybackSuccessCloseTimer();
+    clearPlaybackTransientCloseTimers();
     playerRuntime.activePlayer = null;
-    const errIdx = store.getState().playback.currentStepIndex;
+    const currentState = store.getState();
+    const errIdx = currentState.playback.currentStepIndex;
+    playerRuntime.lastPlaybackErrorStepIndex = errIdx;
+    playerRuntime.lastPlaybackErrorMacroId = currentState && currentState.library ? currentState.library.selectedMacroId : null;
     const message = err && err.message ? err.message : String(err || "Error desconocido");
     store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${message}` });
     store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${message}` });
@@ -5746,7 +5930,8 @@
   }
 
   function stopPlaybackFromUser() {
-    clearPlaybackSuccessCloseTimer();
+    clearPlaybackTransientCloseTimers();
+    playerRuntime.manualStopRequested = true;
     if (playerRuntime.activePlayer) {
       playerRuntime.activePlayer.stop();
       playerRuntime.activePlayer = null;
@@ -8194,6 +8379,10 @@
           const _macro = _state.library.macros.find((m) => m.id === selectedId);
           if (!_macro) return;
           if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
+          playerRuntime.manualStopRequested = false;
+          playerRuntime.lastPlaybackErrorStepIndex = null;
+          playerRuntime.lastPlaybackErrorMacroId = null;
+          clearPlaybackTransientCloseTimers();
           store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Reproduciendo "${_macro.name}"` });
           const _PlayerClass = globalScope.WebMaticPlayer;
@@ -8225,6 +8414,11 @@
                 store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
                 store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Continuando en otra pestaña..." });
                 removePlaybackFloating();
+                return;
+              }
+              if (playerRuntime.manualStopRequested) {
+                playerRuntime.activePlayer = null;
+                playerRuntime.manualStopRequested = false;
                 return;
               }
               playerRuntime.activePlayer = null;
@@ -8266,7 +8460,16 @@
             const _fbPrepared = applyRuntimeDataToSteps(_fbResolved, _fbState.settings);
             store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _fbPrepared } });
             function _fbNext() {
-              if (_fbIter >= n || _fbPlayer._abort) {
+              if (_fbPlayer._abort) {
+                playerRuntime.activePlayer = null;
+                if (playerRuntime.manualStopRequested) {
+                  playerRuntime.manualStopRequested = false;
+                  return;
+                }
+                finishPlaybackSuccessfully(_fbPrepared, "Reproduccion completada");
+                return;
+              }
+              if (_fbIter >= n) {
                 playerRuntime.activePlayer = null;
                 finishPlaybackSuccessfully(_fbPrepared, "Reproduccion completada");
                 return;
@@ -8289,7 +8492,10 @@
               });
             }
             _fbNext();
-          }
+          },
+          () => openSidebarFromPlaybackFloating(),
+          () => copyPlaybackDiagnostic(),
+          () => openEditorAtPlaybackFailure()
         );
         _startMacroPlay();
       }
@@ -8304,6 +8510,10 @@
           const _lmacro = _lstate.library.macros.find((m) => m.id === selectedId);
           if (!_lmacro) return;
           if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
+          playerRuntime.manualStopRequested = false;
+          playerRuntime.lastPlaybackErrorStepIndex = null;
+          playerRuntime.lastPlaybackErrorMacroId = null;
+          clearPlaybackTransientCloseTimers();
           const _lCount = _lstate.playback.repeatCount;
           store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Reproduciendo "${_lmacro.name}" en bucle x${_lCount}` });
@@ -8318,7 +8528,16 @@
           const _lPreparedSteps = applyRuntimeDataToSteps(_lResolvedSteps, _lstate.settings);
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lPreparedSteps } });
           function _lNext() {
-            if (_lIter >= _lCount || _lPlayer._abort) {
+            if (_lPlayer._abort) {
+              playerRuntime.activePlayer = null;
+              if (playerRuntime.manualStopRequested) {
+                playerRuntime.manualStopRequested = false;
+                return;
+              }
+              finishPlaybackSuccessfully(_lPreparedSteps, "Reproduccion completada");
+              return;
+            }
+            if (_lIter >= _lCount) {
               playerRuntime.activePlayer = null;
               finishPlaybackSuccessfully(_lPreparedSteps, "Reproduccion completada");
               return;
@@ -8347,6 +8566,10 @@
           const _lnmacro = _lnstate.library.macros.find((m) => m.id === selectedId);
           if (!_lnmacro) return;
           if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
+          playerRuntime.manualStopRequested = false;
+          playerRuntime.lastPlaybackErrorStepIndex = null;
+          playerRuntime.lastPlaybackErrorMacroId = null;
+          clearPlaybackTransientCloseTimers();
           store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Bucle x${n}: "${_lnmacro.name}"` });
           const _lnPlayer = new (globalScope.WebMaticPlayer)();
@@ -8357,7 +8580,16 @@
           const _lnPrepared = applyRuntimeDataToSteps(_lnResolved, _lnstate.settings);
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _lnPrepared } });
           function _lnNext() {
-            if (_lnIter >= n || _lnPlayer._abort) {
+            if (_lnPlayer._abort) {
+              playerRuntime.activePlayer = null;
+              if (playerRuntime.manualStopRequested) {
+                playerRuntime.manualStopRequested = false;
+                return;
+              }
+              finishPlaybackSuccessfully(_lnPrepared, "Reproduccion completada");
+              return;
+            }
+            if (_lnIter >= n) {
               playerRuntime.activePlayer = null;
               finishPlaybackSuccessfully(_lnPrepared, "Reproduccion completada");
               return;
@@ -8386,7 +8618,10 @@
           () => addWaitHere(),
           () => { _startLoopPlay(); },
           () => { stopPlaybackFromUser(); },
-          (n) => { _startLoopPlayN(n); }
+          (n) => { _startLoopPlayN(n); },
+          () => openSidebarFromPlaybackFloating(),
+          () => copyPlaybackDiagnostic(),
+          () => openEditorAtPlaybackFailure()
         );
         _startLoopPlay();
       }
