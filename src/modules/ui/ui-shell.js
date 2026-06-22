@@ -152,6 +152,7 @@
             <button class="webmatic-action-btn webmatic-btn-play-loop" data-action="macro-play-loop" disabled>&#9654;&#9654; Bucle</button>
           </div>
           <div class="webmatic-step-progress" data-step-progress style="display:none"></div>
+          <div class="webmatic-step-progress" data-play-stop-summary style="display:none"></div>
           <button class="webmatic-action-btn webmatic-btn-addwait" data-action="add-wait-here" style="display:none" data-addwait-btn title="Agrega +1s de espera antes del paso actual en la macro guardada">&#9719; +1s aqui</button>
           <details class="webmatic-play-summary-disclosure">
             <summary class="webmatic-play-summary-trigger">+ Info</summary>
@@ -534,6 +535,21 @@ Estado: --</span>
         // Scroll current step into view
         const currentEl = stepProgress.querySelector(".webmatic-step-current");
         if (currentEl) currentEl.scrollIntoView({ block: "nearest" });
+      }
+    }
+
+    const stopSummaryEl = panel.querySelector("[data-play-stop-summary]");
+    const stopSummary = state.runtime && state.runtime.playbackStopSummary;
+    if (stopSummaryEl) {
+      stopSummaryEl.style.display = !state.playback.isPlaying && stopSummary ? "" : "none";
+      if (!state.playback.isPlaying && stopSummary) {
+        const lines = [
+          `<strong>${escapeHtml(stopSummary.message || "Ejecucion detenida por el usuario")}</strong>`,
+          stopSummary.action ? `<span>Accion: ${escapeHtml(stopSummary.action)}</span>` : "",
+          stopSummary.selector ? `<span>Selector: ${escapeHtml(stopSummary.selector)}</span>` : "",
+          stopSummary.macroName ? `<span>Macro: ${escapeHtml(stopSummary.macroName)}</span>` : ""
+        ].filter(Boolean).join("");
+        setHtmlContent(stopSummaryEl, lines);
       }
     }
   }

@@ -61,25 +61,63 @@
     return fullyVisible && nearCenterX && nearCenterY;
   }
 
+  function getVisibilityInfo(el, deps) {
+    const info = {
+      isSufficientlyVisible: isSufficientlyVisible(el, deps),
+      isCenteredEnough: isCenteredEnough(el, deps)
+    };
+    info.needsScroll = !info.isSufficientlyVisible || !info.isCenteredEnough;
+    info.reason = !info.isSufficientlyVisible
+      ? "outside_viewport"
+      : (!info.isCenteredEnough ? "near_edge" : "comfortable");
+    return info;
+  }
+
   function focusStepElement(el, deps) {
     const options = deps && typeof deps === "object" ? deps : {};
     const setTimeoutFn = options.setTimeout || (typeof setTimeout !== "undefined" ? setTimeout : null);
     const waitAfterScrollMs = Number.isFinite(Number(options.waitAfterScrollMs)) ? Math.max(0, Number(options.waitAfterScrollMs)) : 180;
-    const waitWhenVisibleMs = Number.isFinite(Number(options.waitWhenVisibleMs)) ? Math.max(0, Number(options.waitWhenVisibleMs)) : 120;
-    if (!el || typeof el.scrollIntoView !== "function") return Promise.resolve(false);
-    const shouldCenter = !isCenteredEnough(el, options);
+    const waitAfterNearEdgeScrollMs = Number.isFinite(Number(options.waitAfterNearEdgeScrollMs)) ? Math.max(0, Number(options.waitAfterNearEdgeScrollMs)) : 120;
+    const waitWhenComfortableMs = Number.isFinite(Number(options.waitWhenComfortableMs)) ? Math.max(0, Number(options.waitWhenComfortableMs)) : 80;
+    if (!el || typeof el.scrollIntoView !== "function") {
+      return Promise.resolve({
+        didScroll: false,
+        elementWasAlreadyComfortablyVisible: true,
+        reason: "no_element"
+      });
+    }
+    const visibility = getVisibilityInfo(el, options);
+    const shouldCenter = visibility.needsScroll;
+    let didScroll = false;
 
     if (shouldCenter) {
       try {
         el.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+        didScroll = true;
       } catch (_e) {
-        try { el.scrollIntoView({ block: "center", inline: "center" }); } catch (__e) { return Promise.resolve(false); }
+        try {
+          el.scrollIntoView({ block: "center", inline: "center" });
+          didScroll = true;
+        } catch (__e) {
+          return Promise.resolve({
+            didScroll: false,
+            elementWasAlreadyComfortablyVisible: false,
+            reason: "scroll_failed"
+          });
+        }
       }
     }
 
-    const waitMs = shouldCenter ? waitAfterScrollMs : waitWhenVisibleMs;
-    if (!setTimeoutFn || waitMs <= 0) return Promise.resolve(shouldCenter);
-    return new Promise((resolve) => setTimeoutFn(() => resolve(shouldCenter), waitMs));
+    const waitMs = didScroll
+      ? (visibility.reason === "near_edge" ? waitAfterNearEdgeScrollMs : waitAfterScrollMs)
+      : waitWhenComfortableMs;
+    const result = {
+      didScroll,
+      elementWasAlreadyComfortablyVisible: !shouldCenter,
+      reason: visibility.reason
+    };
+    if (!setTimeoutFn || waitMs <= 0) return Promise.resolve(result);
+    return new Promise((resolve) => setTimeoutFn(() => resolve(result), waitMs));
   }
 
   function clearAllHighlights(deps) {
@@ -101,6 +139,7 @@
     highlightElement,
     isSufficientlyVisible,
     isCenteredEnough,
+    getVisibilityInfo,
     focusStepElement,
     clearAllHighlights
   };

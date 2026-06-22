@@ -88,7 +88,8 @@
       searchQuery: ""
     },
     runtime: {
-      statusMessage: "Listo"
+      statusMessage: "Listo",
+      playbackStopSummary: null
     },
     settings: {
       theme: "light",
@@ -236,6 +237,7 @@
           },
           runtime: {
             ...state.runtime,
+            playbackStopSummary: null,
             statusMessage: "Reproduccion en curso"
           },
           ui: {
@@ -257,6 +259,14 @@
             statusMessage: "Reproduccion detenida"
           }
           // panelVisible is NOT restored here — only when the floating panel is closed
+        };
+      case ActionTypes.PLAYBACK_STOP_SUMMARY_SET:
+        return {
+          ...state,
+          runtime: {
+            ...state.runtime,
+            playbackStopSummary: action.payload || null
+          }
         };
       case ActionTypes.STEP_CAPTURED:
         if (!action.payload) {

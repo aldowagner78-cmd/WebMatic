@@ -62,6 +62,22 @@ test("content playback banner: stop manual informa paso, accion y selector antes
   assert.match(summaryBody, /index \+ 1/);
   assert.match(summaryBody, /_stepLabel\(step\)/);
   assert.match(summaryBody, /step\.selector \|\| step\.from \|\| step\.to/);
+  assert.match(summaryBody, /macroName/);
+  assert.match(summaryBody, /action: step && step\.type/);
+  assert.match(stopBody, /PLAYBACK_STOP_SUMMARY_SET/);
   assert.ok(stopBody.indexOf("STATUS_MESSAGE_SET") < stopBody.indexOf("removePlaybackFloating()"));
   assert.match(stopBody, /PANEL_SHOWN/);
+});
+
+test("content playback banner: no cambia visualmente por waits ni pasos internos", () => {
+  const source = readContent();
+  const helperBody = functionBody(source, "isPlaybackBannerStepRelevant");
+  const visualBody = functionBody(source, "getPlaybackBannerVisualIndex");
+  const updateBody = functionBody(source, "updatePlaybackFloating");
+
+  assert.match(helperBody, /type === "wait" \|\| type === "wait_for"/);
+  assert.match(helperBody, /type === "key"\) return Boolean\(step\.selector\)/);
+  assert.match(visualBody, /for \(let i = max; i >= 0; i -= 1\)/);
+  assert.match(updateBody, /panel\.dataset\.wmVisualStepIndex/);
+  assert.match(updateBody, /previousVisualIndex === String\(visualIndex\)/);
 });

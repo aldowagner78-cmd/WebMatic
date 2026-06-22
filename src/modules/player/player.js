@@ -1461,7 +1461,8 @@
       document,
       setTimeout,
       waitAfterScrollMs: 180,
-      waitWhenVisibleMs: 120
+      waitAfterNearEdgeScrollMs: 120,
+      waitWhenComfortableMs: 80
     });
   }
 

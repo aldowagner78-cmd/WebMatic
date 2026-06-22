@@ -64,8 +64,15 @@ test("Store: DRAFT_RESTORED reemplaza pasos y contador en bloque", () => {
 test("Store: PLAY_STARTED y PLAY_STOPPED actualizan playback", () => {
   const store = storeApi.createStore();
 
+  store.dispatch({
+    type: contracts.ActionTypes.PLAYBACK_STOP_SUMMARY_SET,
+    payload: { message: "detenido", action: "click", selector: "#send", macroName: "Login" }
+  });
+  assert.equal(store.getState().runtime.playbackStopSummary.message, "detenido");
+
   store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
   assert.equal(store.getState().playback.isPlaying, true);
+  assert.equal(store.getState().runtime.playbackStopSummary, null);
 
   store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
   assert.equal(store.getState().playback.isPlaying, false);

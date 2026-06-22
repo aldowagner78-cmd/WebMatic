@@ -175,7 +175,7 @@ test("playback visual focus: centra elemento visible pero fuera del centro", asy
   assert.equal(scrolls, 1);
 });
 
-test("playback visual focus: si ya esta centrado no hace scroll pero espera highlight", async () => {
+test("playback visual focus: si ya esta centrado no hace scroll y espera breve", async () => {
   resetBody('<button id="target">Enviar</button>');
   const target = win.document.getElementById("target");
   let scrolls = 0;
@@ -188,7 +188,7 @@ test("playback visual focus: si ya esta centrado no hace scroll pero espera high
 
   assert.equal(result.ok, true);
   assert.equal(scrolls, 0);
-  assert.ok(elapsed >= 100);
+  assert.ok(elapsed >= 60);
 });
 
 test("playback visual focus: wait, wait_for y navigate no enfocan elementos", async () => {

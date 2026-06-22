@@ -5353,6 +5353,32 @@
     _setNodeStyle(el, "display", value);
   }
 
+  function isPlaybackBannerStepRelevant(step) {
+    if (!step || typeof step !== "object") return false;
+    const type = String(step.type || "");
+    if (type === "wait" || type === "wait_for" || type === "set_variable" || type === "capture_defaults") return false;
+    if (type === "key") return Boolean(step.selector);
+    return type === "navigate"
+      || type === "click"
+      || type === "dblclick"
+      || type === "input"
+      || type === "text"
+      || type === "check"
+      || type === "choose_option"
+      || type === "hover"
+      || type === "drag_drop";
+  }
+
+  function getPlaybackBannerVisualIndex(steps, currentIndex) {
+    const list = Array.isArray(steps) ? steps : [];
+    if (list.length === 0) return -1;
+    const max = Math.max(0, Math.min(Number(currentIndex) || 0, list.length - 1));
+    for (let i = max; i >= 0; i -= 1) {
+      if (isPlaybackBannerStepRelevant(list[i])) return i;
+    }
+    return -1;
+  }
+
   function updatePlaybackFloating(state) {
     const panel = document.getElementById(FLOATING_PLAYER_ID);
     if (!panel) return;
@@ -5394,14 +5420,25 @@
       // Playing — show current step
       _setNodeStyle(dot, "background", "#2563eb");
       _setNodeStyle(dot, "animation", "none");
-      const step = currentStepIndex >= 0 && currentStepIndex < total ? currentSteps[currentStepIndex] : null;
+      const visualIndex = getPlaybackBannerVisualIndex(currentSteps, currentStepIndex);
+      const previousVisualIndex = panel.dataset.wmVisualStepIndex;
+      if (previousVisualIndex === String(visualIndex)) {
+        _setNodeDisplay(addWaitEl, "none");
+        _setNodeDisplay(stopEl, "inline-flex");
+        _setNodeDisplay(replayEl, "none");
+        _setNodeDisplay(loopCountEl, "none");
+        _setNodeDisplay(loopReplayEl, "none");
+        return;
+      }
+      panel.dataset.wmVisualStepIndex = String(visualIndex);
+      const step = visualIndex >= 0 && visualIndex < total ? currentSteps[visualIndex] : null;
       const label = step ? _stepLabel(step) : "Iniciando...";
-      const counter = total > 0 ? ` (${Math.min(currentStepIndex + 1, total)}/${total})` : "";
+      const counter = total > 0 && visualIndex >= 0 ? ` (${Math.min(visualIndex + 1, total)}/${total})` : "";
       _setNodeText(infoEl, "\u25B8 " + label + counter);
       _setNodeStyle(infoEl, "color", "#1e293b");
       _setNodeStyle(infoEl, "fontWeight", "500");
       _setNodeTitle(infoEl, label);
-      if (total > 0) _setNodeStyle(progress, "width", Math.round(((currentStepIndex + 1) / total) * 100) + "%");
+      if (total > 0 && visualIndex >= 0) _setNodeStyle(progress, "width", Math.round(((visualIndex + 1) / total) * 100) + "%");
       _setNodeStyle(progress, "background", "#2563eb");
       _setNodeDisplay(addWaitEl, "none");
       _setNodeDisplay(stopEl, "inline-flex");
@@ -5476,9 +5513,22 @@
     const step = total > 0 ? steps[index] : null;
     const label = step ? _stepLabel(step) : "";
     const selector = step && (step.selector || step.from || step.to) ? String(step.selector || step.from || step.to) : "";
+    const macroId = state && state.library ? state.library.selectedMacroId : null;
+    const macros = state && state.library && Array.isArray(state.library.macros) ? state.library.macros : [];
+    const macro = macros.find((m) => m && m.id === macroId);
+    const macroName = macro && macro.name ? String(macro.name) : "";
     const position = total > 0 ? ` en paso ${index + 1}/${total}` : "";
     const detail = label ? `: ${label}` : (selector ? `: ${selector}` : "");
-    return `Ejecucion detenida por el usuario${position}${detail}`;
+    const message = `Ejecucion detenida por el usuario${position}${detail}`;
+    return {
+      message,
+      index,
+      total,
+      action: step && step.type ? String(step.type) : "",
+      selector,
+      macroName,
+      label
+    };
   }
 
   function stopPlaybackFromUser() {
@@ -5486,10 +5536,11 @@
       playerRuntime.activePlayer.stop();
       playerRuntime.activePlayer = null;
     }
-    const message = summarizeManualPlaybackStop();
+    const summary = summarizeManualPlaybackStop();
     store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+    store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STOP_SUMMARY_SET, payload: summary });
     store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
-    store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: message });
+    store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: summary.message });
     removePlaybackFloating();
   }
 

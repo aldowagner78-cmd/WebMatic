@@ -28,7 +28,7 @@ test("build info: expone la version visible centralizada", () => {
   const sandbox = { window: {} };
   vm.runInNewContext(readRepoFile(BUILD_INFO_FILE), sandbox);
 
-  assert.equal(sandbox.window.WebMaticBuildInfo.versionLabel, "v0.2.0-modular-rc30");
+  assert.equal(sandbox.window.WebMaticBuildInfo.versionLabel, "v0.2.0-modular-rc31");
 });
 
 test("ui shell: usa WebMaticBuildInfo para mostrar la version", () => {
@@ -39,6 +39,16 @@ test("ui shell: usa WebMaticBuildInfo para mostrar la version", () => {
   assert.equal(source.includes(`v0.2.0-modular-${"rc9"}`), false);
   assert.equal(source.includes(`v0.2.0-modular-${"rc10"}`), false);
   assert.equal(source.includes("Versión: v0."), false);
+});
+
+test("ui shell: muestra resumen persistente de stop manual", () => {
+  const source = readRepoFile(UI_SHELL_FILE);
+
+  assert.match(source, /data-play-stop-summary/);
+  assert.match(source, /playbackStopSummary/);
+  assert.match(source, /Accion:/);
+  assert.match(source, /Selector:/);
+  assert.match(source, /Macro:/);
 });
 
 test("manifest e inyeccion manual: build-info carga antes de ui-shell", () => {
