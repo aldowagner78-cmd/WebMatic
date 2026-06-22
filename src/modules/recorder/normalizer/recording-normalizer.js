@@ -443,7 +443,30 @@
       return arr.filter((_, idx) => !remove.has(idx));
     };
 
-    return compactConsecutiveWaits(compactTextInputsConfirmedByEnter(compactNativeSelectClicks(inferMissingEnterSelector(out))));
+    const insertWaitForBeforeChooseOption = (arr) => {
+      const result = [];
+      for (const step of arr) {
+        const prev = result[result.length - 1];
+        if (
+          step &&
+          step.type === "choose_option" &&
+          step.selector &&
+          !(prev && (prev.type === "wait_for" || prev.type === "wait"))
+        ) {
+          result.push({ type: "wait_for", selector: step.selector, timeout: 10000, _autoWait: true });
+        }
+        result.push(step);
+      }
+      return result;
+    };
+
+    return compactConsecutiveWaits(
+      compactTextInputsConfirmedByEnter(
+        insertWaitForBeforeChooseOption(
+          compactNativeSelectClicks(inferMissingEnterSelector(out))
+        )
+      )
+    );
   }
 
   function dedupeFieldRuns(steps) {

@@ -395,7 +395,59 @@ test("normalizeRecordedSteps: no compacta checkbox radio ni select", () => {
     { type: "choose_option", selector: "#pais", value: "uy" }
   ];
 
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "check", selector: "#chk-tecnologia", checked: true },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "check", selector: "#chk-tecnologia", checked: false },
+    { type: "wait_for", selector: "#pais", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "ar" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "uy" }
+  ]);
+});
+
+test("normalizeRecordedSteps: agrega wait_for automatico antes de choose_option", () => {
+  const steps = [
+    { type: "navigate", url: "https://a.local/" },
+    { type: "choose_option", selector: "#pais", value: "ar" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "navigate", url: "https://a.local/" },
+    { type: "wait_for", selector: "#pais", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "ar" }
+  ]);
+});
+
+test("normalizeRecordedSteps: no duplica wait_for antes de choose_option", () => {
+  const steps = [
+    { type: "wait_for", selector: "#pais", timeout: 10000 },
+    { type: "choose_option", selector: "#pais", value: "ar" }
+  ];
+
   assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no duplica wait manual antes de choose_option", () => {
+  const steps = [
+    { type: "wait", seconds: 2 },
+    { type: "choose_option", selector: "#pais", value: "ar" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: select nativo compactado conserva choose_option con wait_for previo", () => {
+  const steps = [
+    { type: "click", selector: "#pais" },
+    { type: "choose_option", selector: "#pais", value: "ar" },
+    { type: "click", selector: "#pais > option:nth-of-type(2)" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "wait_for", selector: "#pais", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "ar" }
+  ]);
 });
 
 test("normalizeRecordedSteps: compacta texto confirmado por KEY Enter del mismo selector", () => {
@@ -501,7 +553,14 @@ test("normalizeRecordedSteps: no compacta flujo choose_option antes de Enter", (
     { type: "key", key: "Enter", selector: "#combo" }
   ];
 
-  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "input", selector: "#combo", value: "san" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#combo", value: "santa" },
+    { type: "wait_for", selector: "#combo", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#combo", value: "sf", text: "Santa Fe" },
+    { type: "key", key: "Enter", selector: "#combo" }
+  ]);
 });
 
 test("normalizeRecordedSteps: no compacta combobox listbox ni autocomplete antes de Enter", () => {
@@ -852,10 +911,10 @@ test("normalizeRecordedSteps [E]: select nativo click+choose_option+click option
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
-  assert.equal(out.length, 1, "debe quedar un solo paso");
-  assert.equal(out[0].type, "choose_option");
-  assert.equal(out[0].selector, "#pais");
-  assert.equal(out[0].value, "AR");
+  assert.deepEqual(out, [
+    { type: "wait_for", selector: "#pais", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "AR" }
+  ]);
 });
 
 test("normalizeRecordedSteps [E2]: click+choose_option sin click option tambien se compacta", () => {
@@ -865,9 +924,10 @@ test("normalizeRecordedSteps [E2]: click+choose_option sin click option tambien 
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
-  assert.equal(out.length, 1);
-  assert.equal(out[0].type, "choose_option");
-  assert.equal(out[0].selector, "#provincia");
+  assert.deepEqual(out, [
+    { type: "wait_for", selector: "#provincia", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#provincia", value: "SF" }
+  ]);
 });
 
 test("normalizeRecordedSteps [F]: dos choose_option dependientes no se eliminan", () => {
@@ -877,9 +937,12 @@ test("normalizeRecordedSteps [F]: dos choose_option dependientes no se eliminan"
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
-  assert.equal(out.length, 2, "ambos choose_option deben conservarse");
-  assert.equal(out[0].selector, "#pais");
-  assert.equal(out[1].selector, "#provincia");
+  assert.deepEqual(out, [
+    { type: "wait_for", selector: "#pais", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "AR" },
+    { type: "wait_for", selector: "#provincia", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#provincia", value: "SF" }
+  ]);
 });
 
 test("normalizeRecordedSteps [H]: custom combobox input+choose_option+click role NO se compacta", () => {
@@ -890,10 +953,12 @@ test("normalizeRecordedSteps [H]: custom combobox input+choose_option+click role
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
-  assert.equal(out.length, 3, "no debe compactar combobox custom con input previo");
+  assert.equal(out.length, 4, "no debe compactar combobox custom con input previo");
   assert.equal(out[0].type, "input");
-  assert.equal(out[1].type, "choose_option");
-  assert.equal(out[2].type, "click");
+  assert.equal(out[1].type, "wait_for");
+  assert.equal(out[1].selector, "#combo");
+  assert.equal(out[2].type, "choose_option");
+  assert.equal(out[3].type, "click");
 });
 
 test("normalizeRecordedSteps [H2]: choose_option con controlRef combobox no se compacta aunque tenga click previo", () => {
@@ -908,7 +973,11 @@ test("normalizeRecordedSteps [H2]: choose_option con controlRef combobox no se c
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
-  assert.equal(out.length, 2, "combobox con controlRef.role=combobox no debe compactarse");
+  assert.equal(out.length, 3, "combobox con controlRef.role=combobox no debe compactarse");
+  assert.equal(out[0].type, "click");
+  assert.equal(out[1].type, "wait_for");
+  assert.equal(out[1].selector, "#autocomplete");
+  assert.equal(out[2].type, "choose_option");
 });
 
 test("normalizeRecordedSteps [I]: checkbox y radio no son afectados por la compactacion de selects", () => {
@@ -919,10 +988,12 @@ test("normalizeRecordedSteps [I]: checkbox y radio no son afectados por la compa
   ];
 
   const out = Recorder.normalizeRecordedSteps(steps);
-  assert.equal(out.length, 3);
+  assert.equal(out.length, 4);
   assert.equal(out[0].type, "check");
-  assert.equal(out[1].type, "choose_option");
-  assert.equal(out[2].type, "check");
+  assert.equal(out[1].type, "wait_for");
+  assert.equal(out[1].selector, "#pais");
+  assert.equal(out[2].type, "choose_option");
+  assert.equal(out[3].type, "check");
 });
 
 test("normalizeRecordedSteps [J]: waits automaticos siguen limitados a 1s con las nuevas pasadas", () => {
