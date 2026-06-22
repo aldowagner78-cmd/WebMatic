@@ -5314,7 +5314,7 @@
     closeEl.id = "wm-play-close";
     closeEl.style.cssText = [
       "all:initial",
-      "display:inline-flex",
+      "display:none",
       "align-items:center",
       "flex-shrink:0",
       "border:1px solid rgba(100,116,139,0.3)",
@@ -5359,14 +5359,17 @@
 
     if (errorMessage) {
       // Error state — keep panel open, show error, allow fix and replay
+      const failedStep = currentStepIndex >= 0 && currentStepIndex < total ? currentSteps[currentStepIndex] : null;
+      const failedLabel = failedStep ? _stepLabel(failedStep) : "";
+      const errorText = failedLabel ? "\u2717 " + errorMessage + " \u2014 " + failedLabel : "\u2717 " + errorMessage;
       if (dot) { dot.style.background = "#dc2626"; dot.style.animation = "none"; }
-      if (infoEl) { infoEl.textContent = "\u2717 " + errorMessage; infoEl.style.color = "#dc2626"; infoEl.style.fontWeight = "600"; infoEl.title = errorMessage; }
+      if (infoEl) { infoEl.textContent = errorText; infoEl.style.color = "#dc2626"; infoEl.style.fontWeight = "600"; infoEl.title = errorText; }
       if (progress) { progress.style.background = "#dc2626"; }
-      if (addWaitEl) addWaitEl.style.display = "inline-flex";
+      if (addWaitEl) addWaitEl.style.display = "none";
       if (stopEl) stopEl.style.display = "none";
-      if (replayEl) replayEl.style.display = "inline-flex";
-      if (loopCountEl) loopCountEl.style.display = "inline-flex";
-      if (loopReplayEl) loopReplayEl.style.display = "inline-flex";
+      if (replayEl) replayEl.style.display = "none";
+      if (loopCountEl) loopCountEl.style.display = "none";
+      if (loopReplayEl) loopReplayEl.style.display = "none";
     } else if (isPlaying) {
       // Playing — show current step
       if (dot) { dot.style.background = "#2563eb"; dot.style.animation = "webmatic-pulse 1s infinite"; }
@@ -5376,7 +5379,7 @@
       if (infoEl) { infoEl.textContent = "\u25B8 " + label + counter; infoEl.style.color = "#1e293b"; infoEl.style.fontWeight = "500"; infoEl.title = label; }
       if (progress && total > 0) progress.style.width = Math.round(((currentStepIndex + 1) / total) * 100) + "%";
       if (progress) progress.style.background = "#2563eb";
-      if (addWaitEl) addWaitEl.style.display = "inline-flex";
+      if (addWaitEl) addWaitEl.style.display = "none";
       if (stopEl) stopEl.style.display = "inline-flex";
       if (replayEl) replayEl.style.display = "none";
       if (loopCountEl) loopCountEl.style.display = "none";
@@ -5408,9 +5411,9 @@
       if (progress) { progress.style.width = "100%"; progress.style.background = _fbCount > 0 ? "#f59e0b" : "#16a34a"; }
       if (addWaitEl) addWaitEl.style.display = "none";
       if (stopEl) stopEl.style.display = "none";
-      if (replayEl) replayEl.style.display = "inline-flex";
-      if (loopCountEl) loopCountEl.style.display = "inline-flex";
-      if (loopReplayEl) loopReplayEl.style.display = "inline-flex";
+      if (replayEl) replayEl.style.display = "none";
+      if (loopCountEl) loopCountEl.style.display = "none";
+      if (loopReplayEl) loopReplayEl.style.display = "none";
     } else {
       // Idle / initial
       if (dot) { dot.style.background = "#2563eb"; dot.style.animation = "webmatic-pulse 1s infinite"; }
@@ -7437,6 +7440,7 @@
           playerRuntime.activePlayer = null;
         }
         store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+        removePlaybackFloating();
       }
 
       if (actionId === "close-panel") {
@@ -7921,12 +7925,14 @@
                 ? `Reproduccion completada con ${_fb.length} ${_fb.length === 1 ? "fallback aplicado" : "fallbacks aplicados"}`
                 : "Reproduccion completada";
               store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: _statusMsg });
+              removePlaybackFloating();
               try { console.info("[WebMatic][playback] summary", summary || {}); } catch (_e) { /* ignore */ }
             },
             onError: (err) => {
               playerRuntime.activePlayer = null;
               const errIdx = store.getState().playback.currentStepIndex;
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+              store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
               store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
             }
           });
@@ -7935,6 +7941,7 @@
           () => {
             if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
             store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+            removePlaybackFloating();
           },
           () => addWaitHere(),
           () => { _startMacroPlay(); },
@@ -7963,6 +7970,7 @@
                 playerRuntime.activePlayer = null;
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _fbPrepared.length, steps: _fbPrepared } });
                 store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+                removePlaybackFloating();
                 return;
               }
               _fbIter++;
@@ -7981,6 +7989,8 @@
                   playerRuntime.activePlayer = null;
                   const errIdx = store.getState().playback.currentStepIndex;
                   store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+                  store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
+                  store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
                 }
               });
             }
@@ -8018,6 +8028,7 @@
               playerRuntime.activePlayer = null;
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _lPreparedSteps.length, steps: _lPreparedSteps } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+              removePlaybackFloating();
               return;
             }
             _lIter++;
@@ -8036,6 +8047,7 @@
                 playerRuntime.activePlayer = null;
                 const errIdx = store.getState().playback.currentStepIndex;
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+                store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
                 store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
               }
             });
@@ -8061,6 +8073,7 @@
               playerRuntime.activePlayer = null;
               store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _lnPrepared.length, steps: _lnPrepared } });
               store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+              removePlaybackFloating();
               return;
             }
             _lnIter++;
@@ -8079,6 +8092,8 @@
                 playerRuntime.activePlayer = null;
                 const errIdx = store.getState().playback.currentStepIndex;
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+                store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
+                store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
               }
             });
           }
@@ -8088,6 +8103,7 @@
           () => {
             if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
             store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+            removePlaybackFloating();
           },
           () => addWaitHere(),
           () => { _startLoopPlay(); },
@@ -9134,6 +9150,7 @@
           store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: p.steps.length, steps: p.steps } });
           store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
           store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+          removePlaybackFloating();
         }, 800);
         return;
       }
@@ -9190,11 +9207,13 @@
                 playerRuntime.lastDurationMs = (_summaryDuration && _summaryDuration >= 100) ? _summaryDuration : _fallbackDuration;
                 store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
                 store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+                removePlaybackFloating();
               },
               onError: (err) => {
                 playerRuntime.activePlayer = null;
                 const errIdx = store.getState().playback.currentStepIndex;
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+                store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
                 store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
               }
             });
@@ -9223,6 +9242,7 @@
                 playerRuntime.activePlayer = null;
                 store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: _rnPrepared.length, steps: _rnPrepared } });
                 store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+                removePlaybackFloating();
                 return;
               }
               _rnIter++;
@@ -9241,6 +9261,8 @@
                   playerRuntime.activePlayer = null;
                   const errIdx = store.getState().playback.currentStepIndex;
                   store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+                  store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
+                  store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
                 }
               });
             }
@@ -9285,11 +9307,13 @@
             store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: p.steps.length, steps: p.steps } });
             store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
             store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Reproduccion completada" });
+            removePlaybackFloating();
           },
           onError: (err) => {
             playerRuntime.activePlayer = null;
             const errIdx = store.getState().playback.currentStepIndex;
             store.dispatch({ type: contracts.ActionTypes.PLAYBACK_ERROR, payload: `Paso ${errIdx + 1}: ${err.message}` });
+            store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
             store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: `Error: ${err.message}` });
           }
         });
