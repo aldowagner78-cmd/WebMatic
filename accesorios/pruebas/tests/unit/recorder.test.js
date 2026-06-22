@@ -450,6 +450,53 @@ test("normalizeRecordedSteps: select nativo compactado conserva choose_option co
   ]);
 });
 
+test("normalizeRecordedSteps: conserva wait_for posterior a click dinamico", () => {
+  const steps = [
+    { type: "navigate", url: "https://the-internet.herokuapp.com/dynamic_loading/1" },
+    { type: "click", selector: "#start button", _ts: 1000 },
+    { type: "wait", seconds: 5, _autoWait: true, _ts: 6000 },
+    { type: "wait_for", selector: "#finish", timeout: 10000, _autoWait: true }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "navigate", url: "https://the-internet.herokuapp.com/dynamic_loading/1" },
+    { type: "click", selector: "#start button", _ts: 1000 },
+    { type: "wait_for", selector: "#finish", timeout: 10000, _autoWait: true }
+  ]);
+});
+
+test("normalizeRecordedSteps: no duplica wait_for inmediato despues de click", () => {
+  const steps = [
+    { type: "click", selector: "#start button" },
+    { type: "wait_for", selector: "#finish", timeout: 10000, _autoWait: true }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: no agrega wait_for si despues del click hay accion real", () => {
+  const steps = [
+    { type: "click", selector: "#start button" },
+    { type: "wait", seconds: 5, _autoWait: true },
+    { type: "input", selector: "#name", value: "Ada" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "click", selector: "#start button" },
+    { type: "wait", seconds: 1, _autoWait: true },
+    { type: "input", selector: "#name", value: "Ada" }
+  ]);
+});
+
+test("normalizeRecordedSteps: conserva pausa automatica larga terminal despues de click", () => {
+  const steps = [
+    { type: "click", selector: "#start button" },
+    { type: "wait", seconds: 5, _autoWait: true }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
 test("normalizeRecordedSteps: compacta texto confirmado por KEY Enter del mismo selector", () => {
   const steps = [
     { type: "input", selector: "#campo", value: "abc", controlRef: { selector: "#campo", tag: "input", type: "text", controlKind: "text-input" } },

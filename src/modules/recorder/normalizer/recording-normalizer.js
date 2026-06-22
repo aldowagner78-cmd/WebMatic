@@ -165,28 +165,56 @@
       return -1;
     };
 
+    const findNextNonWait = (arr, fromIndex) => {
+      for (let i = fromIndex; i < arr.length; i += 1) {
+        if (!isWait(arr[i])) return arr[i];
+      }
+      return null;
+    };
+
+    const shouldPreservePostClickAutoWait = (waitStep, prevNonWait, nextNonWait) => {
+      if (!isAutoWait(waitStep) || !prevNonWait || prevNonWait.type !== "click") return false;
+      const seconds = Number(waitStep.seconds);
+      if (!Number.isFinite(seconds) || seconds <= MAX_RECORDED_IDLE_WAIT_SECONDS) return false;
+      return !nextNonWait || nextNonWait.type === "wait_for";
+    };
+
     const compactConsecutiveWaits = (arr) => {
       const out = [];
-      for (const step of arr) {
+      let prevNonWait = null;
+      for (let idx = 0; idx < arr.length; idx += 1) {
+        const step = arr[idx];
+        const nextNonWait = findNextNonWait(arr, idx + 1);
         if (isWait(step) && out.length > 0 && isWait(out[out.length - 1]) && isAutoWait(step) === isAutoWait(out[out.length - 1])) {
           const prev = out[out.length - 1];
           const a = Number(prev.seconds);
           const b = Number(step.seconds);
           prev.seconds = Math.max(0, (Number.isFinite(a) ? a : 0) + (Number.isFinite(b) ? b : 0));
-          if (isAutoWait(prev) && prev.seconds > MAX_RECORDED_IDLE_WAIT_SECONDS) {
+          if (
+            isAutoWait(prev) &&
+            prev.seconds > MAX_RECORDED_IDLE_WAIT_SECONDS &&
+            !shouldPreservePostClickAutoWait(prev, prevNonWait, nextNonWait)
+          ) {
             prev.seconds = MAX_RECORDED_IDLE_WAIT_SECONDS;
           }
           continue;
         }
         if (isAutoWait(step)) {
           const seconds = Number(step.seconds);
+          const normalizedSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : MAX_RECORDED_IDLE_WAIT_SECONDS;
+          const preserveLongWait = shouldPreservePostClickAutoWait(
+            { ...step, seconds: normalizedSeconds },
+            prevNonWait,
+            nextNonWait
+          );
           out.push({
             ...step,
-            seconds: Math.min(MAX_RECORDED_IDLE_WAIT_SECONDS, Number.isFinite(seconds) ? Math.max(0, seconds) : MAX_RECORDED_IDLE_WAIT_SECONDS)
+            seconds: preserveLongWait ? normalizedSeconds : Math.min(MAX_RECORDED_IDLE_WAIT_SECONDS, normalizedSeconds)
           });
           continue;
         }
         out.push(step);
+        prevNonWait = step;
       }
       return out;
     };
@@ -460,10 +488,34 @@
       return result;
     };
 
+    const preferWaitForAfterDynamicClick = (arr) => {
+      const result = [];
+      for (let i = 0; i < arr.length; i += 1) {
+        const step = arr[i];
+        if (isAutoWait(step)) {
+          let prevReal = null;
+          for (let j = result.length - 1; j >= 0; j -= 1) {
+            if (!isWait(result[j])) {
+              prevReal = result[j];
+              break;
+            }
+          }
+          const nextReal = findNextNonWait(arr, i + 1);
+          if (prevReal && prevReal.type === "click" && nextReal && nextReal.type === "wait_for") {
+            continue;
+          }
+        }
+        result.push(step);
+      }
+      return result;
+    };
+
     return compactConsecutiveWaits(
-      compactTextInputsConfirmedByEnter(
-        insertWaitForBeforeChooseOption(
-          compactNativeSelectClicks(inferMissingEnterSelector(out))
+      preferWaitForAfterDynamicClick(
+        compactTextInputsConfirmedByEnter(
+          insertWaitForBeforeChooseOption(
+            compactNativeSelectClicks(inferMissingEnterSelector(out))
+          )
         )
       )
     );
