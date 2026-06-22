@@ -43,20 +43,28 @@ test("content playback banner: se crea una sola vez y se actualiza in-place", ()
   assert.match(updateBody, /_setNodeDisplay\(stopEl, "inline-flex"\)/);
 });
 
-test("content playback banner: exito cierra banner y error lo mantiene con sidebar abierto", () => {
+test("content playback banner: exito queda visible 3s y error no abre sidebar automaticamente", () => {
   const source = readContent();
   const updateBody = functionBody(source, "updatePlaybackFloating");
+  const successBody = functionBody(source, "schedulePlaybackSuccessClose");
+  const errorBody = functionBody(source, "handlePlaybackError");
 
-  assert.match(source, /onDone: \(summary\) =>[\s\S]*?PLAY_STOPPED[\s\S]*?STATUS_MESSAGE_SET[\s\S]*?removePlaybackFloating\(\)/);
-  assert.match(source, /onError: \(err\) =>[\s\S]*?PLAYBACK_ERROR[\s\S]*?PANEL_SHOWN[\s\S]*?STATUS_MESSAGE_SET/);
+  assert.match(source, /onDone: \(summary\) =>[\s\S]*?finishPlaybackSuccessfully\(_preparedSteps, _statusMsg\)/);
+  assert.match(successBody, /setTimeout\(\(\) =>[\s\S]*?removePlaybackFloating\(\{ restoreSidebar: true \}\)[\s\S]*?, 3000\)/);
+  assert.match(errorBody, /PLAYBACK_ERROR/);
+  assert.doesNotMatch(errorBody, /PANEL_SHOWN/);
   assert.match(updateBody, /if \(errorMessage\)/);
-  assert.match(updateBody, /const errorText = failedLabel/);
+  assert.match(updateBody, /Error en reproduccion/);
+  assert.match(updateBody, /Paso: \$\{Math\.min\(currentStepIndex \+ 1, total\)\}\/\$\{total\}/);
+  assert.match(updateBody, /Mensaje: \$\{errorMessage\}/);
+  assert.match(updateBody, /_setNodeDisplay\(sidebarEl, "inline-flex"\)/);
 });
 
-test("content playback banner: stop manual informa paso, accion y selector antes de cerrar", () => {
+test("content playback banner: stop manual queda visible y no abre sidebar automaticamente", () => {
   const source = readContent();
   const summaryBody = functionBody(source, "summarizeManualPlaybackStop");
   const stopBody = functionBody(source, "stopPlaybackFromUser");
+  const updateBody = functionBody(source, "updatePlaybackFloating");
 
   assert.match(summaryBody, /Ejecucion detenida por el usuario/);
   assert.match(summaryBody, /index \+ 1/);
@@ -65,8 +73,13 @@ test("content playback banner: stop manual informa paso, accion y selector antes
   assert.match(summaryBody, /macroName/);
   assert.match(summaryBody, /action: step && step\.type/);
   assert.match(stopBody, /PLAYBACK_STOP_SUMMARY_SET/);
-  assert.ok(stopBody.indexOf("STATUS_MESSAGE_SET") < stopBody.indexOf("removePlaybackFloating()"));
-  assert.match(stopBody, /PANEL_SHOWN/);
+  assert.doesNotMatch(stopBody, /PANEL_SHOWN/);
+  assert.doesNotMatch(stopBody, /removePlaybackFloating/);
+  assert.match(updateBody, /Ejecucion detenida por el usuario/);
+  assert.match(updateBody, /Paso: \$\{stopSummary\.index \+ 1\}\/\$\{stopSummary\.total\}/);
+  assert.match(updateBody, /Accion: \$\{stopSummary\.action\}/);
+  assert.match(updateBody, /Selector: \$\{stopSummary\.selector\}/);
+  assert.match(updateBody, /Macro: \$\{stopSummary\.macroName\}/);
 });
 
 test("content playback banner: no cambia visualmente por waits ni pasos internos", () => {
@@ -80,4 +93,18 @@ test("content playback banner: no cambia visualmente por waits ni pasos internos
   assert.match(visualBody, /for \(let i = max; i >= 0; i -= 1\)/);
   assert.match(updateBody, /panel\.dataset\.wmVisualStepIndex/);
   assert.match(updateBody, /previousVisualIndex === String\(visualIndex\)/);
+});
+
+test("content playback banner: botones finales cierran, abren sidebar y copian diagnostico", () => {
+  const source = readContent();
+  const createBody = functionBody(source, "createPlaybackFloating");
+  const closeBody = functionBody(source, "closePlaybackFloatingOnly");
+  const sidebarBody = functionBody(source, "openSidebarFromPlaybackFloating");
+  const copyBody = functionBody(source, "copyPlaybackDiagnostic");
+
+  assert.match(createBody, /wm-play-open-sidebar/);
+  assert.match(createBody, /wm-play-copy-diagnostic/);
+  assert.match(closeBody, /restoreSidebar: false/);
+  assert.match(sidebarBody, /restoreSidebar: true/);
+  assert.match(copyBody, /getPlaybackDiagnosticText/);
 });
