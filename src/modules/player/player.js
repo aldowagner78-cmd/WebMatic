@@ -712,7 +712,7 @@
           };
 
           if (hasExplicitKeyTarget) {
-            _focusStepElement(target).then(dispatchKey).catch(dispatchKey);
+            _prepareStepElement(target).then(dispatchKey).catch(dispatchKey);
           } else {
             dispatchKey();
           }
@@ -771,7 +771,10 @@
             else { reject(new Error(`drag_drop: elementos no encontrados: "${fromSel}" â†’ "${toSel}"`)); }
             return;
           }
-          _focusStepElement(fromEl).then(() => {
+          _prepareStepElement(fromEl).then(() => {
+            if (toEl && toEl !== fromEl) {
+              _highlightElement(toEl);
+            }
             try {
               const dt = new DataTransfer();
               fromEl.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
@@ -894,20 +897,21 @@
 
         const value = expandVariables(step.value || "", vars);
         const _silentStep = _isSilentInternalStep(step);
+        let _visualPrepared = false;
 
         const runElementAction = () => {
         if (step.type === "click") {
-          if (!_silentStep) _highlightElement(el);
+          if (!_silentStep && !_visualPrepared) _highlightElement(el);
           simulateClick(el);
         } else if (step.type === "dblclick") {
-          if (!_silentStep) _highlightElement(el);
+          if (!_silentStep && !_visualPrepared) _highlightElement(el);
           // Fire the full sequence: mousedown+up+click Ã—2, then dblclick
           [1, 1, 1, 2, 2, 2, 2].forEach((detail, i) => {
             const types = ["mousedown", "mouseup", "click", "mousedown", "mouseup", "click", "dblclick"];
             el.dispatchEvent(new MouseEvent(types[i], { bubbles: true, cancelable: true, detail }));
           });
         } else if (step.type === "choose_option") {
-          if (!_silentStep) _highlightElement(el);
+          if (!_silentStep && !_visualPrepared) _highlightElement(el);
           const _resolvedValue = expandVariables(step.value || "", vars);
           const _resolvedText = expandVariables(step.text || "", vars);
           const _inputMode = String(step.inputMode || "").toLowerCase();
@@ -1068,7 +1072,7 @@
             el,
             selector,
             value,
-            silentStep: _silentStep
+            silentStep: _silentStep || _visualPrepared
           }, {
             highlightElement: _highlightElement,
             setInputValue,
@@ -1084,7 +1088,7 @@
             step,
             el,
             selector,
-            silentStep: _silentStep
+            silentStep: _silentStep || _visualPrepared
           }, {
             resolve,
             reject,
@@ -1107,7 +1111,8 @@
         };
 
         if (!_silentStep && (step.type === "click" || step.type === "input" || step.type === "text" || step.type === "check" || step.type === "choose_option" || step.type === "hover")) {
-          _focusStepElement(el).then(runElementAction).catch(runElementAction);
+          _visualPrepared = true;
+          _prepareStepElement(el).then(runElementAction).catch(runElementAction);
           return;
         }
 
@@ -1452,7 +1457,17 @@
   function _focusStepElement(el) {
     const manager = _highlightManager();
     if (!manager || typeof manager.focusStepElement !== "function") return Promise.resolve(false);
-    return manager.focusStepElement(el, { document, setTimeout, waitMs: 80 });
+    return manager.focusStepElement(el, {
+      document,
+      setTimeout,
+      waitAfterScrollMs: 180,
+      waitWhenVisibleMs: 120
+    });
+  }
+
+  function _prepareStepElement(el) {
+    _highlightElement(el);
+    return _focusStepElement(el);
   }
 
   function _clearAllHighlights() {

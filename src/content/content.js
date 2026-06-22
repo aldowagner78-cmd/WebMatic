@@ -5156,7 +5156,7 @@
     // Spinner dot
     const dot = document.createElement("span");
     dot.id = "wm-play-dot";
-    dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:999px;background:#2563eb;animation:webmatic-pulse 1s infinite;flex-shrink:0";
+    dot.style.cssText = "display:inline-block;width:10px;height:10px;border-radius:999px;background:#2563eb;animation:none;flex-shrink:0";
     panel.appendChild(dot);
 
     // Macro name label
@@ -5182,7 +5182,7 @@
     // Progress bar at bottom of panel
     const progressBar = document.createElement("div");
     progressBar.id = "wm-play-progress";
-    progressBar.style.cssText = "position:absolute;bottom:0;left:0;height:3px;background:#2563eb;transition:width 0.35s ease;width:0%";
+    progressBar.style.cssText = "position:absolute;bottom:0;left:0;height:3px;background:#2563eb;transition:none;width:0%";
     panel.appendChild(progressBar);
 
     // +1s button
@@ -5337,6 +5337,22 @@
     document.documentElement.appendChild(panel);
   }
 
+  function _setNodeText(el, text) {
+    if (el && el.textContent !== text) el.textContent = text;
+  }
+
+  function _setNodeTitle(el, text) {
+    if (el && el.title !== text) el.title = text;
+  }
+
+  function _setNodeStyle(el, prop, value) {
+    if (el && el.style[prop] !== value) el.style[prop] = value;
+  }
+
+  function _setNodeDisplay(el, value) {
+    _setNodeStyle(el, "display", value);
+  }
+
   function updatePlaybackFloating(state) {
     const panel = document.getElementById(FLOATING_PLAYER_ID);
     if (!panel) return;
@@ -5346,7 +5362,7 @@
     const total = (currentSteps || []).length;
 
     const nameEl = panel.querySelector("#wm-play-name");
-    if (nameEl && macro) nameEl.textContent = macro.name;
+    if (nameEl && macro) _setNodeText(nameEl, macro.name);
 
     const dot = panel.querySelector("#wm-play-dot");
     const infoEl = panel.querySelector("#wm-play-info");
@@ -5362,31 +5378,40 @@
       const failedStep = currentStepIndex >= 0 && currentStepIndex < total ? currentSteps[currentStepIndex] : null;
       const failedLabel = failedStep ? _stepLabel(failedStep) : "";
       const errorText = failedLabel ? "\u2717 " + errorMessage + " \u2014 " + failedLabel : "\u2717 " + errorMessage;
-      if (dot) { dot.style.background = "#dc2626"; dot.style.animation = "none"; }
-      if (infoEl) { infoEl.textContent = errorText; infoEl.style.color = "#dc2626"; infoEl.style.fontWeight = "600"; infoEl.title = errorText; }
-      if (progress) { progress.style.background = "#dc2626"; }
-      if (addWaitEl) addWaitEl.style.display = "none";
-      if (stopEl) stopEl.style.display = "none";
-      if (replayEl) replayEl.style.display = "none";
-      if (loopCountEl) loopCountEl.style.display = "none";
-      if (loopReplayEl) loopReplayEl.style.display = "none";
+      _setNodeStyle(dot, "background", "#dc2626");
+      _setNodeStyle(dot, "animation", "none");
+      _setNodeText(infoEl, errorText);
+      _setNodeStyle(infoEl, "color", "#dc2626");
+      _setNodeStyle(infoEl, "fontWeight", "600");
+      _setNodeTitle(infoEl, errorText);
+      _setNodeStyle(progress, "background", "#dc2626");
+      _setNodeDisplay(addWaitEl, "none");
+      _setNodeDisplay(stopEl, "none");
+      _setNodeDisplay(replayEl, "none");
+      _setNodeDisplay(loopCountEl, "none");
+      _setNodeDisplay(loopReplayEl, "none");
     } else if (isPlaying) {
       // Playing — show current step
-      if (dot) { dot.style.background = "#2563eb"; dot.style.animation = "webmatic-pulse 1s infinite"; }
+      _setNodeStyle(dot, "background", "#2563eb");
+      _setNodeStyle(dot, "animation", "none");
       const step = currentStepIndex >= 0 && currentStepIndex < total ? currentSteps[currentStepIndex] : null;
       const label = step ? _stepLabel(step) : "Iniciando...";
       const counter = total > 0 ? ` (${Math.min(currentStepIndex + 1, total)}/${total})` : "";
-      if (infoEl) { infoEl.textContent = "\u25B8 " + label + counter; infoEl.style.color = "#1e293b"; infoEl.style.fontWeight = "500"; infoEl.title = label; }
-      if (progress && total > 0) progress.style.width = Math.round(((currentStepIndex + 1) / total) * 100) + "%";
-      if (progress) progress.style.background = "#2563eb";
-      if (addWaitEl) addWaitEl.style.display = "none";
-      if (stopEl) stopEl.style.display = "inline-flex";
-      if (replayEl) replayEl.style.display = "none";
-      if (loopCountEl) loopCountEl.style.display = "none";
-      if (loopReplayEl) loopReplayEl.style.display = "none";
+      _setNodeText(infoEl, "\u25B8 " + label + counter);
+      _setNodeStyle(infoEl, "color", "#1e293b");
+      _setNodeStyle(infoEl, "fontWeight", "500");
+      _setNodeTitle(infoEl, label);
+      if (total > 0) _setNodeStyle(progress, "width", Math.round(((currentStepIndex + 1) / total) * 100) + "%");
+      _setNodeStyle(progress, "background", "#2563eb");
+      _setNodeDisplay(addWaitEl, "none");
+      _setNodeDisplay(stopEl, "inline-flex");
+      _setNodeDisplay(replayEl, "none");
+      _setNodeDisplay(loopCountEl, "none");
+      _setNodeDisplay(loopReplayEl, "none");
     } else if (!isPlaying && currentStepIndex >= total && total > 0) {
       // Completed successfully
-      if (dot) { dot.style.background = "#16a34a"; dot.style.animation = "none"; }
+      _setNodeStyle(dot, "background", "#16a34a");
+      _setNodeStyle(dot, "animation", "none");
       const _fbList = (playerRuntime && Array.isArray(playerRuntime.lastFallbacks)) ? playerRuntime.lastFallbacks : [];
       const _fbCount = _fbList.length;
       const _dur = _formatPlaybackDuration(playerRuntime && playerRuntime.lastDurationMs);
@@ -5394,35 +5419,39 @@
       if (infoEl) {
         if (_fbCount > 0) {
           const _label = _fbCount === 1 ? "fallback aplicado" : "fallbacks aplicados";
-          infoEl.textContent = "\u2713 Completado con " + _fbCount + " " + _label + " \u2014 " + total + "/" + total + " pasos" + _durSuffix;
-          infoEl.style.color = "#b45309";
-          infoEl.style.fontWeight = "700";
+          _setNodeText(infoEl, "\u2713 Completado con " + _fbCount + " " + _label + " \u2014 " + total + "/" + total + " pasos" + _durSuffix);
+          _setNodeStyle(infoEl, "color", "#b45309");
+          _setNodeStyle(infoEl, "fontWeight", "700");
           try {
             const _detail = _fbList.map((f) => `${f.kind}${f.action ? ":" + f.action : ""}${f.selector ? " " + f.selector : ""}`).join("\n");
-            infoEl.title = _detail;
+            _setNodeTitle(infoEl, _detail);
           } catch (_e) { infoEl.title = ""; }
         } else {
-          infoEl.textContent = "\u2713 Completado sin errores \u2014 " + total + "/" + total + " pasos" + _durSuffix;
-          infoEl.style.color = "#16a34a";
-          infoEl.style.fontWeight = "700";
-          infoEl.title = "";
+          _setNodeText(infoEl, "\u2713 Completado sin errores \u2014 " + total + "/" + total + " pasos" + _durSuffix);
+          _setNodeStyle(infoEl, "color", "#16a34a");
+          _setNodeStyle(infoEl, "fontWeight", "700");
+          _setNodeTitle(infoEl, "");
         }
       }
-      if (progress) { progress.style.width = "100%"; progress.style.background = _fbCount > 0 ? "#f59e0b" : "#16a34a"; }
-      if (addWaitEl) addWaitEl.style.display = "none";
-      if (stopEl) stopEl.style.display = "none";
-      if (replayEl) replayEl.style.display = "none";
-      if (loopCountEl) loopCountEl.style.display = "none";
-      if (loopReplayEl) loopReplayEl.style.display = "none";
+      _setNodeStyle(progress, "width", "100%");
+      _setNodeStyle(progress, "background", _fbCount > 0 ? "#f59e0b" : "#16a34a");
+      _setNodeDisplay(addWaitEl, "none");
+      _setNodeDisplay(stopEl, "none");
+      _setNodeDisplay(replayEl, "none");
+      _setNodeDisplay(loopCountEl, "none");
+      _setNodeDisplay(loopReplayEl, "none");
     } else {
       // Idle / initial
-      if (dot) { dot.style.background = "#2563eb"; dot.style.animation = "webmatic-pulse 1s infinite"; }
-      if (infoEl) { infoEl.textContent = "Iniciando..."; infoEl.style.color = "#64748b"; infoEl.style.fontWeight = "400"; }
-      if (stopEl) stopEl.style.display = "inline-flex";
-      if (replayEl) replayEl.style.display = "none";
-      if (addWaitEl) addWaitEl.style.display = "none";
-      if (loopCountEl) loopCountEl.style.display = "none";
-      if (loopReplayEl) loopReplayEl.style.display = "none";
+      _setNodeStyle(dot, "background", "#2563eb");
+      _setNodeStyle(dot, "animation", "none");
+      _setNodeText(infoEl, "Iniciando...");
+      _setNodeStyle(infoEl, "color", "#64748b");
+      _setNodeStyle(infoEl, "fontWeight", "400");
+      _setNodeDisplay(stopEl, "inline-flex");
+      _setNodeDisplay(replayEl, "none");
+      _setNodeDisplay(addWaitEl, "none");
+      _setNodeDisplay(loopCountEl, "none");
+      _setNodeDisplay(loopReplayEl, "none");
     }
   }
 

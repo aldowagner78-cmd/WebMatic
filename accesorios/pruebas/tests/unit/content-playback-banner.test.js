@@ -34,9 +34,13 @@ test("content playback banner: se crea una sola vez y se actualiza in-place", ()
 
   assert.match(createBody, /document\.getElementById\(FLOATING_PLAYER_ID\)\) return/);
   assert.match(createBody, /document\.documentElement\.appendChild\(panel\)/);
+  assert.match(createBody, /progressBar\.style\.cssText = ".*transition:none/);
+  assert.match(createBody, /dot\.style\.cssText = ".*animation:none/);
   assert.doesNotMatch(updateBody, /createElement\(/);
-  assert.match(updateBody, /infoEl\.textContent/);
-  assert.match(updateBody, /progress\.style\.width/);
+  assert.doesNotMatch(updateBody, /innerHTML/);
+  assert.match(updateBody, /_setNodeText\(infoEl/);
+  assert.match(updateBody, /_setNodeStyle\(progress, "width"/);
+  assert.match(updateBody, /_setNodeDisplay\(stopEl, "inline-flex"\)/);
 });
 
 test("content playback banner: exito cierra banner y error lo mantiene con sidebar abierto", () => {

@@ -102,6 +102,17 @@ function placeOutsideViewport(el) {
 
 function placeInsideViewport(el) {
   el.getBoundingClientRect = () => ({
+    left: 460,
+    top: 340,
+    right: 560,
+    bottom: 380,
+    width: 100,
+    height: 40
+  });
+}
+
+function placeVisibleNearEdge(el) {
+  el.getBoundingClientRect = () => ({
     left: 10,
     top: 10,
     right: 110,
@@ -115,43 +126,69 @@ test("playback visual focus: click fuera de viewport hace scroll antes del click
   resetBody('<button id="target">Enviar</button>');
   const target = win.document.getElementById("target");
   const events = [];
+  let scrollArgs = null;
   placeOutsideViewport(target);
-  target.scrollIntoView = () => { events.push("scroll"); };
-  target.addEventListener("click", () => { events.push("click"); });
+  target.scrollIntoView = (args) => { scrollArgs = args; events.push("scroll"); };
+  target.addEventListener("click", () => { events.push(target.hasAttribute("data-wm-hl") ? "highlighted-click" : "click"); });
 
+  const startedAt = Date.now();
   const result = await runStep({ type: "click", selector: "#target" });
+  const elapsed = Date.now() - startedAt;
 
   assert.equal(result.ok, true);
-  assert.deepEqual(events, ["scroll", "click"]);
+  assert.deepEqual(events, ["scroll", "highlighted-click"]);
+  assert.deepEqual(scrollArgs, { block: "center", inline: "center", behavior: "auto" });
+  assert.ok(elapsed >= 150);
 });
 
 test("playback visual focus: input fuera de viewport hace scroll antes de escribir", async () => {
   resetBody('<input id="name" type="text">');
   const input = win.document.getElementById("name");
   const events = [];
+  let scrollArgs = null;
   placeOutsideViewport(input);
-  input.scrollIntoView = () => { events.push("scroll"); };
-  input.addEventListener("input", () => { events.push("input"); });
+  input.scrollIntoView = (args) => { scrollArgs = args; events.push("scroll"); };
+  input.addEventListener("input", () => { events.push(input.hasAttribute("data-wm-hl") ? "highlighted-input" : "input"); });
 
+  const startedAt = Date.now();
   const result = await runStep({ type: "input", selector: "#name", value: "Ana" });
+  const elapsed = Date.now() - startedAt;
 
   assert.equal(result.ok, true);
   assert.equal(input.value, "Ana");
   assert.equal(events[0], "scroll");
-  assert.ok(events.slice(1).includes("input"));
+  assert.ok(events.slice(1).includes("highlighted-input"));
+  assert.deepEqual(scrollArgs, { block: "center", inline: "center", behavior: "auto" });
+  assert.ok(elapsed >= 150);
 });
 
-test("playback visual focus: no hace scroll si el elemento ya esta visible", async () => {
+test("playback visual focus: centra elemento visible pero fuera del centro", async () => {
+  resetBody('<button id="target">Enviar</button>');
+  const target = win.document.getElementById("target");
+  let scrolls = 0;
+  placeVisibleNearEdge(target);
+  target.scrollIntoView = () => { scrolls += 1; };
+
+  const result = await runStep({ type: "click", selector: "#target" });
+
+  assert.equal(result.ok, true);
+  assert.equal(scrolls, 1);
+});
+
+test("playback visual focus: si ya esta centrado no hace scroll pero espera highlight", async () => {
   resetBody('<button id="target">Enviar</button>');
   const target = win.document.getElementById("target");
   let scrolls = 0;
   placeInsideViewport(target);
   target.scrollIntoView = () => { scrolls += 1; };
 
+  const startedAt = Date.now();
   const result = await runStep({ type: "click", selector: "#target" });
+  const elapsed = Date.now() - startedAt;
 
   assert.equal(result.ok, true);
   assert.equal(scrolls, 0);
+  assert.ok(elapsed >= 100);
 });
 
 test("playback visual focus: wait, wait_for y navigate no enfocan elementos", async () => {

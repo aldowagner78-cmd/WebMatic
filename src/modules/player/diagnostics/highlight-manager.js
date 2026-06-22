@@ -41,21 +41,45 @@
     return visibleX >= Math.min(width, 12) && visibleY >= Math.min(height, 12);
   }
 
+  function isCenteredEnough(el, deps) {
+    if (!el || typeof el.getBoundingClientRect !== "function") return true;
+    const doc = (deps && deps.document) || el.ownerDocument || (typeof document !== "undefined" ? document : null);
+    const viewport = getViewport(doc);
+    let rect = null;
+    try { rect = el.getBoundingClientRect(); } catch (_e) { rect = null; }
+    if (!rect) return true;
+    const width = Math.max(0, Number(rect.width) || (Number(rect.right) - Number(rect.left)) || 0);
+    const height = Math.max(0, Number(rect.height) || (Number(rect.bottom) - Number(rect.top)) || 0);
+    if (width <= 0 || height <= 0) return true;
+
+    const margin = Math.min(48, Math.max(12, Math.round(Math.min(viewport.width, viewport.height) * 0.06)));
+    const fullyVisible = rect.left >= margin && rect.top >= margin && rect.right <= viewport.width - margin && rect.bottom <= viewport.height - margin;
+    const centerX = rect.left + width / 2;
+    const centerY = rect.top + height / 2;
+    const nearCenterX = centerX >= viewport.width * 0.30 && centerX <= viewport.width * 0.70;
+    const nearCenterY = centerY >= viewport.height * 0.25 && centerY <= viewport.height * 0.75;
+    return fullyVisible && nearCenterX && nearCenterY;
+  }
+
   function focusStepElement(el, deps) {
     const options = deps && typeof deps === "object" ? deps : {};
     const setTimeoutFn = options.setTimeout || (typeof setTimeout !== "undefined" ? setTimeout : null);
-    const waitMs = Number.isFinite(Number(options.waitMs)) ? Math.max(0, Number(options.waitMs)) : 80;
+    const waitAfterScrollMs = Number.isFinite(Number(options.waitAfterScrollMs)) ? Math.max(0, Number(options.waitAfterScrollMs)) : 180;
+    const waitWhenVisibleMs = Number.isFinite(Number(options.waitWhenVisibleMs)) ? Math.max(0, Number(options.waitWhenVisibleMs)) : 120;
     if (!el || typeof el.scrollIntoView !== "function") return Promise.resolve(false);
-    if (isSufficientlyVisible(el, options)) return Promise.resolve(false);
+    const shouldCenter = !isCenteredEnough(el, options);
 
-    try {
-      el.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
-    } catch (_e) {
-      try { el.scrollIntoView({ block: "center", inline: "center" }); } catch (__e) { return Promise.resolve(false); }
+    if (shouldCenter) {
+      try {
+        el.scrollIntoView({ block: "center", inline: "center", behavior: "auto" });
+      } catch (_e) {
+        try { el.scrollIntoView({ block: "center", inline: "center" }); } catch (__e) { return Promise.resolve(false); }
+      }
     }
 
-    if (!setTimeoutFn || waitMs <= 0) return Promise.resolve(true);
-    return new Promise((resolve) => setTimeoutFn(() => resolve(true), waitMs));
+    const waitMs = shouldCenter ? waitAfterScrollMs : waitWhenVisibleMs;
+    if (!setTimeoutFn || waitMs <= 0) return Promise.resolve(shouldCenter);
+    return new Promise((resolve) => setTimeoutFn(() => resolve(shouldCenter), waitMs));
   }
 
   function clearAllHighlights(deps) {
@@ -76,6 +100,7 @@
   const api = {
     highlightElement,
     isSufficientlyVisible,
+    isCenteredEnough,
     focusStepElement,
     clearAllHighlights
   };
