@@ -5405,6 +5405,13 @@
     _setNodeStyle(el, "display", value);
   }
 
+  function clearPlaybackSuccessCloseTimer() {
+    if (playerRuntime.successCloseTimer) {
+      clearTimeout(playerRuntime.successCloseTimer);
+      playerRuntime.successCloseTimer = null;
+    }
+  }
+
   function isPlaybackBannerStepRelevant(step) {
     if (!step || typeof step !== "object") return false;
     const type = String(step.type || "");
@@ -5608,12 +5615,34 @@
     }
   }
 
+  function animateAndRemovePlaybackFloating(options) {
+    const opts = options && typeof options === "object" ? options : {};
+    const el = document.getElementById(FLOATING_PLAYER_ID);
+    if (!el) {
+      removePlaybackFloating(opts);
+      return;
+    }
+    if (el.dataset.wmClosing === "1") return;
+    el.dataset.wmClosing = "1";
+    try {
+      el.style.transition = "opacity 220ms ease, transform 220ms ease";
+      el.style.opacity = "0";
+      el.style.transform = "translateY(-6px)";
+      el.style.pointerEvents = "none";
+    } catch (_e) { /* ignore */ }
+    setTimeout(() => {
+      removePlaybackFloating(opts);
+    }, 220);
+  }
+
   function openSidebarFromPlaybackFloating() {
-    removePlaybackFloating({ restoreSidebar: true });
+    clearPlaybackSuccessCloseTimer();
+    animateAndRemovePlaybackFloating({ restoreSidebar: true });
   }
 
   function closePlaybackFloatingOnly() {
-    removePlaybackFloating({ restoreSidebar: false });
+    clearPlaybackSuccessCloseTimer();
+    animateAndRemovePlaybackFloating({ restoreSidebar: false });
   }
 
   function getPlaybackDiagnosticText() {
@@ -5664,14 +5693,11 @@
   }
 
   function schedulePlaybackSuccessClose() {
-    if (playerRuntime.successCloseTimer) {
-      clearTimeout(playerRuntime.successCloseTimer);
-      playerRuntime.successCloseTimer = null;
-    }
+    clearPlaybackSuccessCloseTimer();
     playerRuntime.successCloseTimer = setTimeout(() => {
       playerRuntime.successCloseTimer = null;
-      removePlaybackFloating({ restoreSidebar: true });
-    }, 3000);
+      animateAndRemovePlaybackFloating({ restoreSidebar: true });
+    }, 2000);
   }
 
   function finishPlaybackSuccessfully(steps, statusMessage) {
@@ -5683,6 +5709,7 @@
   }
 
   function handlePlaybackError(err) {
+    clearPlaybackSuccessCloseTimer();
     playerRuntime.activePlayer = null;
     const errIdx = store.getState().playback.currentStepIndex;
     const message = err && err.message ? err.message : String(err || "Error desconocido");
@@ -5719,6 +5746,7 @@
   }
 
   function stopPlaybackFromUser() {
+    clearPlaybackSuccessCloseTimer();
     if (playerRuntime.activePlayer) {
       playerRuntime.activePlayer.stop();
       playerRuntime.activePlayer = null;

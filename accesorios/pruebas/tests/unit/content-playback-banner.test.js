@@ -43,15 +43,21 @@ test("content playback banner: se crea una sola vez y se actualiza in-place", ()
   assert.match(updateBody, /_setNodeDisplay\(stopEl, "inline-flex"\)/);
 });
 
-test("content playback banner: exito queda visible 3s y error no abre sidebar automaticamente", () => {
+test("content playback banner: exito queda visible 2s y cierra con animacion", () => {
   const source = readContent();
   const updateBody = functionBody(source, "updatePlaybackFloating");
   const successBody = functionBody(source, "schedulePlaybackSuccessClose");
   const errorBody = functionBody(source, "handlePlaybackError");
+  const animatedCloseBody = functionBody(source, "animateAndRemovePlaybackFloating");
 
   assert.match(source, /onDone: \(summary\) =>[\s\S]*?finishPlaybackSuccessfully\(_preparedSteps, _statusMsg\)/);
-  assert.match(successBody, /setTimeout\(\(\) =>[\s\S]*?removePlaybackFloating\(\{ restoreSidebar: true \}\)[\s\S]*?, 3000\)/);
+  assert.match(successBody, /clearPlaybackSuccessCloseTimer\(\)/);
+  assert.match(successBody, /setTimeout\(\(\) =>[\s\S]*?animateAndRemovePlaybackFloating\(\{ restoreSidebar: true \}\)[\s\S]*?, 2000\)/);
+  assert.match(animatedCloseBody, /opacity 220ms ease, transform 220ms ease/);
+  assert.match(animatedCloseBody, /translateY\(-6px\)/);
+  assert.match(animatedCloseBody, /setTimeout\(\(\) =>[\s\S]*?removePlaybackFloating\(opts\)[\s\S]*?, 220\)/);
   assert.match(errorBody, /PLAYBACK_ERROR/);
+  assert.match(errorBody, /clearPlaybackSuccessCloseTimer\(\)/);
   assert.doesNotMatch(errorBody, /PANEL_SHOWN/);
   assert.match(updateBody, /if \(errorMessage\)/);
   assert.match(updateBody, /Error en reproduccion/);
@@ -66,6 +72,7 @@ test("content playback banner: stop manual queda visible y no abre sidebar autom
   const stopBody = functionBody(source, "stopPlaybackFromUser");
   const updateBody = functionBody(source, "updatePlaybackFloating");
 
+  assert.match(stopBody, /clearPlaybackSuccessCloseTimer\(\)/);
   assert.match(summaryBody, /Ejecucion detenida por el usuario/);
   assert.match(summaryBody, /index \+ 1/);
   assert.match(summaryBody, /_stepLabel\(step\)/);
@@ -101,10 +108,13 @@ test("content playback banner: botones finales cierran, abren sidebar y copian d
   const closeBody = functionBody(source, "closePlaybackFloatingOnly");
   const sidebarBody = functionBody(source, "openSidebarFromPlaybackFloating");
   const copyBody = functionBody(source, "copyPlaybackDiagnostic");
+  const animatedCloseBody = functionBody(source, "animateAndRemovePlaybackFloating");
 
   assert.match(createBody, /wm-play-open-sidebar/);
   assert.match(createBody, /wm-play-copy-diagnostic/);
-  assert.match(closeBody, /restoreSidebar: false/);
-  assert.match(sidebarBody, /restoreSidebar: true/);
+  assert.match(closeBody, /animateAndRemovePlaybackFloating\(\{ restoreSidebar: false \}\)/);
+  assert.match(sidebarBody, /animateAndRemovePlaybackFloating\(\{ restoreSidebar: true \}\)/);
   assert.match(copyBody, /getPlaybackDiagnosticText/);
+  assert.doesNotMatch(copyBody, /animateAndRemovePlaybackFloating|removePlaybackFloating/);
+  assert.match(animatedCloseBody, /pointerEvents = "none"/);
 });
