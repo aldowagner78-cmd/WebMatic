@@ -117,6 +117,12 @@ test("buildSelector: dynamic id is used only as last resort when no stable alter
   assert.equal(Recorder.buildSelector(el), "#btn_9a8b7c_20260613");
 });
 
+test("buildSelector: salta id dinamico Angular Material si hay placeholder estable", () => {
+  resetBody('<input id="mat-input-3" placeholder="Buscar Nro. de Expediente:">');
+  const el = win.document.querySelector("input");
+  assert.equal(Recorder.buildSelector(el), 'input[placeholder="Buscar Nro. de Expediente:"]');
+});
+
 test("dedupeFieldRuns: conserva primer input si hay otra edicion posterior separada", () => {
   const steps = [
     { type: "navigate", url: "file:///pagina-a.html" },

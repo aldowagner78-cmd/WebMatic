@@ -73,6 +73,10 @@
     return false;
   }
 
+  function isLikelyAngularMaterialDynamicId(value) {
+    return /^mat-(?:input|select|option)-\d+$/i.test(String(value || "").trim());
+  }
+
   function buildSelector(element) {
     if (!element || !(element instanceof Element)) return "";
     const E = escapeAttr;
@@ -94,7 +98,7 @@
 
     const tag = element.tagName.toLowerCase();
     const elementId = String(element.id || "");
-    if (elementId) {
+    if (elementId && !isLikelyAngularMaterialDynamicId(elementId)) {
       const byId = accept("#" + EI(elementId));
       if (byId) return byId;
     }
@@ -238,6 +242,7 @@
     _resolveSelectorInDoc: resolveSelectorInDoc,
     selectorResolvesToElement,
     isLikelyDynamicValue,
+    isLikelyAngularMaterialDynamicId,
     buildSelector
   };
 
