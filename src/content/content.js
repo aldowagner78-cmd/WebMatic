@@ -5437,6 +5437,33 @@
     store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
   }
 
+  function summarizeManualPlaybackStop() {
+    const state = store.getState();
+    const playback = state && state.playback ? state.playback : {};
+    const steps = Array.isArray(playback.currentSteps) ? playback.currentSteps : [];
+    const total = steps.length;
+    const rawIndex = Number(playback.currentStepIndex);
+    const index = Number.isFinite(rawIndex) ? Math.max(0, Math.min(rawIndex, Math.max(total - 1, 0))) : 0;
+    const step = total > 0 ? steps[index] : null;
+    const label = step ? _stepLabel(step) : "";
+    const selector = step && (step.selector || step.from || step.to) ? String(step.selector || step.from || step.to) : "";
+    const position = total > 0 ? ` en paso ${index + 1}/${total}` : "";
+    const detail = label ? `: ${label}` : (selector ? `: ${selector}` : "");
+    return `Ejecucion detenida por el usuario${position}${detail}`;
+  }
+
+  function stopPlaybackFromUser() {
+    if (playerRuntime.activePlayer) {
+      playerRuntime.activePlayer.stop();
+      playerRuntime.activePlayer = null;
+    }
+    const message = summarizeManualPlaybackStop();
+    store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+    store.dispatch({ type: contracts.ActionTypes.PANEL_SHOWN });
+    store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: message });
+    removePlaybackFloating();
+  }
+
   function createFloatingBtn(onStop) {
     if (document.getElementById(FLOATING_BTN_ID)) return;
     const btn = document.createElement("button");
@@ -7435,12 +7462,7 @@
       }
 
       if (actionId === "play-stop") {
-        if (playerRuntime.activePlayer) {
-          playerRuntime.activePlayer.stop();
-          playerRuntime.activePlayer = null;
-        }
-        store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-        removePlaybackFloating();
+        stopPlaybackFromUser();
       }
 
       if (actionId === "close-panel") {
@@ -7938,18 +7960,10 @@
           });
         }
         createPlaybackFloating(
-          () => {
-            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-            removePlaybackFloating();
-          },
+          () => { stopPlaybackFromUser(); },
           () => addWaitHere(),
           () => { _startMacroPlay(); },
-          () => {
-            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-            removePlaybackFloating();
-          },
+          () => { stopPlaybackFromUser(); },
           (n) => {
             // Repetir N veces desde el flotante
             if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
@@ -8100,18 +8114,10 @@
           _lnNext();
         }
         createPlaybackFloating(
-          () => {
-            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-            removePlaybackFloating();
-          },
+          () => { stopPlaybackFromUser(); },
           () => addWaitHere(),
           () => { _startLoopPlay(); },
-          () => {
-            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-            removePlaybackFloating();
-          },
+          () => { stopPlaybackFromUser(); },
           (n) => { _startLoopPlayN(n); }
         );
         _startLoopPlay();
@@ -9140,10 +9146,10 @@
           playerRuntime.lastDurationMs = (_durNow && _durNow >= 100) ? _durNow : null;
           if (p.macroId) store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: p.macroId });
           createPlaybackFloating(
-            () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
+            () => { stopPlaybackFromUser(); },
             null,
             null,
-            () => { store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED }); removePlaybackFloating(); },
+            () => { stopPlaybackFromUser(); },
             null
           );
           store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
@@ -9161,11 +9167,7 @@
         if (p.macroId) store.dispatch({ type: contracts.ActionTypes.LIBRARY_SELECTED, payload: p.macroId });
 
         createPlaybackFloating(
-          () => {
-            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-            removePlaybackFloating();
-          },
+          () => { stopPlaybackFromUser(); },
           () => addWaitHere(),
           () => {
             if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
@@ -9218,11 +9220,7 @@
               }
             });
           },
-          () => {
-            if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
-            store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
-            removePlaybackFloating();
-          },
+          () => { stopPlaybackFromUser(); },
           (n) => {
             if (playerRuntime.activePlayer) { playerRuntime.activePlayer.stop(); playerRuntime.activePlayer = null; }
             const _rnstate = store.getState();

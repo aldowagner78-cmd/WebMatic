@@ -666,48 +666,56 @@
           }
           // Foco real para que la lÃ³gica del navegador (submit por Enter, etc.)
           // funcione como cuando un humano usa el teclado.
-          try { if (target && typeof target.focus === "function") target.focus(); } catch (_e) { /* ignore */ }
+          const dispatchKey = () => {
+            try { if (target && typeof target.focus === "function") target.focus(); } catch (_e) { /* ignore */ }
 
-          const _keyName = String(step.key || "");
-          const _keyCodeMap = { Enter: 13, Tab: 9, Escape: 27 };
-          const _kc = _keyCodeMap[_keyName] || 0;
-          const _keyInit = {
-            key: _keyName,
-            code: _keyName,
-            keyCode: _kc,
-            which: _kc,
-            bubbles: true,
-            cancelable: true
+            const _keyName = String(step.key || "");
+            const _keyCodeMap = { Enter: 13, Tab: 9, Escape: 27 };
+            const _kc = _keyCodeMap[_keyName] || 0;
+            const _keyInit = {
+              key: _keyName,
+              code: _keyName,
+              keyCode: _kc,
+              which: _kc,
+              bubbles: true,
+              cancelable: true
+            };
+            const _kd = new KeyboardEvent("keydown",  _keyInit);
+            const skipSyntheticKeypress = _keyName === "Enter" && hasExplicitKeyTarget && _isEditableKeyTarget(target);
+            const _kp = skipSyntheticKeypress ? null : new KeyboardEvent("keypress", _keyInit);
+            const _ku = new KeyboardEvent("keyup",    _keyInit);
+            target.dispatchEvent(_kd);
+            if (_kp) target.dispatchEvent(_kp);
+            target.dispatchEvent(_ku);
+
+            // Comportamiento nativo del navegador: si Enter no fue preventDefault'd
+            // dentro de un input de un <form>, el form se envÃ­a. Replicar eso aquÃ­
+            // hace que login (IAPOS / GeneXus / cualquier form clÃ¡sico) funcione.
+            const shouldKeepLegacySubmit = !(hasExplicitKeyTarget && _isEditableKeyTarget(target));
+            if (
+              _keyName === "Enter" &&
+              shouldKeepLegacySubmit &&
+              !_kd.defaultPrevented &&
+              !(_kp && _kp.defaultPrevented) &&
+              target &&
+              typeof target.closest === "function"
+            ) {
+              try {
+                const _form = target.closest("form");
+                if (_form) {
+                  if (typeof _form.requestSubmit === "function") _form.requestSubmit();
+                  else _form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+                }
+              } catch (_e) { /* ignore */ }
+            }
+            resolve();
           };
-          const _kd = new KeyboardEvent("keydown",  _keyInit);
-          const skipSyntheticKeypress = _keyName === "Enter" && hasExplicitKeyTarget && _isEditableKeyTarget(target);
-          const _kp = skipSyntheticKeypress ? null : new KeyboardEvent("keypress", _keyInit);
-          const _ku = new KeyboardEvent("keyup",    _keyInit);
-          target.dispatchEvent(_kd);
-          if (_kp) target.dispatchEvent(_kp);
-          target.dispatchEvent(_ku);
 
-          // Comportamiento nativo del navegador: si Enter no fue preventDefault'd
-          // dentro de un input de un <form>, el form se envÃ­a. Replicar eso aquÃ­
-          // hace que login (IAPOS / GeneXus / cualquier form clÃ¡sico) funcione.
-          const shouldKeepLegacySubmit = !(hasExplicitKeyTarget && _isEditableKeyTarget(target));
-          if (
-            _keyName === "Enter" &&
-            shouldKeepLegacySubmit &&
-            !_kd.defaultPrevented &&
-            !(_kp && _kp.defaultPrevented) &&
-            target &&
-            typeof target.closest === "function"
-          ) {
-            try {
-              const _form = target.closest("form");
-              if (_form) {
-                if (typeof _form.requestSubmit === "function") _form.requestSubmit();
-                else _form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-              }
-            } catch (_e) { /* ignore */ }
+          if (hasExplicitKeyTarget) {
+            _focusStepElement(target).then(dispatchKey).catch(dispatchKey);
+          } else {
+            dispatchKey();
           }
-          resolve();
           return;
         }
 
@@ -763,15 +771,27 @@
             else { reject(new Error(`drag_drop: elementos no encontrados: "${fromSel}" â†’ "${toSel}"`)); }
             return;
           }
-          try {
-            const dt = new DataTransfer();
-            fromEl.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
-            toEl.dispatchEvent(new DragEvent("dragenter", { bubbles: true, cancelable: true, dataTransfer: dt }));
-            toEl.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer: dt }));
-            toEl.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt }));
-            fromEl.dispatchEvent(new DragEvent("dragend", { bubbles: true, cancelable: true, dataTransfer: dt }));
-          } catch (e) { /* DragEvent no disponible en todos los entornos */ }
-          resolve();
+          _focusStepElement(fromEl).then(() => {
+            try {
+              const dt = new DataTransfer();
+              fromEl.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              toEl.dispatchEvent(new DragEvent("dragenter", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              toEl.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              toEl.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              fromEl.dispatchEvent(new DragEvent("dragend", { bubbles: true, cancelable: true, dataTransfer: dt }));
+            } catch (e) { /* DragEvent no disponible en todos los entornos */ }
+            resolve();
+          }).catch(() => {
+            try {
+              const dt = new DataTransfer();
+              fromEl.dispatchEvent(new DragEvent("dragstart", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              toEl.dispatchEvent(new DragEvent("dragenter", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              toEl.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              toEl.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: dt }));
+              fromEl.dispatchEvent(new DragEvent("dragend", { bubbles: true, cancelable: true, dataTransfer: dt }));
+            } catch (e) { /* DragEvent no disponible en todos los entornos */ }
+            resolve();
+          });
           return;
         }
 
@@ -875,6 +895,7 @@
         const value = expandVariables(step.value || "", vars);
         const _silentStep = _isSilentInternalStep(step);
 
+        const runElementAction = () => {
         if (step.type === "click") {
           if (!_silentStep) _highlightElement(el);
           simulateClick(el);
@@ -1083,6 +1104,14 @@
         }
 
         resolve();
+        };
+
+        if (!_silentStep && (step.type === "click" || step.type === "input" || step.type === "text" || step.type === "check" || step.type === "choose_option" || step.type === "hover")) {
+          _focusStepElement(el).then(runElementAction).catch(runElementAction);
+          return;
+        }
+
+        runElementAction();
       }
 
       attempt();
@@ -1418,6 +1447,12 @@
 
   function _highlightElement(el) {
     return _highlightManager().highlightElement(el);
+  }
+
+  function _focusStepElement(el) {
+    const manager = _highlightManager();
+    if (!manager || typeof manager.focusStepElement !== "function") return Promise.resolve(false);
+    return manager.focusStepElement(el, { document, setTimeout, waitMs: 80 });
   }
 
   function _clearAllHighlights() {
@@ -2094,6 +2129,3 @@
     module.exports = Player;
   }
 })(typeof globalThis !== "undefined" ? globalThis : window);
-
-
-

@@ -89,6 +89,88 @@ function runSteps(steps, vars = {}, playerOpts = {}) {
   });
 }
 
+function placeOutsideViewport(el) {
+  el.getBoundingClientRect = () => ({
+    left: 0,
+    top: 1200,
+    right: 100,
+    bottom: 1240,
+    width: 100,
+    height: 40
+  });
+}
+
+function placeInsideViewport(el) {
+  el.getBoundingClientRect = () => ({
+    left: 10,
+    top: 10,
+    right: 110,
+    bottom: 50,
+    width: 100,
+    height: 40
+  });
+}
+
+test("playback visual focus: click fuera de viewport hace scroll antes del click", async () => {
+  resetBody('<button id="target">Enviar</button>');
+  const target = win.document.getElementById("target");
+  const events = [];
+  placeOutsideViewport(target);
+  target.scrollIntoView = () => { events.push("scroll"); };
+  target.addEventListener("click", () => { events.push("click"); });
+
+  const result = await runStep({ type: "click", selector: "#target" });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(events, ["scroll", "click"]);
+});
+
+test("playback visual focus: input fuera de viewport hace scroll antes de escribir", async () => {
+  resetBody('<input id="name" type="text">');
+  const input = win.document.getElementById("name");
+  const events = [];
+  placeOutsideViewport(input);
+  input.scrollIntoView = () => { events.push("scroll"); };
+  input.addEventListener("input", () => { events.push("input"); });
+
+  const result = await runStep({ type: "input", selector: "#name", value: "Ana" });
+
+  assert.equal(result.ok, true);
+  assert.equal(input.value, "Ana");
+  assert.equal(events[0], "scroll");
+  assert.ok(events.slice(1).includes("input"));
+});
+
+test("playback visual focus: no hace scroll si el elemento ya esta visible", async () => {
+  resetBody('<button id="target">Enviar</button>');
+  const target = win.document.getElementById("target");
+  let scrolls = 0;
+  placeInsideViewport(target);
+  target.scrollIntoView = () => { scrolls += 1; };
+
+  const result = await runStep({ type: "click", selector: "#target" });
+
+  assert.equal(result.ok, true);
+  assert.equal(scrolls, 0);
+});
+
+test("playback visual focus: wait, wait_for y navigate no enfocan elementos", async () => {
+  resetBody('<button id="target">Enviar</button>');
+  const target = win.document.getElementById("target");
+  let scrolls = 0;
+  placeOutsideViewport(target);
+  target.scrollIntoView = () => { scrolls += 1; };
+
+  const result = await runSteps([
+    { type: "wait", ms: 1 },
+    { type: "wait_for", selector: "#target", timeout: 50 },
+    { type: "navigate", url: "https://example.com/" }
+  ]);
+
+  assert.equal(result.ok, true);
+  assert.equal(scrolls, 0);
+});
+
 test("key: Enter con selector enfoca y despacha sobre el campo grabado", async () => {
   resetBody('<form id="f"><input id="busqueda" type="search"><input id="password" type="password"></form>');
   const busqueda = win.document.getElementById("busqueda");
