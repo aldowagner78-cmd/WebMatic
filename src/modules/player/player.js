@@ -356,7 +356,7 @@
       const cs = view && typeof view.getComputedStyle === "function"
         ? view.getComputedStyle(current)
         : { display: "", visibility: "", pointerEvents: "" };
-      if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none") return false;
+      if (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none" || cs.opacity === "0") return false;
       current = current.parentElement;
     }
     return htmlEl.getClientRects && htmlEl.getClientRects().length > 0;
@@ -723,9 +723,10 @@
         if (step.type === "wait_for") {
           const wfSelector = expandVariables(step.selector || "", vars);
           const wfTimeout = step.timeout != null ? step.timeout : timeoutMs;
+          const requiresVisible = step.visible === true;
           const wfPoll = () => {
             const found = findElement(wfSelector);
-            if (found) { resolve(); }
+            if (found && (!requiresVisible || _isInteractable(found))) { resolve(); }
             else if (_shouldBypassMissingLoginStep("wait_for", wfSelector)) { resolve(); }
             else if (Date.now() - start < wfTimeout) { setTimeout(wfPoll, retryMs); }
             else {

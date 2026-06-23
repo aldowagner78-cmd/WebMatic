@@ -294,6 +294,54 @@ test("wait_for: espera hasta que el elemento aparece en el DOM", async () => {
   assert.equal(result.ok, true, result.error || "check via label falló");
 });
 
+test("wait_for visible: no resuelve si el elemento existe pero esta oculto", async () => {
+  resetBody('<div id="finish" style="display:none">Hello World!</div>');
+  const finish = win.document.getElementById("finish");
+  finish.getClientRects = () => [];
+
+  const result = await runStep(
+    { type: "wait_for", selector: "#finish", timeout: 100, visible: true },
+    {},
+    { retryMs: 20, timeoutMs: 500 }
+  );
+
+  assert.equal(result.ok, false);
+  assert.ok(result.error.includes("wait_for"), `Error inesperado: ${result.error}`);
+});
+
+test("wait_for visible: resuelve cuando el elemento se vuelve visible", async () => {
+  resetBody('<div id="finish" style="display:none">Hello World!</div>');
+  const finish = win.document.getElementById("finish");
+  finish.getClientRects = () => [];
+
+  setTimeout(() => {
+    finish.style.display = "block";
+    finish.getClientRects = () => [{ left: 0, top: 0, right: 120, bottom: 30, width: 120, height: 30 }];
+  }, 80);
+
+  const result = await runStep(
+    { type: "wait_for", selector: "#finish", timeout: 500, visible: true },
+    {},
+    { retryMs: 20, timeoutMs: 700 }
+  );
+
+  assert.equal(result.ok, true, result.error || "debe esperar visibilidad real");
+});
+
+test("wait_for legacy: sin visible resuelve aunque el elemento este oculto", async () => {
+  resetBody('<div id="finish" style="display:none">Hello World!</div>');
+  const finish = win.document.getElementById("finish");
+  finish.getClientRects = () => [];
+
+  const result = await runStep(
+    { type: "wait_for", selector: "#finish", timeout: 100 },
+    {},
+    { retryMs: 20, timeoutMs: 500 }
+  );
+
+  assert.equal(result.ok, true, result.error || "legacy debe esperar solo existencia");
+});
+
 test("wait_for: falla si el elemento nunca aparece (timeout propio)", async () => {
   resetBody('<div></div>');
   // timeout corto en el step mismo

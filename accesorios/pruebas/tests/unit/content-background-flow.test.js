@@ -36,6 +36,7 @@ test("content recorder: accion real cancela observador post-click dinamico", () 
   const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
   assert.match(source, /function _cancelPostClickObserverForStep\(step\)/);
   assert.match(source, /if \(step\.type === "wait_for" && step\._autoWait\) return;/);
+  assert.match(source, /visible: true/);
   const cancelCalls = source.match(/_cancelPostClickObserverForStep\(step\);/g) || [];
   assert.equal(cancelCalls.length >= 2, true);
 });

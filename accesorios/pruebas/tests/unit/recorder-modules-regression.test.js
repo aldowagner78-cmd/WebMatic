@@ -124,6 +124,27 @@ test("post-click dynamic observer: detecta elemento existente que pasa a visible
   assert.equal(picked.selector, "#finish");
 });
 
+test("post-click dynamic observer: ignora loader y elige resultado final visible", () => {
+  document.body.innerHTML = `
+    <button id="start">Start</button>
+    <div id="loading" style="display:none">Loading...</div>
+    <div id="finish" style="display:none"><h4>Hello World!</h4></div>
+  `;
+
+  const visibleAtClick = recorderEvents.collectVisiblePostClickSelectors(document, (el) => "#" + el.id);
+  const loading = document.getElementById("loading");
+  const finish = document.getElementById("finish");
+  loading.style.display = "block";
+  finish.style.display = "block";
+
+  const picked = recorderEvents.pickPostClickWaitForCandidate([loading, finish], (el) => "#" + el.id, {
+    clickedSelector: "#start",
+    visibleAtClick
+  });
+
+  assert.equal(picked.selector, "#finish");
+});
+
 test("post-click dynamic observer: ignora UI de WebMatic", () => {
   document.body.innerHTML = `
     <button id="start">Start</button>

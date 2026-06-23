@@ -6220,7 +6220,7 @@
       });
       if (!picked || !picked.selector) return false;
       _stopPostClickObserver();
-      emit({ type: "wait_for", selector: picked.selector, timeout: 10000, _autoWait: true });
+      emit({ type: "wait_for", selector: picked.selector, timeout: 10000, _autoWait: true, visible: true });
       return true;
     };
 

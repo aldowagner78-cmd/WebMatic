@@ -1,4 +1,4 @@
-(function initRecorderEvents(globalScope) {
+﻿(function initRecorderEvents(globalScope) {
   function _ctor(name) {
     return globalScope && globalScope[name] ? globalScope[name] : null;
   }
@@ -197,9 +197,33 @@
     }
   }
 
+  const POST_CLICK_TRANSIENT_RE = /(?:^|[^a-z0-9])(loading|loader|spinner|progress|busy|cargando|procesando)(?:$|[^a-z0-9])/i;
+
+  function _isTransientPostClickElement(el, selector) {
+    try {
+      if (!_isInstance(el, "Element")) return true;
+      const attrs = [
+        selector,
+        el.id,
+        el.className,
+        el.getAttribute && el.getAttribute("role"),
+        el.getAttribute && el.getAttribute("aria-label"),
+        el.getAttribute && el.getAttribute("title"),
+        el.getAttribute && el.getAttribute("data-testid"),
+        el.textContent
+      ].map((v) => String(v || ""));
+      const role = String(el.getAttribute && el.getAttribute("role") || "").toLowerCase();
+      if (role === "progressbar") return true;
+      if (String(el.getAttribute && el.getAttribute("aria-busy") || "").toLowerCase() === "true") return true;
+      return attrs.some((entry) => POST_CLICK_TRANSIENT_RE.test(entry));
+    } catch (_e) {
+      return true;
+    }
+  }
+
   function _postClickCandidateScore(el, selector) {
     const sel = String(selector || "");
-    if (!sel) return 0;
+    if (!sel || _isTransientPostClickElement(el, sel)) return 0;
     if (el.id && sel === "#" + el.id) return 100;
     if (el.getAttribute && String(el.getAttribute("aria-label") || "").trim()) return 90;
     if (el.getAttribute && String(el.getAttribute("placeholder") || "").trim()) return 85;
@@ -311,3 +335,4 @@
     module.exports = api;
   }
 })(typeof globalThis !== "undefined" ? globalThis : window);
+
