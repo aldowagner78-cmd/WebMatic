@@ -152,6 +152,145 @@
     return explicitClickable && checkIsHidden;
   }
 
+  const POST_CLICK_CANDIDATE_SELECTOR = [
+    "[id]",
+    "[aria-label]",
+    "[placeholder]",
+    "[title]",
+    "[name]",
+    "button",
+    "a[href]",
+    "input",
+    "select",
+    "textarea",
+    "[role]",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "p",
+    "div",
+    "span",
+    "section",
+    "article",
+    "main",
+    "aside"
+  ].join(",");
+
+  function _isPostClickVisible(el) {
+    try {
+      if (!_isInstance(el, "Element")) return false;
+      if (isInsideWebMaticUi(el)) return false;
+      if (el.closest("[data-wm-flash]")) return false;
+      const tag = String(el.tagName || "").toLowerCase();
+      if (!tag || tag === "html" || tag === "body" || tag === "script" || tag === "style" || tag === "template") return false;
+      if (_isInstance(el, "HTMLElement") && el.hidden) return false;
+      const view = (el.ownerDocument && el.ownerDocument.defaultView) || globalScope;
+      const cs = view && typeof view.getComputedStyle === "function" ? view.getComputedStyle(el) : null;
+      if (cs && (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0")) return false;
+      if (el.getClientRects && el.getClientRects().length === 0) return false;
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _postClickCandidateScore(el, selector) {
+    const sel = String(selector || "");
+    if (!sel) return 0;
+    if (el.id && sel === "#" + el.id) return 100;
+    if (el.getAttribute && String(el.getAttribute("aria-label") || "").trim()) return 90;
+    if (el.getAttribute && String(el.getAttribute("placeholder") || "").trim()) return 85;
+    if (el.getAttribute && String(el.getAttribute("title") || "").trim()) return 80;
+    if (el.getAttribute && String(el.getAttribute("name") || "").trim()) return 75;
+    if (/\[text=/.test(sel)) return 60;
+    return 30;
+  }
+
+  function _isReasonablePostClickCandidate(el) {
+    if (!_isPostClickVisible(el)) return false;
+    const hasStableAttr = !!(
+      el.id ||
+      (el.getAttribute && (
+        String(el.getAttribute("aria-label") || "").trim() ||
+        String(el.getAttribute("placeholder") || "").trim() ||
+        String(el.getAttribute("title") || "").trim() ||
+        String(el.getAttribute("name") || "").trim()
+      ))
+    );
+    if (hasStableAttr) return true;
+    const text = String(el.textContent || "").replace(/\s+/g, " ").trim();
+    return text.length > 0 && text.length <= 80;
+  }
+
+  function _expandPostClickCandidateElements(node) {
+    const out = [];
+    const seen = new Set();
+    const push = (el) => {
+      if (!_isInstance(el, "Element") || seen.has(el)) return;
+      seen.add(el);
+      out.push(el);
+    };
+
+    if (_isInstance(node, "Element")) {
+      let cur = node;
+      let depth = 0;
+      while (cur && depth < 4) {
+        push(cur);
+        cur = cur.parentElement;
+        depth += 1;
+      }
+      try {
+        node.querySelectorAll(POST_CLICK_CANDIDATE_SELECTOR).forEach(push);
+      } catch (_e) { /* ignore */ }
+    } else if (node && node.parentElement) {
+      push(node.parentElement);
+    }
+
+    return out;
+  }
+
+  function pickPostClickWaitForCandidate(nodes, buildSelector, opts) {
+    const select = typeof buildSelector === "function" ? buildSelector : null;
+    if (!select) return null;
+    const options = opts && typeof opts === "object" ? opts : {};
+    const visibleAtClick = options.visibleAtClick && typeof options.visibleAtClick.has === "function"
+      ? options.visibleAtClick
+      : new Set();
+    const clickedSelector = String(options.clickedSelector || "");
+    const list = Array.isArray(nodes) ? nodes : [nodes];
+    let best = null;
+
+    list.forEach((node) => {
+      _expandPostClickCandidateElements(node).forEach((el) => {
+        if (!_isReasonablePostClickCandidate(el)) return;
+        let selector = "";
+        try { selector = String(select(el) || "").trim(); } catch (_e) { selector = ""; }
+        if (!selector || selector === clickedSelector || visibleAtClick.has(selector)) return;
+        const score = _postClickCandidateScore(el, selector);
+        if (!score) return;
+        if (!best || score > best.score) best = { selector, element: el, score };
+      });
+    });
+
+    return best ? { selector: best.selector, element: best.element } : null;
+  }
+
+  function collectVisiblePostClickSelectors(root, buildSelector) {
+    const out = new Set();
+    const select = typeof buildSelector === "function" ? buildSelector : null;
+    if (!root || !select) return out;
+    try {
+      root.querySelectorAll(POST_CLICK_CANDIDATE_SELECTOR).forEach((el) => {
+        const picked = pickPostClickWaitForCandidate([el], select, { visibleAtClick: new Set() });
+        if (picked && picked.selector) out.add(picked.selector);
+      });
+    } catch (_e) { /* ignore */ }
+    return out;
+  }
+
   const api = {
     normalizeCaptureTarget,
     isInteractableCaptureTarget,
@@ -161,7 +300,9 @@
     isInsideWebMaticUi,
     isRequiredSelectorRecordedStep,
     isInvalidCapturedStep,
-    shouldPreferClickOverCheck
+    shouldPreferClickOverCheck,
+    pickPostClickWaitForCandidate,
+    collectVisiblePostClickSelectors
   };
 
   globalScope.WebMaticRecorderEvents = api;

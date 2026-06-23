@@ -9,6 +9,15 @@ global.Element = win.Element;
 global.HTMLElement = win.HTMLElement;
 global.HTMLInputElement = win.HTMLInputElement;
 global.HTMLTextAreaElement = win.HTMLTextAreaElement;
+win.Element.prototype.getClientRects = function getClientRects() {
+  const style = win.getComputedStyle(this);
+  if (this.hidden || style.display === "none" || style.visibility === "hidden") return [];
+  return [{ left: 0, top: 0, right: 100, bottom: 30, width: 100, height: 30 }];
+};
+win.Element.prototype.getBoundingClientRect = function getBoundingClientRect() {
+  const rects = this.getClientRects();
+  return rects[0] || { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 };
+};
 
 const normalizer = require("../../../../src/modules/recorder/normalizer/recording-normalizer.js");
 const defaultsCapture = require("../../../../src/modules/recorder/defaults/defaults-capture.js");
@@ -94,4 +103,54 @@ test("recorder helper modules preserve normalization, defaults and capture guard
     recorderEvents.normalizeCaptureTarget(document.getElementById("icon-path")),
     document.getElementById("icon-button")
   );
+});
+
+test("post-click dynamic observer: detecta elemento existente que pasa a visible", () => {
+  document.body.innerHTML = `
+    <button id="start">Start</button>
+    <div id="finish" style="display:none"><h4>Hello World!</h4></div>
+  `;
+
+  const visibleAtClick = recorderEvents.collectVisiblePostClickSelectors(document, (el) => "#" + el.id);
+  assert.equal(visibleAtClick.has("#finish"), false);
+
+  const finish = document.getElementById("finish");
+  finish.style.display = "block";
+  const picked = recorderEvents.pickPostClickWaitForCandidate([finish], (el) => "#" + el.id, {
+    clickedSelector: "#start",
+    visibleAtClick
+  });
+
+  assert.equal(picked.selector, "#finish");
+});
+
+test("post-click dynamic observer: ignora UI de WebMatic", () => {
+  document.body.innerHTML = `
+    <button id="start">Start</button>
+    <div id="webmatic-panel-root"><div id="finish">Hello World!</div></div>
+  `;
+
+  const picked = recorderEvents.pickPostClickWaitForCandidate(
+    [document.getElementById("finish")],
+    (el) => "#" + el.id,
+    { clickedSelector: "#start", visibleAtClick: new Set() }
+  );
+
+  assert.equal(picked, null);
+});
+
+test("post-click dynamic observer: no duplica candidato ya visible al click", () => {
+  document.body.innerHTML = `
+    <button id="start">Start</button>
+    <div id="finish">Hello World!</div>
+  `;
+
+  const visibleAtClick = recorderEvents.collectVisiblePostClickSelectors(document, (el) => "#" + el.id);
+  const picked = recorderEvents.pickPostClickWaitForCandidate(
+    [document.getElementById("finish")],
+    (el) => "#" + el.id,
+    { clickedSelector: "#start", visibleAtClick }
+  );
+
+  assert.equal(picked, null);
 });

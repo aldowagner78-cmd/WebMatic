@@ -6189,12 +6189,22 @@
   }
 
   let _postClickObserver = null;
-  function _startPostClickObserver(clickedSelector) {
+  let _postClickObserverTimer = null;
+  function _stopPostClickObserver() {
     if (_postClickObserver) { _postClickObserver.disconnect(); _postClickObserver = null; }
+    if (_postClickObserverTimer) { clearTimeout(_postClickObserverTimer); _postClickObserverTimer = null; }
+  }
+  function _startPostClickObserver(clickedSelector, emitStep) {
+    _stopPostClickObserver();
     _snapshotMissingAfterClick(clickedSelector);
+    const emit = typeof emitStep === "function" ? emitStep : captureStep;
+    const events = globalScope.WebMaticRecorderEvents || {};
 
     // Collect selectors for all currently-present interactive elements.
     const _presentNow = new Set();
+    const visibleAtClick = events && typeof events.collectVisiblePostClickSelectors === "function"
+      ? events.collectVisiblePostClickSelectors(document, buildSelector)
+      : new Set();
     try {
       document.querySelectorAll("input,select,textarea,button,[contenteditable]").forEach((el) => {
         const id = el.id ? `#${el.id}` : "";
@@ -6202,7 +6212,19 @@
       });
     } catch (_) {}
 
-    _postClickObserver = new MutationObserver(() => {
+    const emitWaitForCandidate = (nodes) => {
+      if (!events || typeof events.pickPostClickWaitForCandidate !== "function") return false;
+      const picked = events.pickPostClickWaitForCandidate(nodes, buildSelector, {
+        clickedSelector,
+        visibleAtClick
+      });
+      if (!picked || !picked.selector) return false;
+      _stopPostClickObserver();
+      emit({ type: "wait_for", selector: picked.selector, timeout: 10000, _autoWait: true });
+      return true;
+    };
+
+    _postClickObserver = new MutationObserver((mutations) => {
       // When new elements appear, mark their selectors as "were missing at click"
       try {
         document.querySelectorAll("input,select,textarea,button,[contenteditable]").forEach((el) => {
@@ -6214,17 +6236,39 @@
           }
         });
       } catch (_) {}
+
+      const candidates = [];
+      try {
+        mutations.forEach((m) => {
+          if (m.type === "childList") {
+            m.addedNodes.forEach((node) => candidates.push(node));
+          } else if (m.type === "attributes") {
+            candidates.push(m.target);
+          } else if (m.type === "characterData" && m.target && m.target.parentElement) {
+            candidates.push(m.target.parentElement);
+          }
+        });
+      } catch (_) {}
+      emitWaitForCandidate(candidates);
     });
     try {
       _postClickObserver.observe(document.body || document.documentElement, {
-        childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class", "hidden", "display"]
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true,
+        attributeFilter: ["style", "class", "hidden", "display", "aria-hidden"]
       });
     } catch (_) {}
 
-    // Stop observing after 15s regardless
-    setTimeout(() => {
-      if (_postClickObserver) { _postClickObserver.disconnect(); _postClickObserver = null; }
-    }, 15000);
+    // Stop observing after 10s regardless.
+    _postClickObserverTimer = setTimeout(_stopPostClickObserver, 10000);
+  }
+
+  function _cancelPostClickObserverForStep(step) {
+    if (!_postClickObserver || !step || typeof step !== "object") return;
+    if (step.type === "wait_for" && step._autoWait) return;
+    _stopPostClickObserver();
   }
 
   function _isVisualCoalescibleTextStep(step) {
@@ -6282,6 +6326,7 @@
 
   function captureStep(step) {
     if (_isInvalidCapturedStep(step)) return;
+    _cancelPostClickObserverForStep(step);
     const blockKey = _resolveStepBlockKey(step);
     const stamped = Object.assign({ _ts: Date.now() }, step);
     if (blockKey) {
@@ -6383,7 +6428,7 @@
       // inject a wait_for so playback waits for it to appear.
       _checkAndInjectWaitFor(target.id ? `#${target.id}` : clickSel);
       captureStep({ type: "click", selector: clickSel });
-      _startPostClickObserver(clickSel);
+      _startPostClickObserver(clickSel, captureStep);
     };
 
     const onChange = (event) => {
@@ -6724,6 +6769,7 @@
       clearTimeout(recorderRuntime._ceTimer);
       clearTimeout(recorderRuntime._hoverTimer);
       clearTimeout(recorderRuntime._scrollTimer);
+      _stopPostClickObserver();
       recorderRuntime.lastCopiedText = null;
       recorderRuntime.lastCopiedVar  = null;
       recorderRuntime._ceTimer       = null;
@@ -6860,6 +6906,7 @@
 
     function addStep(step) {
       if (_isInvalidCapturedStep(step)) return;
+      _cancelPostClickObserverForStep(step);
       const fullStep = Object.assign({ _ts: Date.now() }, step);
       buffer.push(fullStep);
       // Persistir en background para sobrevivir navegaciones
@@ -6920,7 +6967,7 @@
       const clickSel = buildSelector(t);
       _checkAndInjectWaitFor(t.id ? `#${t.id}` : clickSel, addStep);
       addStep({ type: "click", selector: clickSel });
-      _startPostClickObserver(clickSel);
+      _startPostClickObserver(clickSel, addStep);
     };
 
     const _onChange = (e) => {
@@ -7244,6 +7291,7 @@
       // each input event. No iteration is possible, but removing the listeners
       // above prevents new captures after stop.
       if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
+      _stopPostClickObserver();
       _inlineDragSource = "";
       const p = document.getElementById(INLINE_REC_PANEL_ID);
       if (p && p.parentNode) p.parentNode.removeChild(p);
