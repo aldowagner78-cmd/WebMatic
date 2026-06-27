@@ -85,3 +85,82 @@ Comando agregado:
 Resultado ejecutado:
 - `npm run test:e2e:angular-material`: pass.
 - `npm test`: 506 pass, 0 fail.
+
+
+## Actualización rc36 - WAIT_FOR inteligente tras NAVIGATE
+
+### Archivos modificados
+- `src/modules/recorder/normalizer/recording-normalizer.js`
+- `src/content/content.js`
+- `src/modules/ui/build-info.js`
+- `accesorios/pruebas/tests/unit/recorder.test.js`
+- `accesorios/pruebas/tests/unit/build-info.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+- `README_INSTALACION.txt`
+
+### Qué se cambió
+- Se agrega `wait_for` automático visible para el primer paso con selector después de `navigate`.
+- Se reemplazan esperas automáticas fijas entre `navigate` y la primera acción con selector por un `wait_for` más robusto.
+- Se evita duplicar `wait_for` si ya existe.
+- Se respeta `WAIT` manual del usuario.
+- Se actualiza versión visible interna de rc35 a rc36.
+
+### Por qué se cambió
+- En pruebas públicas quedó pendiente que el primer selector después de `NAVIGATE` tuviera espera automática.
+- Los delays fijos pueden fallar en páginas lentas, SPA o contenido dinámico.
+- `WAIT_FOR` permite esperar el elemento real sin depender de segundos arbitrarios.
+
+### Cómo probar
+
+Windows PowerShell:
+Ruta:
+`C:\Users\usuario\Desktop\WebMatic-dev\repo-modular`
+
+Comandos:
+```powershell
+npm install
+node --test accesorios/pruebas/tests/unit/recorder.test.js
+node --test accesorios/pruebas/tests/unit/build-info.test.js
+npm test
+```
+
+Validación esperada:
+- `recorder.test.js`: pass.
+- `build-info.test.js`: pass.
+- `npm test`: fail 0.
+- Una macro nueva con `NAVIGATE` seguido de `CLICK`, `TYPE`, `CHECK` o `CHOOSE_OPTION` debe incluir `WAIT_FOR` antes del primer selector.
+
+### Resultado de pruebas ejecutadas por el agente
+- `node -c` correcto en JS modificados.
+- `recorder.test.js`: 85 pass, 0 fail.
+- No se completó `npm test` entero dentro del entorno del agente; debe ejecutarse localmente antes de commit/tag rc36.
+
+### Cómo revertir
+- Restaurar backup anterior al parche rc36.
+- O revertir el commit rc36.
+- No hace falta tocar `manifest.json`, porque este parche no lo modifica.
+
+## Actualizacion rc36 - prueba e2e WAIT_FOR tras NAVIGATE
+
+Archivos agregados:
+- `accesorios/pruebas/tests/e2e/wait-for-after-navigate/fixture.html`
+- `accesorios/pruebas/tests/e2e/wait-for-after-navigate/run.js`
+
+Archivos modificados:
+- `package.json`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+
+Que valida:
+- Fixture local con input `#busqueda-expediente` creado despues de un retardo corto.
+- Macro base `navigate` + `input` normalizada como `navigate` -> `wait_for` visible -> `input`.
+- El `wait_for` queda antes del primer selector accionable despues de `navigate`.
+- La reproduccion empieza antes de que el input exista y escribe `EE-2026-00014539` solo despues de la creacion del input.
+
+Comando agregado:
+`npm run test:e2e:wait-for-navigate`
+
+Resultado ejecutado:
+- `npm run test:e2e:wait-for-navigate`: pass.
+- `npm test`: 510 pass, 0 fail.

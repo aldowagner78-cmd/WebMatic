@@ -471,6 +471,70 @@
       return arr.filter((_, idx) => !remove.has(idx));
     };
 
+    const selectorActionTypes = new Set([
+      "click",
+      "dblclick",
+      "input",
+      "text",
+      "check",
+      "choose_option",
+      "hover",
+      "scroll_to",
+      "extract"
+    ]);
+
+    const needsSelectorReadyBeforeAction = (step) => {
+      if (!step || !step.selector) return false;
+      if (selectorActionTypes.has(step.type)) return true;
+      return step.type === "key" && String(step.key || "").toLowerCase() === "enter";
+    };
+
+    const isTransparentAfterNavigate = (step) => !!(
+      step &&
+      (isAutoWait(step) || step._baselineDefault || step._fast || step.type === "capture_defaults")
+    );
+
+    const insertWaitForAfterNavigate = (arr) => {
+      const injectAfter = new Map();
+      const skip = new Set();
+
+      for (let i = 0; i < arr.length; i += 1) {
+        const step = arr[i];
+        if (!step || step.type !== "navigate") continue;
+
+        let j = i + 1;
+        while (j < arr.length && isTransparentAfterNavigate(arr[j])) j += 1;
+
+        const next = arr[j];
+        if (!next || next.type === "navigate") continue;
+        if (next.type === "wait_for" || (next.type === "wait" && !isAutoWait(next))) continue;
+
+        if (needsSelectorReadyBeforeAction(next)) {
+          injectAfter.set(i, {
+            type: "wait_for",
+            selector: next.selector,
+            timeout: 10000,
+            _autoWait: true,
+            visible: true
+          });
+
+          for (let k = i + 1; k < j; k += 1) {
+            if (isAutoWait(arr[k])) skip.add(k);
+          }
+        }
+      }
+
+      if (injectAfter.size === 0 && skip.size === 0) return arr;
+
+      const result = [];
+      for (let i = 0; i < arr.length; i += 1) {
+        if (skip.has(i)) continue;
+        result.push(arr[i]);
+        if (injectAfter.has(i)) result.push(injectAfter.get(i));
+      }
+      return result;
+    };
+
     const insertWaitForBeforeChooseOption = (arr) => {
       const result = [];
       for (const step of arr) {
@@ -513,8 +577,10 @@
     return compactConsecutiveWaits(
       preferWaitForAfterDynamicClick(
         compactTextInputsConfirmedByEnter(
-          insertWaitForBeforeChooseOption(
-            compactNativeSelectClicks(inferMissingEnterSelector(out))
+          insertWaitForAfterNavigate(
+            insertWaitForBeforeChooseOption(
+              compactNativeSelectClicks(inferMissingEnterSelector(out))
+            )
           )
         )
       )

@@ -1,5 +1,30 @@
 # Changelog
 
+## [2026-06-27] v0.2.0-modular-rc36
+
+### Agregado
+- `WAIT_FOR` automático y visible para el primer selector accionable después de `NAVIGATE`.
+- Tests unitarios para navegación seguida de input/click, espera automática reemplazada por `WAIT_FOR`, no duplicación de `WAIT_FOR` y respeto de espera manual.
+
+### Modificado
+- `recording-normalizer` reemplaza esperas automáticas fijas entre `NAVIGATE` y la primera acción con selector por un `wait_for` estable.
+- `content.js` replica la limpieza de guardado para que las macros grabadas queden listas para reproducir sin depender de delays fijos.
+- Versión visible interna actualizada a `v0.2.0-modular-rc36`.
+
+### Corregido
+- Caso rc36: macros que empiezan con `NAVIGATE` y luego interactúan con un selector ya no arrancan la acción sin esperar a que el elemento exista/sea visible.
+- Se mantiene el `WAIT_FOR` dinámico posterior a clicks que abren contenido demorado.
+
+### Pendiente
+- Validación e2e simulada con Playwright para flujo NAVIGATE -> contenido demorado -> primer selector.
+- Captura de password pegado y submit/logout reales.
+- Actualización completa del manual de usuario antes de firma Firefox 0.2.2.
+
+### Compatibilidad
+- No se modificó `manifest.json`.
+- No se cambió versión firmada Firefox.
+- No se agregaron dependencias nuevas.
+
 ## [2026-06-27] v0.2.0-modular-rc35
 
 ### Agregado
@@ -39,4 +64,16 @@
 ### Validado
 - El selector estable `input[placeholder="Buscar Nro. de Expediente:"]` queda disponible para macro/controlRef.
 - La reproduccion completa el input aunque el selector primario legacy `#mat-input-3` ya no exista.
+- No usa internet, pagina real, login, credenciales ni datos reales.
+
+## [2026-06-27] rc36 - validacion e2e WAIT_FOR tras NAVIGATE
+
+### Agregado
+- Prueba e2e simulada con Playwright: `npm run test:e2e:wait-for-navigate`.
+- Fixture local en `accesorios/pruebas/tests/e2e/wait-for-after-navigate/` con input creado de forma demorada despues de cargar la pagina.
+
+### Validado
+- Una macro `NAVIGATE` + `TYPE` se normaliza como `NAVIGATE` -> `WAIT_FOR visible` -> `TYPE`.
+- El `WAIT_FOR` usa `#busqueda-expediente` antes de escribir `EE-2026-00014539`.
+- La reproduccion empieza antes de que exista el input y escribe solo despues de su creacion.
 - No usa internet, pagina real, login, credenciales ni datos reales.

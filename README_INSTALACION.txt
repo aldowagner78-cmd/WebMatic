@@ -1,4 +1,4 @@
-# Instalación y uso del parche WebMatic rc35
+# Instalación y uso del parche WebMatic rc36
 
 ## Requisitos
 
@@ -25,7 +25,7 @@ Ruta:
 C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
 
 Comando:
-Expand-Archive -Path C:\Users\usuario\Desktop\WebMatic-dev\WebMatic-rc35-selector-angular-material-PARCHE.zip -DestinationPath . -Force
+Expand-Archive -Path C:\Users\usuario\Desktop\WebMatic-dev\WebMatic-rc36-wait-for-navigate-PARCHE.zip -DestinationPath . -Force
 
 Linux:
 Ruta:
@@ -38,7 +38,7 @@ Ruta:
 ~/Escritorio/WebMatic-dev/repo-modular
 
 Comando:
-unzip -o ~/Escritorio/WebMatic-dev/WebMatic-rc35-selector-angular-material-PARCHE.zip -d .
+unzip -o ~/Escritorio/WebMatic-dev/WebMatic-rc36-wait-for-navigate-PARCHE.zip -d .
 
 ## Ejecución / carga temporal en Firefox
 
@@ -53,7 +53,7 @@ Pasos:
 
 Resultado esperado:
 - WebMatic carga como extensión temporal.
-- La versión visible interna muestra v0.2.0-modular-rc35.
+- La versión visible interna muestra v0.2.0-modular-rc36.
 
 ## Modo demo / prueba manual sugerida
 
@@ -98,7 +98,7 @@ Ruta:
 C:\Users\usuario\Desktop\WebMatic-dev
 
 Comando recomendado:
-Compress-Archive -Path .\repo-modular -DestinationPath .\WebMatic-repo-modular-rc35-validado.zip -Force
+Compress-Archive -Path .\repo-modular -DestinationPath .\WebMatic-repo-modular-rc36-validado.zip -Force
 
 Antes de compartir, excluir:
 - node_modules
@@ -121,3 +121,27 @@ Quitar la extensión temporal anterior y volver a cargar manifest.json.
 
 Si una macro vieja todavía tiene #mat-input-N:
 Editarla manualmente o regrabar el paso para que use placeholder/aria-label. El reproductor ahora también puede usar controlRef.altSelectors cuando la macro conserva esa metadata.
+
+
+## Prueba específica rc36
+
+Objetivo:
+Confirmar que una macro con `NAVIGATE` seguido de una acción sobre selector espere el elemento antes de actuar.
+
+Ejemplo esperado en IIM:
+```iim
+NAVIGATE URL="https://sitio.local/formulario"
+// WAIT_FOR SELECTOR="#nombre" TIMEOUT=10000
+TYPE SELECTOR="#nombre" CONTENT="Ada"
+```
+
+Pruebas unitarias específicas:
+```powershell
+node --test --test-name-pattern "tras navigate" accesorios/pruebas/tests/unit/recorder.test.js
+node --test --test-name-pattern "despues de navigate" accesorios/pruebas/tests/unit/recorder.test.js
+```
+
+Resultado esperado:
+- Las pruebas pasan.
+- La macro nueva no depende de un `WAIT SECONDS` fijo entre navegación y primera acción.
+- No se modifica `manifest.json`.

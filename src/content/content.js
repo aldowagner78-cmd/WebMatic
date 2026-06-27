@@ -7773,36 +7773,67 @@
       return true;
     });
 
-    // Pass 4: auto-inject wait_for after navigate steps
-    // Inserts wait_for for the first selector-bearing step after each navigate,
-    // making macros robust on full page loads and SPA transitions.
-    const _stableWaitTargetTypes = new Set(["input", "text", "check", "choose_option", "extract"]);
-    const pass4 = [];
+    // Pass 4: auto-inject wait_for after navigate steps.
+    // Insert a visible wait_for before the first selector-bearing action after
+    // each navigation. Auto waits between NAVIGATE and that action are replaced:
+    // a DOM-ready wait is more reliable than a fixed delay.
+    const _stableWaitTargetTypes = new Set([
+      "click",
+      "dblclick",
+      "input",
+      "text",
+      "check",
+      "choose_option",
+      "hover",
+      "scroll_to",
+      "extract"
+    ]);
+    const _needsSelectorReadyBeforeAction = (step) => !!(
+      step &&
+      step.selector &&
+      (_stableWaitTargetTypes.has(step.type) ||
+        (step.type === "key" && String(step.key || "").toLowerCase() === "enter"))
+    );
+    const _isTransparentAfterNavigate = (step) => !!(
+      step &&
+      ((step.type === "wait" && step._autoWait === true) ||
+        step._baselineDefault ||
+        step._fast ||
+        step.type === "capture_defaults")
+    );
+    const pass4InjectAfter = new Map();
+    const pass4Skip = new Set();
+
     for (let i = 0; i < pass3d.length; i++) {
-      pass4.push(pass3d[i]);
-      if (pass3d[i].type === "navigate") {
-        const nextStep = pass3d[i + 1];
-        // Skip if already followed by a wait/wait_for or another navigate.
-        if (nextStep && nextStep.type !== "wait" && nextStep.type !== "wait_for" && nextStep.type !== "navigate") {
-          let waitSelector = null;
-          let sawAnotherNavigate = false;
-          for (let j = i + 1; j < pass3d.length; j++) {
-            const cand = pass3d[j];
-            if (cand.type === "wait") continue;
-            if (cand.type === "navigate") {
-              sawAnotherNavigate = true;
-              break;
-            }
-            if (cand.selector && _stableWaitTargetTypes.has(cand.type)) {
-              waitSelector = cand.selector;
-            }
-            break;
-          }
-          if (waitSelector && !sawAnotherNavigate) {
-            pass4.push({ type: "wait_for", selector: waitSelector, timeout: 10000 });
-          }
+      const step = pass3d[i];
+      if (!step || step.type !== "navigate") continue;
+
+      let j = i + 1;
+      while (j < pass3d.length && _isTransparentAfterNavigate(pass3d[j])) j += 1;
+
+      const next = pass3d[j];
+      if (!next || next.type === "navigate") continue;
+      if (next.type === "wait_for" || (next.type === "wait" && next._autoWait !== true)) continue;
+
+      if (_needsSelectorReadyBeforeAction(next)) {
+        pass4InjectAfter.set(i, {
+          type: "wait_for",
+          selector: next.selector,
+          timeout: 10000,
+          _autoWait: true,
+          visible: true
+        });
+        for (let k = i + 1; k < j; k++) {
+          if (pass3d[k] && pass3d[k].type === "wait" && pass3d[k]._autoWait === true) pass4Skip.add(k);
         }
       }
+    }
+
+    const pass4 = [];
+    for (let i = 0; i < pass3d.length; i++) {
+      if (pass4Skip.has(i)) continue;
+      pass4.push(pass3d[i]);
+      if (pass4InjectAfter.has(i)) pass4.push(pass4InjectAfter.get(i));
     }
     // Pass 4b: auto-inject wait_for after click steps that open modals/dialogs
     // When a click is followed by check/input on a DIFFERENT selector, the click

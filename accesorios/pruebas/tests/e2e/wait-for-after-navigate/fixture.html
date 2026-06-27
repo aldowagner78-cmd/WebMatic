@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture WAIT_FOR after NAVIGATE</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #172033;
+    }
+
+    main {
+      width: min(760px, calc(100% - 32px));
+      margin: 48px auto;
+    }
+
+    .panel {
+      border: 1px solid #c7d0dd;
+      border-radius: 6px;
+      background: #fff;
+      padding: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #44546a;
+    }
+
+    input {
+      width: min(420px, 100%);
+      box-sizing: border-box;
+      border: 1px solid #78889c;
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-size: 16px;
+    }
+
+    #dynamic-slot {
+      min-height: 78px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="panel">
+      <div id="dynamic-slot" data-state="waiting">Cargando campo...</div>
+    </div>
+  </main>
+
+  <script>
+    (function initDelayedField() {
+      var params = new URLSearchParams(window.location.search);
+      var delay = Number(params.get("delay") || 350);
+      if (!Number.isFinite(delay) || delay < 0) delay = 350;
+
+      window.__wmWaitForNavigateLog = [{
+        type: "page-loaded",
+        at: performance.now()
+      }];
+
+      setTimeout(function () {
+        var slot = document.getElementById("dynamic-slot");
+        var label = document.createElement("label");
+        var input = document.createElement("input");
+
+        label.setAttribute("for", "busqueda-expediente");
+        label.textContent = "Buscar Nro. de Expediente:";
+        input.id = "busqueda-expediente";
+        input.type = "text";
+        input.placeholder = "Buscar Nro. de Expediente:";
+
+        slot.textContent = "";
+        slot.dataset.state = "ready";
+        slot.appendChild(label);
+        slot.appendChild(input);
+
+        window.__wmWaitForNavigateLog.push({
+          type: "input-created",
+          at: performance.now(),
+          exists: !!document.getElementById("busqueda-expediente")
+        });
+
+        input.addEventListener("input", function () {
+          window.__wmWaitForNavigateLog.push({
+            type: "input-event",
+            at: performance.now(),
+            value: input.value
+          });
+        });
+
+        input.addEventListener("change", function () {
+          window.__wmWaitForNavigateLog.push({
+            type: "change-event",
+            at: performance.now(),
+            value: input.value
+          });
+        });
+      }, delay);
+    })();
+  </script>
+</body>
+</html>

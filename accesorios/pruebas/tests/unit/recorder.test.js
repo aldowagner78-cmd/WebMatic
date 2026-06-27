@@ -372,7 +372,12 @@ test("normalizeRecordedSteps: no compacta correcciones si hay navigate entre med
     { type: "input", selector: "#busqueda", value: "TEST ENTER" }
   ];
 
-  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "input", selector: "#busqueda", value: "TEST" },
+    { type: "navigate", url: "https://example.test/otra" },
+    { type: "wait_for", selector: "#busqueda", timeout: 10000, _autoWait: true, visible: true },
+    { type: "input", selector: "#busqueda", value: "TEST ENTER" }
+  ]);
 });
 
 test("normalizeRecordedSteps: no compacta correcciones si hay wait_for entre medio", () => {
@@ -460,6 +465,53 @@ test("normalizeRecordedSteps: select nativo compactado conserva choose_option co
   ]);
 });
 
+test("normalizeRecordedSteps: agrega wait_for visible antes del primer input tras navigate", () => {
+  const steps = [
+    { type: "navigate", url: "https://a.local/form" },
+    { type: "input", selector: "#nombre", value: "Ada" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "navigate", url: "https://a.local/form" },
+    { type: "wait_for", selector: "#nombre", timeout: 10000, _autoWait: true, visible: true },
+    { type: "input", selector: "#nombre", value: "Ada" }
+  ]);
+});
+
+test("normalizeRecordedSteps: reemplaza wait automatico tras navigate por wait_for del primer selector", () => {
+  const steps = [
+    { type: "navigate", url: "https://a.local/form" },
+    { type: "wait", seconds: 4, _autoWait: true },
+    { type: "click", selector: "#abrir" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
+    { type: "navigate", url: "https://a.local/form" },
+    { type: "wait_for", selector: "#abrir", timeout: 10000, _autoWait: true, visible: true },
+    { type: "click", selector: "#abrir" }
+  ]);
+});
+
+test("normalizeRecordedSteps: no duplica wait_for existente tras navigate", () => {
+  const steps = [
+    { type: "navigate", url: "https://a.local/form" },
+    { type: "wait_for", selector: "#nombre", timeout: 15000 },
+    { type: "input", selector: "#nombre", value: "Ada" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
+test("normalizeRecordedSteps: respeta wait manual tras navigate", () => {
+  const steps = [
+    { type: "navigate", url: "https://a.local/form" },
+    { type: "wait", seconds: 3 },
+    { type: "input", selector: "#nombre", value: "Ada" }
+  ];
+
+  assert.deepEqual(Recorder.normalizeRecordedSteps(steps), steps);
+});
+
 test("normalizeRecordedSteps: conserva wait_for posterior a click dinamico", () => {
   const steps = [
     { type: "navigate", url: "https://the-internet.herokuapp.com/dynamic_loading/1" },
@@ -470,6 +522,7 @@ test("normalizeRecordedSteps: conserva wait_for posterior a click dinamico", () 
 
   assert.deepEqual(Recorder.normalizeRecordedSteps(steps), [
     { type: "navigate", url: "https://the-internet.herokuapp.com/dynamic_loading/1" },
+    { type: "wait_for", selector: "#start button", timeout: 10000, _autoWait: true, visible: true },
     { type: "click", selector: "#start button", _ts: 1000 },
     { type: "wait_for", selector: "#finish", timeout: 10000, _autoWait: true }
   ]);
