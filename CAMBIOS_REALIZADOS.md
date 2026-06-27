@@ -61,3 +61,27 @@ Prueba manual:
 - Restaurar la copia de seguridad `repo-modular_BACKUP_rc34`.
 - O revertir manualmente los archivos listados arriba.
 - No hace falta tocar `manifest.json`, porque este parche no lo modifica.
+
+## Actualizacion rc35 - prueba e2e Angular Material local
+
+Archivos agregados:
+- `accesorios/pruebas/tests/e2e/angular-material-selectors/fixture.html`
+- `accesorios/pruebas/tests/e2e/angular-material-selectors/run.js`
+
+Archivos modificados:
+- `package.json`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+
+Que valida:
+- Primera carga con `id="mat-input-3"` y placeholder estable `Buscar Nro. de Expediente:`.
+- Segunda carga con `id="mat-input-99"` conservando placeholder/label.
+- Generacion rc35 de selector estable por placeholder.
+- Reproduccion de macro legacy con `#mat-input-3` usando `controlRef.altSelectors` para completar el input cambiado.
+
+Comando agregado:
+`npm run test:e2e:angular-material`
+
+Resultado ejecutado:
+- `npm run test:e2e:angular-material`: pass.
+- `npm test`: 506 pass, 0 fail.

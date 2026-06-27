@@ -29,3 +29,14 @@
 - No se modificó `manifest.json`.
 - No se cambió versión firmada Firefox.
 - No se agregaron dependencias nuevas.
+
+## [2026-06-27] rc35 - validacion e2e Angular Material local
+
+### Agregado
+- Prueba e2e simulada con Playwright: `npm run test:e2e:angular-material`.
+- Fixture local en `accesorios/pruebas/tests/e2e/angular-material-selectors/` que simula un campo Angular Material con `#mat-input-3` y segunda carga como `#mat-input-99`.
+
+### Validado
+- El selector estable `input[placeholder="Buscar Nro. de Expediente:"]` queda disponible para macro/controlRef.
+- La reproduccion completa el input aunque el selector primario legacy `#mat-input-3` ya no exista.
+- No usa internet, pagina real, login, credenciales ni datos reales.

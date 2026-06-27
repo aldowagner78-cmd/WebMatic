@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture Angular Material selectors</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f7f9;
+      color: #1d2733;
+    }
+
+    main {
+      width: min(720px, calc(100% - 32px));
+      margin: 48px auto;
+    }
+
+    .mat-mdc-form-field {
+      display: block;
+      max-width: 420px;
+      margin: 20px 0;
+    }
+
+    .mat-mdc-text-field-wrapper {
+      border: 1px solid #8b98a7;
+      border-radius: 4px;
+      background: #fff;
+      padding: 10px 12px 8px;
+    }
+
+    .mat-mdc-floating-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      color: #435061;
+    }
+
+    .mat-mdc-input-element {
+      width: 100%;
+      box-sizing: border-box;
+      border: 0;
+      outline: 0;
+      font-size: 16px;
+      line-height: 24px;
+      color: #182230;
+      background: transparent;
+    }
+
+    .mat-mdc-form-field-subscript-wrapper {
+      min-height: 18px;
+      padding-top: 4px;
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <form id="expediente-form" autocomplete="off">
+      <mat-form-field class="mat-mdc-form-field mat-form-field-appearance-outline">
+        <div class="mat-mdc-text-field-wrapper">
+          <label id="expediente-label" class="mat-mdc-floating-label" for="mat-input-3">
+            Buscar Nro. de Expediente:
+          </label>
+          <input
+            id="mat-input-3"
+            class="mat-mdc-input-element mat-input-element"
+            matinput
+            type="text"
+            placeholder="Buscar Nro. de Expediente:"
+            aria-labelledby="expediente-label"
+          >
+        </div>
+        <div class="mat-mdc-form-field-subscript-wrapper">Fixture local sin datos reales</div>
+      </mat-form-field>
+    </form>
+  </main>
+
+  <script>
+    (function initFixture() {
+      var params = new URLSearchParams(window.location.search);
+      var requestedId = params.get("id") || "mat-input-3";
+      var input = document.querySelector(".mat-mdc-input-element");
+      var label = document.getElementById("expediente-label");
+      window.__wmAngularMaterialEvents = [];
+
+      input.id = requestedId;
+      label.setAttribute("for", requestedId);
+      input.addEventListener("input", function () {
+        window.__wmAngularMaterialEvents.push({ type: "input", value: input.value, id: input.id });
+      });
+      input.addEventListener("change", function () {
+        window.__wmAngularMaterialEvents.push({ type: "change", value: input.value, id: input.id });
+      });
+    })();
+  </script>
+</body>
+</html>
