@@ -1,4 +1,4 @@
-﻿(function initSelectorBuilder(globalScope) {
+(function initSelectorBuilder(globalScope) {
   function escapeAttr(value) {
     return String(value == null ? "" : value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
@@ -75,6 +75,79 @@
 
   function isLikelyAngularMaterialDynamicId(value) {
     return /^mat-(?:input|select|option)-\d+$/i.test(String(value || "").trim());
+  }
+
+  function buildStableFallbackSelectors(element, primary) {
+    if (!element || !(element instanceof Element)) return [];
+    const E = escapeAttr;
+    const EI = escapeCssIdent;
+    const doc = element.ownerDocument || (typeof document !== "undefined" ? document : null);
+    if (!doc) return [];
+
+    const tag = element.tagName.toLowerCase();
+    const primarySelector = String(primary || "").trim();
+    const alts = [];
+
+    const accept = (selector, options) => {
+      const sel = String(selector || "").trim();
+      if (!sel || sel === primarySelector || alts.includes(sel)) return;
+      if (selectorResolvesToElement(doc, sel, element, options)) alts.push(sel);
+    };
+
+    const dataAttrs = [
+      ["testid", "data-testid"],
+      ["test", "data-test"],
+      ["cy", "data-cy"]
+    ];
+    dataAttrs.forEach(([key, attr]) => {
+      if (element.dataset && element.dataset[key]) {
+        accept(`[${attr}="${E(element.dataset[key])}"]`);
+      }
+    });
+
+    const aria = element.getAttribute && element.getAttribute("aria-label");
+    if (aria) {
+      accept(`${tag}[aria-label="${E(aria)}"]`);
+      accept(`[aria-label="${E(aria)}"]`);
+    }
+
+    const placeholder = element.getAttribute && element.getAttribute("placeholder");
+    if (placeholder) {
+      accept(`${tag}[placeholder="${E(placeholder)}"]`);
+      accept(`[placeholder="${E(placeholder)}"]`);
+    }
+
+    const titleAttr = element.getAttribute && element.getAttribute("title");
+    if (titleAttr && titleAttr.length <= 80) {
+      accept(`${tag}[title="${E(titleAttr)}"]`);
+      accept(`[title="${E(titleAttr)}"]`);
+    }
+
+    const nameAttr = element.getAttribute && element.getAttribute("name");
+    if (nameAttr) {
+      const typeAttr = String((element.getAttribute && element.getAttribute("type")) || "").toLowerCase();
+      if (tag === "input" && typeAttr) accept(`${tag}[type="${E(typeAttr)}"][name="${E(nameAttr)}"]`);
+      accept(`${tag}[name="${E(nameAttr)}"]`);
+      accept(`[name="${E(nameAttr)}"]`);
+    }
+
+    const roleAttr = element.getAttribute && element.getAttribute("role");
+    if (roleAttr) accept(`${tag}[role="${E(roleAttr)}"]`);
+
+    const stableData = Array.from(element.attributes || []).find((a) => {
+      if (!a.name.startsWith("data-")) return false;
+      if (/data-(v-|reactid|ng-|index$|key$|_)/.test(a.name)) return false;
+      if (a.value.length > 80 || a.value === "") return false;
+      return true;
+    });
+    if (stableData) accept(`[${stableData.name}="${E(stableData.value)}"]`);
+
+    const elementId = String(element.id || "");
+    if (elementId && !isLikelyAngularMaterialDynamicId(elementId) && !isLikelyDynamicValue(elementId)) {
+      accept("#" + EI(elementId));
+    }
+
+    return alts;
   }
 
   function buildSelector(element) {
@@ -243,6 +316,7 @@
     selectorResolvesToElement,
     isLikelyDynamicValue,
     isLikelyAngularMaterialDynamicId,
+    buildStableFallbackSelectors,
     buildSelector
   };
 

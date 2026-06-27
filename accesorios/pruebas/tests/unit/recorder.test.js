@@ -123,6 +123,16 @@ test("buildSelector: salta id dinamico Angular Material si hay placeholder estab
   assert.equal(Recorder.buildSelector(el), 'input[placeholder="Buscar Nro. de Expediente:"]');
 });
 
+test("buildStableFallbackSelectors: no usa id dinamico Angular Material como fallback estable", () => {
+  resetBody('<input id="mat-input-3" placeholder="Buscar Nro. de Expediente:" aria-label="Buscar expediente">');
+  const el = win.document.querySelector("input");
+  const selectorApi = Recorder._selectorBuilder();
+  const alts = selectorApi.buildStableFallbackSelectors(el, 'input[placeholder="Buscar Nro. de Expediente:"]');
+  assert.ok(alts.includes('input[aria-label="Buscar expediente"]'));
+  assert.ok(alts.includes('[aria-label="Buscar expediente"]'));
+  assert.equal(alts.includes("#mat-input-3"), false);
+});
+
 test("dedupeFieldRuns: conserva primer input si hay otra edicion posterior separada", () => {
   const steps = [
     { type: "navigate", url: "file:///pagina-a.html" },

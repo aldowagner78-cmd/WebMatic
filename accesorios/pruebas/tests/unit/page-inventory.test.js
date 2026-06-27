@@ -104,6 +104,16 @@ test("captureControl: altSelectors solo incluye selectores que resuelven al mism
   assert.equal(c.altSelectors.includes('#chk-tecnologia input[name="generos"]'), false);
 });
 
+test("captureControl: Angular Material conserva selector estable y evita id dinamico como alternativa", () => {
+  resetBody('<input id="mat-input-3" placeholder="Buscar Nro. de Expediente:" aria-label="Buscar expediente">');
+  const el = win.document.getElementById("mat-input-3");
+  const c = inv.captureControl(el);
+  assert.equal(c.selector, 'input[aria-label="Buscar expediente"]');
+  assert.ok(Array.isArray(c.altSelectors));
+  assert.ok(c.altSelectors.includes('input[placeholder="Buscar Nro. de Expediente:"]'));
+  assert.equal(c.altSelectors.includes("#mat-input-3"), false);
+});
+
 test("captureControl: button → controlKind button sin currentValue", () => {
   resetBody('<button id="enviar">Enviar</button>');
   const el = win.document.getElementById("enviar");

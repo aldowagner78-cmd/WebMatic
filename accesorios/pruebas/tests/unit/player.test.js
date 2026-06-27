@@ -122,6 +122,22 @@ function placeVisibleNearEdge(el) {
   });
 }
 
+test("wait_for: usa controlRef.altSelectors si el selector primario dinamico no existe", async () => {
+  resetBody('<input id="mat-input-8" placeholder="Buscar Nro. de Expediente:">');
+  const result = await runStep({
+    type: "wait_for",
+    selector: "#mat-input-3",
+    controlRef: {
+      selector: "#mat-input-3",
+      altSelectors: ['input[placeholder="Buscar Nro. de Expediente:"]']
+    },
+    timeout: 200
+  });
+
+  assert.equal(result.ok, true);
+});
+
+
 test("playback visual focus: click fuera de viewport hace scroll antes del click", async () => {
   resetBody('<button id="target">Enviar</button>');
   const target = win.document.getElementById("target");

@@ -37,11 +37,27 @@
     return String(value == null ? "" : value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   }
 
+  function _selectorApi() {
+    if (globalScope.WebMaticSelectorBuilder) return globalScope.WebMaticSelectorBuilder;
+    const rec = globalScope.WebMaticRecorder;
+    if (rec && typeof rec._selectorBuilder === "function") {
+      try { return rec._selectorBuilder(); } catch (_e) { /* ignore */ }
+    }
+    if (typeof require === "function") {
+      try { return require("../../common/selectors/selector-builder.js"); } catch (_e) { /* ignore */ }
+    }
+    return null;
+  }
+
   /** Devuelve el selector principal usando el Recorder si está disponible. */
   function _primarySelector(el) {
     const rec = globalScope.WebMaticRecorder;
     if (rec && typeof rec.buildSelector === "function") {
       try { return rec.buildSelector(el); } catch (e) { /* fallback */ }
+    }
+    const selectorApi = _selectorApi();
+    if (selectorApi && typeof selectorApi.buildSelector === "function") {
+      try { return selectorApi.buildSelector(el); } catch (e) { /* fallback */ }
     }
     // Fallback mínimo y genérico.
     if (el.id) return "#" + el.id;
@@ -53,6 +69,13 @@
 
   /** Lista de selectores alternativos estables (sin duplicar el principal). */
   function _altSelectors(el, primary) {
+    const selectorApi = _selectorApi();
+    if (selectorApi && typeof selectorApi.buildStableFallbackSelectors === "function") {
+      try {
+        return selectorApi.buildStableFallbackSelectors(el, primary);
+      } catch (_e) { /* fallback local */ }
+    }
+
     const alts = [];
     const tag = el.tagName.toLowerCase();
     const doc = el.ownerDocument || (typeof document !== "undefined" ? document : null);
@@ -73,7 +96,6 @@
       if (!sel || sel === primary || alts.includes(sel)) return;
       if (isValidForElement(sel)) alts.push(sel);
     };
-    if (el.id) push("#" + el.id);
     const name = el.getAttribute && el.getAttribute("name");
     if (name) push(`${tag}[name="${_esc(name)}"]`);
     const aria = el.getAttribute && el.getAttribute("aria-label");

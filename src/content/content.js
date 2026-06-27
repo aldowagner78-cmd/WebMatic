@@ -126,15 +126,56 @@
     chrome.runtime.onMessage.addListener((msg) => {
       if (msg?.type === "RECORDING_STATE") _isRecording = msg.active === true;
     });
+    const _sfSelectorElementCache = new Map();
+    function _sfSelectorBuilderApi() {
+      if (globalScope.WebMaticSelectorBuilder) return globalScope.WebMaticSelectorBuilder;
+      if (_Rec && typeof _Rec._selectorBuilder === "function") {
+        try { return _Rec._selectorBuilder(); } catch (_e) { /* ignore */ }
+      }
+      return null;
+    }
+    function _sfRememberSelector(selector, el) {
+      const sel = String(selector || "").trim();
+      if (sel && el instanceof Element) {
+        try { _sfSelectorElementCache.set(sel, el); } catch (_e) { /* ignore */ }
+      }
+    }
+    function _sfControlRefForStep(step) {
+      if (!step || typeof step !== "object" || !step.selector || step.controlRef) return step;
+      const el = _sfSelectorElementCache.get(String(step.selector || ""));
+      if (!(el instanceof Element)) return step;
+      const ref = {
+        selector: String(step.selector || ""),
+        tag: String(el.tagName || "").toLowerCase()
+      };
+      if (el instanceof HTMLInputElement) ref.type = String(el.getAttribute("type") || "text").toLowerCase();
+      const id = String(el.id || "");
+      if (id) ref.id = id;
+      const name = el.getAttribute && el.getAttribute("name");
+      if (name) ref.name = String(name);
+      const label = (el.getAttribute && (el.getAttribute("aria-label") || el.getAttribute("placeholder") || el.getAttribute("title") || el.getAttribute("name"))) || "";
+      if (label) ref.label = String(label).trim();
+      const api = _sfSelectorBuilderApi();
+      if (api && typeof api.buildStableFallbackSelectors === "function") {
+        try {
+          const alts = api.buildStableFallbackSelectors(el, step.selector);
+          if (Array.isArray(alts) && alts.length > 0) ref.altSelectors = alts;
+        } catch (_e) { /* ignore */ }
+      }
+      return Object.assign({}, step, { controlRef: ref });
+    }
     function _sel(el) {
-      if (_Rec && typeof _Rec.buildSelector === "function") return _Rec.buildSelector(el);
-      if (!el || !(el instanceof Element)) return "";
-      if (el.id) return "#" + el.id;
-      return el.tagName.toLowerCase();
+      let selector = "";
+      if (_Rec && typeof _Rec.buildSelector === "function") selector = _Rec.buildSelector(el);
+      else if (el instanceof Element && el.id) selector = "#" + el.id;
+      else if (el instanceof Element) selector = el.tagName.toLowerCase();
+      _sfRememberSelector(selector, el);
+      return selector;
     }
     function _send(step) {
       if (!_isRecording) return;
-      chrome.runtime.sendMessage({ type: "FRAME_STEP_CAPTURED", step }, () => { void chrome.runtime.lastError; });
+      const enrichedStep = _sfControlRefForStep(step);
+      chrome.runtime.sendMessage({ type: "FRAME_STEP_CAPTURED", step: enrichedStep }, () => { void chrome.runtime.lastError; });
     }
     document.addEventListener("click", (e) => {
       let t = e.target;
@@ -6030,16 +6071,124 @@
   const recorderEventsApi = globalScope.WebMaticRecorderEvents;
   const recordingLifecycleApi = globalScope.WebMaticRecordingLifecycle;
 
-  function buildSelector(element) {
-    if (RecorderClass && typeof RecorderClass.buildSelector === "function") {
-      return RecorderClass.buildSelector(element);
+  const _wmSelectorElementCache = new Map();
+
+  function _selectorBuilderApi() {
+    if (globalScope.WebMaticSelectorBuilder) return globalScope.WebMaticSelectorBuilder;
+    if (RecorderClass && typeof RecorderClass._selectorBuilder === "function") {
+      try { return RecorderClass._selectorBuilder(); } catch (_e) { /* ignore */ }
     }
-    // fallback (should not happen if scripts loaded correctly)
-    if (!element || !(element instanceof Element)) return "";
-    if (element.id) return `#${element.id}`;
-    const tag = element.tagName.toLowerCase();
-    const classes = Array.from(element.classList || []).slice(0, 2).join(".");
-    return classes ? `${tag}.${classes}` : tag;
+    return null;
+  }
+
+  function _rememberSelectorElement(selector, element) {
+    const sel = String(selector || "").trim();
+    if (!sel || !(element instanceof Element)) return;
+    try { _wmSelectorElementCache.set(sel, element); } catch (_e) { /* ignore */ }
+  }
+
+  function _isAngularMaterialDynamicId(id) {
+    const api = _selectorBuilderApi();
+    if (api && typeof api.isLikelyAngularMaterialDynamicId === "function") {
+      try { return api.isLikelyAngularMaterialDynamicId(id); } catch (_e) { /* ignore */ }
+    }
+    return /^mat-(?:input|select|option)-\d+$/i.test(String(id || "").trim());
+  }
+
+  function _waitForSelectorForTarget(target, stableSelector) {
+    if (!(target instanceof Element)) return String(stableSelector || "");
+    const id = String(target.id || "");
+    if (id && !_isAngularMaterialDynamicId(id)) return `#${id}`;
+    return String(stableSelector || "");
+  }
+
+  function _controlLabelForTarget(el) {
+    if (!(el instanceof Element)) return "";
+    const aria = el.getAttribute && el.getAttribute("aria-label");
+    if (aria) return String(aria).trim();
+    const placeholder = el.getAttribute && el.getAttribute("placeholder");
+    if (placeholder) return String(placeholder).trim();
+    const title = el.getAttribute && el.getAttribute("title");
+    if (title) return String(title).trim();
+    const name = el.getAttribute && el.getAttribute("name");
+    return name ? String(name).trim() : "";
+  }
+
+  function _controlKindForTarget(el) {
+    if (!(el instanceof Element)) return "";
+    const tag = String(el.tagName || "").toLowerCase();
+    if (tag === "select") return "native-select";
+    if (tag === "textarea") return "textarea";
+    if (tag === "button") return "button";
+    const role = String((el.getAttribute && el.getAttribute("role")) || "").toLowerCase();
+    if (role === "combobox") return "autocomplete";
+    if (el instanceof HTMLInputElement) {
+      const type = String(el.getAttribute("type") || "text").toLowerCase();
+      if (type === "checkbox") return "checkbox";
+      if (type === "radio") return "radio";
+      if (type === "button" || type === "submit" || type === "reset") return "button";
+      if (el.getAttribute && el.getAttribute("list")) return "datalist";
+      const autocompleteAria = (el.getAttribute && el.getAttribute("aria-autocomplete")) || "";
+      const haspopup = String((el.getAttribute && el.getAttribute("aria-haspopup")) || "").toLowerCase();
+      if (autocompleteAria || haspopup === "listbox") return "autocomplete";
+      return "text-input";
+    }
+    return "";
+  }
+
+  function _controlRefForRecordedTarget(el, selector, existingRef) {
+    if (!(el instanceof Element)) return existingRef || null;
+    const ref = Object.assign({}, existingRef || {});
+    const tag = String(el.tagName || "").toLowerCase();
+    ref.selector = ref.selector || String(selector || "");
+    ref.tag = ref.tag || tag;
+    const type = el instanceof HTMLInputElement ? String(el.getAttribute("type") || "text").toLowerCase() : "";
+    if (type && !ref.type) ref.type = type;
+    const name = el.getAttribute && el.getAttribute("name");
+    if (name && !ref.name) ref.name = String(name);
+    if (el.id && !ref.id) ref.id = String(el.id);
+    const label = _controlLabelForTarget(el);
+    if (label && !ref.label) ref.label = label;
+    const kind = _controlKindForTarget(el);
+    if (kind && !ref.controlKind) ref.controlKind = kind;
+
+    const api = _selectorBuilderApi();
+    if ((!Array.isArray(ref.altSelectors) || ref.altSelectors.length === 0) &&
+        api && typeof api.buildStableFallbackSelectors === "function") {
+      try {
+        const alts = api.buildStableFallbackSelectors(el, selector);
+        if (Array.isArray(alts) && alts.length > 0) ref.altSelectors = alts;
+      } catch (_e) { /* ignore */ }
+    }
+
+    return ref;
+  }
+
+  function _withControlRefForRecording(step) {
+    if (!step || typeof step !== "object" || !step.selector) return step;
+    const el = _wmSelectorElementCache.get(String(step.selector || ""));
+    if (!(el instanceof Element)) return step;
+    const ref = _controlRefForRecordedTarget(el, step.selector, step.controlRef);
+    if (!ref) return step;
+    return Object.assign({}, step, { controlRef: ref });
+  }
+
+  function buildSelector(element) {
+    let selector = "";
+    if (RecorderClass && typeof RecorderClass.buildSelector === "function") {
+      selector = RecorderClass.buildSelector(element);
+    } else {
+      // fallback (should not happen if scripts loaded correctly)
+      if (!element || !(element instanceof Element)) return "";
+      if (element.id) selector = `#${element.id}`;
+      else {
+        const tag = element.tagName.toLowerCase();
+        const classes = Array.from(element.classList || []).slice(0, 2).join(".");
+        selector = classes ? `${tag}.${classes}` : tag;
+      }
+    }
+    _rememberSelectorElement(selector, element);
+    return selector;
   }
 
   function _resetRuntimeForNewRecording(locationHref) {
@@ -6117,7 +6266,7 @@
       ? `{{!${copiedVar}}}`
       : rawValue;
 
-    _checkAndInjectWaitFor(target.id ? `#${target.id}` : selector, emitStep);
+    _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selector), emitStep);
     emitStep({ type: "input", selector, value });
     return true;
   }
@@ -6325,6 +6474,7 @@
   }
 
   function captureStep(step) {
+    step = _withControlRefForRecording(step);
     if (_isInvalidCapturedStep(step)) return;
     _cancelPostClickObserverForStep(step);
     const blockKey = _resolveStepBlockKey(step);
@@ -6426,7 +6576,7 @@
       const clickSel = buildSelector(target);
       // If this click is on an element that wasn't present at the previous click,
       // inject a wait_for so playback waits for it to appear.
-      _checkAndInjectWaitFor(target.id ? `#${target.id}` : clickSel);
+      _checkAndInjectWaitFor(_waitForSelectorForTarget(target, clickSel));
       captureStep({ type: "click", selector: clickSel });
       _startPostClickObserver(clickSel, captureStep);
     };
@@ -6462,7 +6612,7 @@
       }
       if (target instanceof HTMLSelectElement) {
         const selSel = buildSelector(target);
-        _checkAndInjectWaitFor(target.id ? `#${target.id}` : selSel);
+        _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selSel));
         captureStep({ type: "choose_option", selector: selSel, value: target.value });
         return;
       }
@@ -6478,7 +6628,7 @@
       }
       const inpSel = buildSelector(target);
       if (_isSensitiveInputTarget(target, inpSel)) return;
-      _checkAndInjectWaitFor(target.id ? `#${target.id}` : inpSel);
+      _checkAndInjectWaitFor(_waitForSelectorForTarget(target, inpSel));
       captureStep({ type: "input", selector: inpSel, value: recordedValue });
     };
 
@@ -6499,8 +6649,8 @@
         if (_isTextEntryCaptureTarget(target)) return;
         const selector = target instanceof Element ? buildSelector(target) : "";
         if (!selector) return;
-        if (target instanceof Element && target.id) {
-          _checkAndInjectWaitFor(`#${target.id}`);
+        if (target instanceof Element) {
+          _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selector));
         } else if (selector) {
           _checkAndInjectWaitFor(selector);
         }
@@ -6905,6 +7055,7 @@
     }
 
     function addStep(step) {
+      step = _withControlRefForRecording(step);
       if (_isInvalidCapturedStep(step)) return;
       _cancelPostClickObserverForStep(step);
       const fullStep = Object.assign({ _ts: Date.now() }, step);
@@ -6965,7 +7116,7 @@
       t = normalizeCaptureTarget(t);
       flashElement(t);
       const clickSel = buildSelector(t);
-      _checkAndInjectWaitFor(t.id ? `#${t.id}` : clickSel, addStep);
+      _checkAndInjectWaitFor(_waitForSelectorForTarget(t, clickSel), addStep);
       addStep({ type: "click", selector: clickSel });
       _startPostClickObserver(clickSel, addStep);
     };
@@ -6994,7 +7145,7 @@
       }
       if (t instanceof HTMLSelectElement) {
         const sel = buildSelector(t);
-        _checkAndInjectWaitFor(t.id ? `#${t.id}` : sel, addStep);
+        _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
         addStep({ type: "choose_option", selector: sel, value: t.value });
         return;
       }
@@ -7003,7 +7154,7 @@
         ? `{{!${lastCopiedVar}}}` : raw;
       const sel = buildSelector(t);
       if (_isSensitiveInputTarget(t, sel)) return;
-      _checkAndInjectWaitFor(t.id ? `#${t.id}` : sel, addStep);
+      _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
       addStep({ type: "input", selector: sel, value: val });
     };
 
@@ -7019,8 +7170,8 @@
         if (_isTextEntryCaptureTarget(t)) return;
         const sel = t instanceof Element ? buildSelector(t) : "";
         if (!sel) return;
-        if (t instanceof Element && t.id) {
-          _checkAndInjectWaitFor(`#${t.id}`, addStep);
+        if (t instanceof Element) {
+          _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
         } else if (sel) {
           _checkAndInjectWaitFor(sel, addStep);
         }

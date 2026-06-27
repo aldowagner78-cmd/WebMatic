@@ -1,4 +1,4 @@
-﻿(function initPlayer(globalScope) {
+(function initPlayer(globalScope) {
   const utils = globalScope.WebMaticUtils;
   const PLAY_START_VAR = "__WEBMATIC_PLAY_START_MS__";
 
@@ -231,12 +231,44 @@
     }
   }
 
-    function findElement(selector) {
+    function _collectFallbackSelectorsForStep(step, primarySelector, vars) {
+    const out = [];
+    const primary = String(primarySelector || "").trim();
+    const push = (value) => {
+      const raw = String(value || "").trim();
+      if (!raw || raw === primary || out.includes(raw)) return;
+      const expanded = expandVariables(raw, vars || {});
+      if (expanded && expanded !== primary && !out.includes(expanded)) out.push(expanded);
+    };
+    const pushMany = (values) => {
+      if (!Array.isArray(values)) return;
+      values.forEach(push);
+    };
+
+    if (step && typeof step === "object") {
+      push(step.fallbackSelector);
+      pushMany(step.fallbackSelectors);
+      pushMany(step.altSelectors);
+
+      const ref = step.controlRef && typeof step.controlRef === "object" ? step.controlRef : null;
+      if (ref) {
+        push(ref.selector);
+        push(ref.fallbackSelector);
+        pushMany(ref.fallbackSelectors);
+        pushMany(ref.altSelectors);
+      }
+    }
+
+    return out;
+  }
+
+    function findElement(selector, step, vars) {
     return _elementFinder().findElement(selector, {
       document,
       normalizeTextForCompare: _normalizeTextForCompare,
       foldTextForCompare: _foldTextForCompare,
-      knownFallback: _findKnownGalleryControlFallback
+      knownFallback: _findKnownGalleryControlFallback,
+      fallbackSelectors: _collectFallbackSelectorsForStep(step, selector, vars)
     });
   }
 
@@ -398,7 +430,7 @@
     if (!m) return null;
 
     const baseSelector = m[1];
-    const targetEl = findElement(baseSelector);
+    const targetEl = findElement(baseSelector, step, {});
     if (!(targetEl instanceof Element)) return null;
 
     const stepType = String(step && step.type || "").toLowerCase();
@@ -654,7 +686,7 @@
 
         if (step.type === "key") {
           const keySelector = expandVariables(step.selector || "", vars);
-          const explicitKeyTarget = keySelector ? findElement(keySelector) : null;
+          const explicitKeyTarget = keySelector ? findElement(keySelector, step, vars) : null;
           const hasExplicitKeyTarget = !!explicitKeyTarget;
           let target = explicitKeyTarget || document.activeElement || document.body;
           if (String(step.key || "") === "Enter") {
@@ -725,7 +757,7 @@
           const wfTimeout = step.timeout != null ? step.timeout : timeoutMs;
           const requiresVisible = step.visible === true;
           const wfPoll = () => {
-            const found = findElement(wfSelector);
+            const found = findElement(wfSelector, step, vars);
             if (found && (!requiresVisible || _isInteractable(found))) { resolve(); }
             else if (_shouldBypassMissingLoginStep("wait_for", wfSelector)) { resolve(); }
             else if (Date.now() - start < wfTimeout) { setTimeout(wfPoll, retryMs); }
@@ -765,8 +797,8 @@
         if (step.type === "drag_drop") {
           const fromSel = expandVariables(step.from || "", vars);
           const toSel = expandVariables(step.to || "", vars);
-          const fromEl = findElement(fromSel);
-          const toEl = findElement(toSel);
+          const fromEl = findElement(fromSel, step, vars);
+          const toEl = findElement(toSel, step, vars);
           if (!fromEl || !toEl) {
             if (Date.now() - start < timeoutMs) { setTimeout(attempt, retryMs); }
             else { reject(new Error(`drag_drop: elementos no encontrados: "${fromSel}" â†’ "${toSel}"`)); }
@@ -862,7 +894,7 @@
         }
 
         const selector = expandVariables(step.selector || "", vars);
-        let el = step.type === "check" ? findBestCheckTarget(selector) : findElement(selector);
+        let el = step.type === "check" ? findBestCheckTarget(selector) : findElement(selector, step, vars);
 
         if (!el) {
           if (_shouldBypassMissingLoginStep(step.type, selector)) {
@@ -1713,7 +1745,7 @@
           // { type:"if_exists", selector, then:[...pasos], else:[...pasos] }
           if (step.type === "if_exists") {
             const _ifSel = expandVariables(step.selector || "", vars);
-            const _ifFound = !!findElement(_ifSel);
+            const _ifFound = !!findElement(_ifSel, step, vars);
             const _ifBranch = _ifFound ? (step.then || []) : (step.else || []);
             if (_ifBranch.length > 0) {
               // Guardar estado de reanudaciÃ³n ANTES de ejecutar sub-pasos.
@@ -1748,7 +1780,7 @@
             }
             for (let _luIter = 0; _luIter < _luMax; _luIter++) {
               if (this._abort) break;
-              const _luEl = findElement(_luSel);
+              const _luEl = findElement(_luSel, step, vars);
               const _luKeep = _luCond === "exists" ? !!_luEl : !_luEl;
               if (!_luKeep) break;
               if (Array.isArray(step.steps) && step.steps.length > 0) {
@@ -2025,7 +2057,7 @@
       const runtimeMeta = options.runtimeMeta && typeof options.runtimeMeta === "object" ? options.runtimeMeta : null;
       if (step.type === "if_exists") {
         const _ifSel = expandVariables(step.selector || "", vars);
-        const _ifFound = !!findElement(_ifSel);
+        const _ifFound = !!findElement(_ifSel, step, vars);
         const _ifBranch = _ifFound ? (step.then || []) : (step.else || []);
         if (_ifBranch.length > 0) {
           await this._runSubSteps(_ifBranch, vars, baseDelayMs, continuationSteps, runtimeMeta);
@@ -2041,7 +2073,7 @@
         }
         for (let _luIter = 0; _luIter < _luMax; _luIter++) {
           if (this._abort) break;
-          const _luEl = findElement(_luSel);
+          const _luEl = findElement(_luSel, step, vars);
           const _luKeep = _luCond === "exists" ? !!_luEl : !_luEl;
           if (!_luKeep) break;
           if (Array.isArray(step.steps) && step.steps.length > 0) {

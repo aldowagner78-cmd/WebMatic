@@ -1,4 +1,4 @@
-﻿(function initElementFinder(globalScope) {
+(function initElementFinder(globalScope) {
   function findInShadow(root, selector) {
     try {
       const direct = root.querySelector(selector);
@@ -43,12 +43,76 @@
     return null;
   }
 
+  function _isVisibleEnough(el) {
+    if (!el || !(el instanceof Element)) return false;
+    try {
+      const view = (el.ownerDocument && el.ownerDocument.defaultView) || (typeof window !== "undefined" ? window : null);
+      const style = view && typeof view.getComputedStyle === "function" ? view.getComputedStyle(el) : null;
+      if (style && (style.display === "none" || style.visibility === "hidden" || style.opacity === "0")) return false;
+      if (typeof el.getClientRects === "function" && el.getClientRects().length > 0) return true;
+      return true;
+    } catch (_e) {
+      return true;
+    }
+  }
+
+  function _searchDocs(doc) {
+    const docs = [];
+    if (doc) docs.push(doc);
+    try {
+      const frames = doc.querySelectorAll("iframe, frame");
+      for (const frame of frames) {
+        try {
+          const innerDoc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+          if (innerDoc) docs.push(innerDoc);
+        } catch (_e) { /* cross-origin */ }
+      }
+    } catch (_e) { /* ignore */ }
+    return docs;
+  }
+
+  function _findByFallbackSelectors(doc, selectors) {
+    const list = Array.isArray(selectors) ? selectors : [];
+    for (const raw of list) {
+      const sel = String(raw || "").trim();
+      if (!sel) continue;
+      const found = findInDocument(doc, sel);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  function _findAngularMaterialDynamicFallback(doc, selector) {
+    const raw = String(selector || "").trim();
+    const match = /^#?mat-(input|select|option)-\d+$/i.exec(raw);
+    if (!match || !doc) return null;
+
+    const kind = match[1].toLowerCase();
+    const selectorByKind = kind === "input"
+      ? 'input[id^="mat-input-"], textarea[id^="mat-input-"]'
+      : kind === "select"
+        ? '[id^="mat-select-"]'
+        : '[id^="mat-option-"]';
+
+    const candidates = [];
+    for (const d of _searchDocs(doc)) {
+      try {
+        d.querySelectorAll(selectorByKind).forEach((el) => {
+          if (_isVisibleEnough(el)) candidates.push(el);
+        });
+      } catch (_e) { /* ignore */ }
+    }
+
+    return candidates.length === 1 ? candidates[0] : null;
+  }
+
   function findElement(selector, opts) {
     const options = opts && typeof opts === "object" ? opts : {};
     const doc = options.document || (typeof document !== "undefined" ? document : null);
     const normalizeTextForCompare = options.normalizeTextForCompare;
     const foldTextForCompare = options.foldTextForCompare;
     const knownFallback = options.knownFallback;
+    const fallbackSelectors = options.fallbackSelectors;
 
     if (!selector || !doc) return null;
 
@@ -109,6 +173,12 @@
 
     const direct = findInDocument(doc, selector);
     if (direct) return direct;
+
+    const fallback = _findByFallbackSelectors(doc, fallbackSelectors);
+    if (fallback) return fallback;
+
+    const angularMaterialFallback = _findAngularMaterialDynamicFallback(doc, selector);
+    if (angularMaterialFallback) return angularMaterialFallback;
 
     if (typeof knownFallback === "function") {
       return knownFallback(selector);
