@@ -37,7 +37,8 @@ test("content, background and storage helpers preserve routing, navigation and m
       index: "2",
       vars: { A: "1" },
       speed: 1.5,
-      macroId: "m1"
+      macroId: "m1",
+      loopReplay: { total: 3, remaining: 2 }
     }),
     {
       tabId: 9,
@@ -45,7 +46,8 @@ test("content, background and storage helpers preserve routing, navigation and m
       index: 2,
       vars: { A: "1" },
       speed: 1.5,
-      macroId: "m1"
+      macroId: "m1",
+      loopReplay: { total: 3, remaining: 2 }
     }
   );
 

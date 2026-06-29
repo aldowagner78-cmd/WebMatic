@@ -1,5 +1,38 @@
 # Changelog
 
+## [2026-06-29] v0.2.0-modular-rc38
+
+### Agregado
+- E2E simulado local `test:e2e:loop-navigate` para validar bucle x3 con `NAVIGATE`, `WAIT_FOR` y escritura posterior sin internet ni credenciales.
+- Persistencia de estado de bucle durante navegación real (`loopReplay`) para que `▶▶ Bucle` pueda continuar tras `NAVIGATE`.
+- Reanudación automática de la siguiente iteración cuando la vuelta actual termina en otra página.
+- Tests unitarios/source-level para preservar `loopReplay` en pending playback y reanudar bucles después de navegación.
+
+### Modificado
+- `player.js` incluye `loopReplay` en `SAVE_PLAYBACK_STATE`, `PLAYBACK_NAVIGATE` y acciones de pestañas.
+- `background.js`, `tabs-navigation.js` y `background-navigator.js` transportan el estado de bucle junto con la continuación.
+- `content.js` arranca la siguiente vuelta del bucle después de reanudar y completar una macro con navegación.
+- Versión visible interna actualizada a `v0.2.0-modular-rc38`.
+
+### Corregido
+- Caso rc38: el botón `▶▶ Bucle` podía cortar después de la primera navegación porque el contador quedaba en la página anterior.
+
+
+
+### Corrección de prueba rc38
+- `buildPendingPlaybackState` ya no agrega `loopReplay: null` cuando no hay bucle activo, conservando el formato legacy.
+- Tests ajustados para validar dos casos separados: pending playback sin bucle y con `loopReplay` real.
+- Test de `navigate file://` actualizado para pasar un `loopReplay` explícito y validar que se preserve.
+
+### Pendiente
+- Firma Firefox `0.2.2` solo después de validar rc38.
+
+### Compatibilidad
+- No se modificó `manifest.json`.
+- No se cambió versión firmada Firefox.
+- No se agregaron dependencias nuevas.
+
+
 ## [2026-06-27] v0.2.0-modular-rc37
 
 ### Agregado

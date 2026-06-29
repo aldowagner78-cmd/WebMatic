@@ -146,3 +146,17 @@ test("content playback banner: botones finales cierran, abren sidebar y copian d
   assert.doesNotMatch(copyBody, /animateAndRemovePlaybackFloating|removePlaybackFloating/);
   assert.match(animatedCloseBody, /pointerEvents = "none"/);
 });
+
+test("content playback loop: preserva bucle al reanudar despues de navigate", () => {
+  const source = readContent();
+  const resumeBody = functionBody(source, "_resumePendingPlaybackIfAny");
+  const continueBody = functionBody(source, "_startLoopReplayIterationFromPending");
+  const nextBody = functionBody(source, "_nextLoopReplayState");
+
+  assert.match(resumeBody, /_nextLoopReplayState\(p\.loopReplay\)/);
+  assert.match(resumeBody, /_startLoopReplayIterationFromPending\(p, _nextLoop\)/);
+  assert.match(resumeBody, /loopReplay: p\.loopReplay \|\| null/);
+  assert.match(continueBody, /loopReplay: normalizedLoop/);
+  assert.match(continueBody, /_nextLoopReplayState\(normalizedLoop\)/);
+  assert.match(nextBody, /remaining: normalized\.remaining - 1/);
+});

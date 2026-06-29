@@ -53,6 +53,10 @@ test("background flow: tabs-navigation cubre restricted, openIfMissing y pending
     tabsNavigation.buildPendingPlaybackState(4, { steps: [{ type: "input" }], index: "3", vars: { X: "1" }, speed: 2 }),
     { tabId: 4, steps: [{ type: "input" }], index: 3, vars: { X: "1" }, speed: 2, macroId: null }
   );
+  assert.deepEqual(
+    tabsNavigation.buildPendingPlaybackState(4, { steps: [{ type: "input" }], index: "3", vars: { X: "1" }, speed: 2, loopReplay: { total: 3, remaining: 2 } }),
+    { tabId: 4, steps: [{ type: "input" }], index: 3, vars: { X: "1" }, speed: 2, macroId: null, loopReplay: { total: 3, remaining: 2 } }
+  );
 });
 
 test("background flow: mock chrome.tabs abre, cambia y cierra tabs sin chrome real", () => {

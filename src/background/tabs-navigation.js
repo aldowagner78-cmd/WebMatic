@@ -14,7 +14,7 @@
 
   function buildPendingPlaybackState(tabId, message) {
     if (!Array.isArray(message && message.steps)) return null;
-    return {
+    const pending = {
       tabId,
       steps: message.steps,
       index: Number.isFinite(Number(message.index)) ? Number(message.index) : 0,
@@ -22,6 +22,10 @@
       speed: message.speed || 1,
       macroId: message.macroId || null
     };
+    if (message.loopReplay && typeof message.loopReplay === "object") {
+      pending.loopReplay = message.loopReplay;
+    }
+    return pending;
   }
 
   function resolveNavigationUrl(rawUrl, baseUrl) {

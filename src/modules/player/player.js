@@ -1648,6 +1648,7 @@
       vars[PLAY_START_VAR] = _playStartMs;
       const startIndex = options.startIndex || 0;
       const macroId = options.macroId || null;
+      const loopReplay = options.loopReplay && typeof options.loopReplay === "object" ? options.loopReplay : null;
       const preRunResetPolicy = _normalizePreRunResetPolicy(options.preRunResetPolicy || null);
       this.isPlaying = true;
       this._abort = false;
@@ -1684,7 +1685,8 @@
                 index: 0,
                 vars,
                 speed,
-                macroId
+                macroId,
+                loopReplay
               });
               if (!resp || resp.ok !== true) {
                 const _errBase = (resp && resp.error) || "background_navigate_failed";
@@ -1695,7 +1697,7 @@
               await new Promise((res) => {
                 chrome.runtime.sendMessage({
                   type: "SAVE_PLAYBACK_STATE",
-                  steps: runtimeSteps, index: 0, vars, speed, macroId
+                  steps: runtimeSteps, index: 0, vars, speed, macroId, loopReplay
                 }, () => { void chrome.runtime.lastError; res(); });
               });
               window.location.href = navInfo.targetUrl || bootstrapUrl;
@@ -1730,7 +1732,7 @@
             await new Promise((res) => {
               chrome.runtime.sendMessage({
                 type: "SAVE_PLAYBACK_STATE",
-                steps: runtimeSteps, index: i + 1, vars, speed, macroId
+                steps: runtimeSteps, index: i + 1, vars, speed, macroId, loopReplay
               }, () => { void chrome.runtime.lastError; res(); });
             });
           }
@@ -1754,7 +1756,7 @@
               await new Promise((res) => {
                 chrome.runtime.sendMessage({
                   type: "SAVE_PLAYBACK_STATE",
-                  steps: runtimeSteps, index: i + 1, vars, speed, macroId
+                  steps: runtimeSteps, index: i + 1, vars, speed, macroId, loopReplay
                 }, () => { void chrome.runtime.lastError; res(); });
               });
               await this._runSubSteps(
@@ -1762,7 +1764,7 @@
                 vars,
                 baseDelayMs,
                 runtimeSteps.slice(i + 1),
-                { speed, macroId }
+                { speed, macroId, loopReplay }
               );
             }
             continue;
@@ -1837,7 +1839,7 @@
                 vars,
                 baseDelayMs,
                 runtimeSteps.slice(i + 1),
-                { speed, macroId }
+                { speed, macroId, loopReplay }
               );
             }
             continue;
@@ -1890,7 +1892,8 @@
                   index: i + 1,
                   vars,
                   speed,
-                  macroId
+                  macroId,
+                  loopReplay
                 });
                 if (!handoff || handoff.ok !== true) {
                   const _errBase = (handoff && handoff.error) || "background_navigate_failed";
@@ -1905,7 +1908,7 @@
                 await new Promise((res) => {
                   chrome.runtime.sendMessage({
                     type: "SAVE_PLAYBACK_STATE",
-                    steps: runtimeSteps, index: i + 1, vars, speed, macroId
+                    steps: runtimeSteps, index: i + 1, vars, speed, macroId, loopReplay
                   }, () => { void chrome.runtime.lastError; res(); });
                 });
                 window.location.href = navInfo.targetUrl || _navUrl;
@@ -1934,7 +1937,8 @@
                 index: i + 1,
                 vars,
                 speed,
-                macroId
+                macroId,
+                loopReplay
               }, (resp) => {
                 if (chrome.runtime.lastError) {
                   res({ ok: false, error: chrome.runtime.lastError.message || "tab_action_failed" });
@@ -2156,7 +2160,8 @@
               index: 0,
               vars,
               speed: runtimeMeta.speed,
-              macroId: runtimeMeta.macroId || null
+              macroId: runtimeMeta.macroId || null,
+              loopReplay: runtimeMeta.loopReplay || null
             }, () => { void chrome.runtime.lastError; res(); });
           });
         }

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Fixture LOOP NAVIGATE</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f6f7fb;
+      color: #1d2735;
+    }
+
+    main {
+      width: min(760px, calc(100% - 32px));
+      margin: 48px auto;
+    }
+
+    .panel {
+      border: 1px solid #ccd4df;
+      border-radius: 6px;
+      background: #fff;
+      padding: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #4a5a6e;
+    }
+
+    input {
+      width: min(420px, 100%);
+      box-sizing: border-box;
+      border: 1px solid #7b899a;
+      border-radius: 4px;
+      padding: 10px 12px;
+      font-size: 16px;
+    }
+
+    #estado,
+    #log {
+      margin-top: 14px;
+      font-size: 14px;
+      line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="panel">
+      <label for="objetivo">Objetivo de la macro</label>
+      <input id="objetivo" type="text" autocomplete="off">
+      <div id="estado" aria-live="polite"></div>
+      <ol id="log"></ol>
+    </div>
+  </main>
+
+  <script>
+    (function initLoopNavigateFixture() {
+      var PASSES_KEY = "wmLoopNavigatePasses";
+      var LOADS_KEY = "wmLoopNavigateLoads";
+      var input = document.getElementById("objetivo");
+      var estado = document.getElementById("estado");
+      var log = document.getElementById("log");
+      var recordedThisLoad = false;
+
+      function readJson(key) {
+        try {
+          var parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+          return [];
+        }
+      }
+
+      function writeJson(key, value) {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      }
+
+      function render() {
+        var passes = readJson(PASSES_KEY);
+        estado.textContent = "Pasadas registradas: " + passes.length;
+        log.textContent = "";
+        passes.forEach(function (entry) {
+          var item = document.createElement("li");
+          item.textContent = entry.value + " #" + entry.pass;
+          log.appendChild(item);
+        });
+      }
+
+      var loads = readJson(LOADS_KEY);
+      loads.push({ at: Date.now(), href: window.location.href });
+      writeJson(LOADS_KEY, loads);
+      render();
+
+      input.addEventListener("change", function () {
+        if (recordedThisLoad) return;
+        if (input.value !== "ITERACION") return;
+        recordedThisLoad = true;
+        var passes = readJson(PASSES_KEY);
+        var pass = passes.length + 1;
+        passes.push({
+          pass: pass,
+          value: input.value,
+          href: window.location.href
+        });
+        writeJson(PASSES_KEY, passes);
+        render();
+
+        window.history.replaceState(
+          null,
+          "",
+          "/fixture.html?played=" + pass
+        );
+      });
+    })();
+  </script>
+</body>
+</html>

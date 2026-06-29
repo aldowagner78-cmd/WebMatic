@@ -397,6 +397,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         speed: message.speed || 1,
         macroId: message.macroId || null
       };
+      if (message.loopReplay && typeof message.loopReplay === "object") {
+        pending.loopReplay = message.loopReplay;
+      }
       pendingPlaybackByTab.set(pending.tabId, pending);
     }
     sendResponse({ ok: true });

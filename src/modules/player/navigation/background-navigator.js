@@ -16,7 +16,8 @@
         index: Number.isFinite(Number(playbackState && playbackState.index)) ? Number(playbackState.index) : undefined,
         vars: playbackState && playbackState.vars ? playbackState.vars : undefined,
         speed: playbackState && playbackState.speed ? playbackState.speed : undefined,
-        macroId: playbackState && playbackState.macroId ? playbackState.macroId : null
+        macroId: playbackState && playbackState.macroId ? playbackState.macroId : null,
+        loopReplay: playbackState && playbackState.loopReplay ? playbackState.loopReplay : null
       }, (resp) => {
         if (chromeApi.runtime.lastError) {
           resolve({

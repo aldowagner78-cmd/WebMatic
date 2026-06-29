@@ -4553,6 +4553,111 @@
     return Number.isFinite(v) && v > 0 ? v : Date.now();
   }
 
+  function _normalizeLoopReplayState(loopReplay) {
+    if (!loopReplay || typeof loopReplay !== "object") return null;
+    const total = Number(loopReplay.total);
+    const remaining = Number(loopReplay.remaining);
+    if (!Number.isFinite(total) || total < 2) return null;
+    if (!Number.isFinite(remaining) || remaining < 1) return null;
+    return {
+      total: Math.max(2, Math.min(99, Math.round(total))),
+      remaining: Math.max(1, Math.min(99, Math.round(remaining)))
+    };
+  }
+
+  function _nextLoopReplayState(loopReplay) {
+    const normalized = _normalizeLoopReplayState(loopReplay);
+    if (!normalized || normalized.remaining <= 1) return null;
+    return {
+      total: normalized.total,
+      remaining: normalized.remaining - 1
+    };
+  }
+
+  function _loopReplayLabel(loopReplay) {
+    const normalized = _normalizeLoopReplayState(loopReplay);
+    if (!normalized) return "";
+    const current = Math.max(1, normalized.total - normalized.remaining + 1);
+    return `${current}/${normalized.total}`;
+  }
+
+  function _startLoopReplayIterationFromPending(pendingPlayback, nextLoopReplay) {
+    const normalizedLoop = _normalizeLoopReplayState(nextLoopReplay);
+    if (!normalizedLoop || !pendingPlayback || !pendingPlayback.macroId) return false;
+    const _state = store.getState();
+    const _macro = _state.library.macros.find((m) => m.id === pendingPlayback.macroId);
+    const _PlayerClass = globalScope.WebMaticPlayer;
+    if (!_macro || !_PlayerClass || !Array.isArray(_macro.steps) || _macro.steps.length === 0) return false;
+
+    if (playerRuntime.activePlayer) {
+      playerRuntime.activePlayer.stop();
+      playerRuntime.activePlayer = null;
+    }
+
+    const _player = new _PlayerClass();
+    playerRuntime.activePlayer = _player;
+    resetRuntimeAutoFillSession();
+
+    const _vars = buildRuntimeVars(pendingPlayback.vars || null, _state.settings);
+    playerRuntime.playStartedAtMs = _resolvePlayStartFromVars(_vars);
+    _vars[PLAY_START_VAR] = playerRuntime.playStartedAtMs;
+
+    const _resolvedSteps = _resolveCallMacros(_macro.steps, _state.library.macros);
+    const _preparedSteps = applyRuntimeDataToSteps(_resolvedSteps, _state.settings);
+    const _speed = Number(pendingPlayback.speed) || (_state.settings.speed ?? 1);
+    const _loopLabel = _loopReplayLabel(normalizedLoop);
+
+    store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
+    store.dispatch({
+      type: contracts.ActionTypes.STATUS_MESSAGE_SET,
+      payload: `Bucle ${_loopLabel}: "${_macro.name}"`
+    });
+    store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index: 0, steps: _preparedSteps } });
+
+    _player.play(_preparedSteps, {
+      speed: _speed,
+      vars: _vars,
+      macroId: _macro.id,
+      loopReplay: normalizedLoop,
+      ..._macroPlaybackMeta(_macro),
+      onStep: (step, index) => {
+        tryAutoFillRuntimeDataOnPage(_state.settings);
+        store.dispatch({ type: contracts.ActionTypes.PLAYBACK_STEP_STARTED, payload: { index, steps: _preparedSteps } });
+      },
+      onDone: (summary) => {
+        if (_isPlaybackHandoffSummary(summary)) {
+          playerRuntime.activePlayer = null;
+          store.dispatch({ type: contracts.ActionTypes.PLAY_STOPPED });
+          store.dispatch({ type: contracts.ActionTypes.STATUS_MESSAGE_SET, payload: "Continuando en otra pestaña..." });
+          removePlaybackFloating();
+          return;
+        }
+
+        const _next = _nextLoopReplayState(normalizedLoop);
+        if (_next) {
+          _startLoopReplayIterationFromPending({
+            ...pendingPlayback,
+            vars: _vars,
+            speed: _speed,
+            macroId: _macro.id
+          }, _next);
+          return;
+        }
+
+        playerRuntime.activePlayer = null;
+        const _summaryDuration = (summary && Number.isFinite(Number(summary.durationMs))) ? Number(summary.durationMs) : null;
+        const _fallbackDuration = playerRuntime.playStartedAtMs ? Math.max(0, Date.now() - playerRuntime.playStartedAtMs) : null;
+        playerRuntime.lastDurationMs = (_summaryDuration && _summaryDuration >= 100) ? _summaryDuration : _fallbackDuration;
+        finishPlaybackSuccessfully(_preparedSteps, "Reproduccion completada");
+      },
+      onError: (err) => {
+        handlePlaybackError(err);
+      }
+    });
+
+    return true;
+  }
+
   function _formatPlaybackDuration(ms) {
     const n = Number(ms);
     if (!Number.isFinite(n) || n < 100) return "";
@@ -8914,6 +9019,7 @@
                 speed: _fbState.settings.speed ?? 1,
                 vars: buildRuntimeVars(null, _fbState.settings),
                 macroId: _fbMacro.id,
+                loopReplay: { total: n, remaining: n },
                 ..._macroPlaybackMeta(_fbMacro),
                 onStep: (step, index) => {
                   tryAutoFillRuntimeDataOnPage(_fbState.settings);
@@ -8982,6 +9088,7 @@
               speed: _lstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lstate.settings),
               macroId: _lmacro.id,
+              loopReplay: { total: _lCount, remaining: _lCount },
               ..._macroPlaybackMeta(_lmacro),
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lstate.settings);
@@ -9034,6 +9141,7 @@
               speed: _lnstate.settings.speed ?? 1,
               vars: buildRuntimeVars(null, _lnstate.settings),
               macroId: _lnmacro.id,
+              loopReplay: { total: n, remaining: n },
               ..._macroPlaybackMeta(_lnmacro),
               onStep: (step, index) => {
                 tryAutoFillRuntimeDataOnPage(_lnstate.settings);
@@ -10090,6 +10198,8 @@
             null
           );
           store.dispatch({ type: contracts.ActionTypes.PLAY_STARTED });
+          const _nextLoop = _nextLoopReplayState(p.loopReplay);
+          if (_nextLoop && _startLoopReplayIterationFromPending(p, _nextLoop)) return;
           finishPlaybackSuccessfully(p.steps, "Reproduccion completada");
         }, 800);
         return;
@@ -10175,6 +10285,7 @@
                 speed: p.speed,
                 vars: buildRuntimeVars(p.vars, _rnstate.settings),
                 macroId: p.macroId,
+                loopReplay: { total: n, remaining: n },
                 ..._macroPlaybackMeta(_rnmacro),
                 onStep: (step, index) => {
                   tryAutoFillRuntimeDataOnPage(_rnstate.settings);
@@ -10207,6 +10318,7 @@
           startIndex: p.index,
           vars: _resumeVars,
           macroId: p.macroId,
+          loopReplay: p.loopReplay || null,
           ..._macroPlaybackMeta(store.getState().library.macros.find((m) => m.id === p.macroId) || null),
           onStep: (step, index) => {
             tryAutoFillRuntimeDataOnPage(store.getState().settings);
@@ -10220,6 +10332,8 @@
               removePlaybackFloating();
               return;
             }
+            const _nextLoop = _nextLoopReplayState(p.loopReplay);
+            if (_nextLoop && _startLoopReplayIterationFromPending(p, _nextLoop)) return;
             playerRuntime.activePlayer = null;
             const _summaryDuration = (summary && Number.isFinite(Number(summary.durationMs))) ? Number(summary.durationMs) : null;
             const _fallbackDuration = playerRuntime.playStartedAtMs ? Math.max(0, Date.now() - playerRuntime.playStartedAtMs) : null;

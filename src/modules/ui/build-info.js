@@ -1,5 +1,5 @@
 (function initWebMaticBuildInfo(globalScope) {
   globalScope.WebMaticBuildInfo = Object.assign({}, globalScope.WebMaticBuildInfo || {}, {
-    versionLabel: "v0.2.0-modular-rc37"
+    versionLabel: "v0.2.0-modular-rc38"
   });
 })(typeof window !== "undefined" ? window : globalThis);

@@ -274,6 +274,7 @@ test("play: TYPE busqueda + KEY Enter con selector no mueve foco a password ni f
     ], {
       speed: 1,
       bootstrapToFirstNavigate: false,
+      loopReplay: { total: 3, remaining: 3 },
       onDone: resolve,
       onError: resolve
     });
@@ -1072,6 +1073,7 @@ test("navigate: URL vacía como no-op permite que pasos siguientes ejecuten", as
     p.play(steps, {
       vars,
       speed: 1,
+      loopReplay: { total: 3, remaining: 3 },
       bootstrapToFirstNavigate: false,
       onDone: resolve,
       onError: resolve
@@ -1093,6 +1095,7 @@ test("navigate: misma URL como no-op permite que pasos siguientes ejecuten", asy
     p.play(steps, {
       vars,
       speed: 1,
+      loopReplay: { total: 3, remaining: 3 },
       bootstrapToFirstNavigate: false,
       onDone: resolve,
       onError: resolve
@@ -1143,6 +1146,7 @@ test("navigate: hacia file:// delega en background y evita location.href directo
       vars,
       speed: 1,
       bootstrapToFirstNavigate: false,
+      loopReplay: { total: 3, remaining: 3 },
       onDone: resolve,
       onError: resolve
     });
@@ -1154,6 +1158,7 @@ test("navigate: hacia file:// delega en background y evita location.href directo
   assert.ok(delegated, "debe delegar navigate file:// al background");
   assert.equal(delegated.index, 1, "debe preservar continuation para resume");
   assert.equal(Array.isArray(delegated.steps), true, "debe enviar steps para pending playback");
+  assert.deepEqual(delegated.loopReplay, { total: 3, remaining: 3 }, "debe preservar estado de bucle para reanudar tras navigate");
   assert.equal(vars.AFTER_FILE_NAV, undefined, "la continuación debe retomarse tras la navegación");
 });
 
