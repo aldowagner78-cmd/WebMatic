@@ -1,7 +1,7 @@
 ﻿{
   "manifest_version": 2,
   "name": "WebMatic",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Automatizacion web modular - Chrome, Edge y Firefox, en Windows, macOS y Linux.",
   "icons": {
     "16": "logo16.png",
@@ -141,4 +141,5 @@
     }
   }
 }
+
 
