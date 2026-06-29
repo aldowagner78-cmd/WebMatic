@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Universal resolution - overlay</title>
+  <link rel="stylesheet" href="./fixture-common.css">
+  <style>
+    .stage {
+      position: relative;
+      min-height: 150px;
+      padding-top: 34px;
+    }
+
+    #blocking-overlay {
+      position: absolute;
+      left: 0;
+      top: 20px;
+      width: 260px;
+      height: 70px;
+      z-index: 5;
+      border: 1px solid #9aa5b1;
+      background: rgba(240, 244, 248, 0.94);
+      display: grid;
+      place-items: center;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Boton tapado por overlay</h1>
+    <section class="stage">
+      <button id="target-action">Procesar</button>
+      <div id="blocking-overlay">
+        <button id="dismiss-overlay">Cerrar aviso</button>
+      </div>
+    </section>
+    <div id="overlay-status" class="status">blocked</div>
+  </main>
+
+  <script>
+    document.getElementById("target-action").addEventListener("click", () => {
+      document.getElementById("overlay-status").textContent = "processed";
+    });
+
+    document.getElementById("dismiss-overlay").addEventListener("click", () => {
+      document.getElementById("blocking-overlay").remove();
+      document.getElementById("overlay-status").textContent = "overlay-closed";
+    });
+  </script>
+</body>
+</html>

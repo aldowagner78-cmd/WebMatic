@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Universal resolution - remount</title>
+  <link rel="stylesheet" href="./fixture-common.css">
+</head>
+<body>
+  <main>
+    <h1>Campo desmontado y vuelto a montar</h1>
+    <button id="start-remount">Refrescar campo</button>
+    <section id="field-host"></section>
+    <div id="remount-status" class="status">ready</div>
+  </main>
+
+  <script>
+    const host = document.getElementById("field-host");
+    const status = document.getElementById("remount-status");
+
+    function renderInput(version) {
+      host.innerHTML = '<label for="volatile-field">Codigo</label><input id="volatile-field" name="codigo" data-version="' + version + '" placeholder="Codigo">';
+    }
+
+    renderInput("initial");
+
+    document.getElementById("start-remount").addEventListener("click", () => {
+      host.innerHTML = "";
+      status.textContent = "unmounted";
+      setTimeout(() => {
+        renderInput("remounted");
+        status.textContent = "remounted";
+      }, 220);
+    });
+
+    host.addEventListener("input", (event) => {
+      if (event.target && event.target.id === "volatile-field") {
+        status.textContent = "value:" + event.target.value + ":" + event.target.dataset.version;
+      }
+    });
+  </script>
+</body>
+</html>

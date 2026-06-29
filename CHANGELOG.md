@@ -1,5 +1,16 @@
 # Changelog
 
+## [2026-06-29] Banco e2e simulado rc39 universal-resolution
+
+### Agregado
+- Nuevo runner local `test:e2e:universal-resolution` sin internet ni credenciales.
+- Fixtures en `accesorios/pruebas/tests/e2e/universal-resolution/` para casos de resolucion universal: wizard con pasos ocultos, placeholder duplicado, overlay, boton disabled tardio, remount de campo, SPA diferida y selectores con varios candidatos.
+
+### Compatibilidad
+- No se modifico `src/`.
+- No se modifico `manifest.json`.
+- No se agregaron dependencias nuevas.
+
 ## [2026-06-29] Ajuste de manual para usuario final
 
 ### Modificado

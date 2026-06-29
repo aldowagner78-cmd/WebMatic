@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Universal resolution - disabled late</title>
+  <link rel="stylesheet" href="./fixture-common.css">
+</head>
+<body>
+  <main>
+    <h1>Boton disabled que se habilita despues</h1>
+    <button id="late-button" disabled>Enviar</button>
+    <div id="late-status" class="status">waiting</div>
+  </main>
+
+  <script>
+    const button = document.getElementById("late-button");
+    const status = document.getElementById("late-status");
+
+    setTimeout(() => {
+      button.disabled = false;
+      status.textContent = "enabled";
+    }, 420);
+
+    button.addEventListener("click", () => {
+      status.textContent = "sent";
+    });
+  </script>
+</body>
+</html>

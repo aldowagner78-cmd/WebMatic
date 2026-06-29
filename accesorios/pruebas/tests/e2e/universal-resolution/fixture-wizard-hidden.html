@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Universal resolution - wizard hidden</title>
+  <link rel="stylesheet" href="./fixture-common.css">
+</head>
+<body>
+  <main>
+    <h1>Wizard con pasos ocultos</h1>
+
+    <section id="step-1" data-step="1">
+      <p>Paso visible inicial.</p>
+      <button class="next-action" data-testid="continue">Continuar</button>
+    </section>
+
+    <section id="step-2" data-step="2" hidden>
+      <p>Paso visible despues del click.</p>
+      <button class="next-action" data-testid="continue">Continuar</button>
+      <button id="load-spa-content">Mostrar contenido SPA</button>
+    </section>
+
+    <section id="step-3" data-step="3" hidden>
+      <p>Este paso queda oculto para forzar botones repetidos fuera del flujo.</p>
+      <button class="next-action" data-testid="continue">Continuar</button>
+    </section>
+
+    <section id="spa-region" aria-live="polite"></section>
+    <div id="wizard-status" class="status">step-1</div>
+  </main>
+
+  <script>
+    const status = document.getElementById("wizard-status");
+    const step1 = document.getElementById("step-1");
+    const step2 = document.getElementById("step-2");
+    const step3 = document.getElementById("step-3");
+
+    step1.querySelector("button").addEventListener("click", () => {
+      step1.hidden = true;
+      step2.hidden = false;
+      step3.hidden = true;
+      status.textContent = "step-2";
+    });
+
+    step2.querySelector(".next-action").addEventListener("click", () => {
+      status.textContent = "step-2-continue";
+    });
+
+    document.getElementById("load-spa-content").addEventListener("click", () => {
+      const region = document.getElementById("spa-region");
+      setTimeout(() => {
+        region.innerHTML = '<button id="spa-confirm">Confirmar SPA</button><output id="spa-output">ready</output>';
+        document.getElementById("spa-confirm").addEventListener("click", () => {
+          document.getElementById("spa-output").textContent = "spa-confirmed";
+        });
+      }, 180);
+    });
+  </script>
+</body>
+</html>
