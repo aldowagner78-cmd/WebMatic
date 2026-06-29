@@ -1,4 +1,22 @@
-﻿(function initSelectorDiagnostics(globalScope) {
+(function initSelectorDiagnostics(globalScope) {
+  const SENSITIVE_DIAGNOSTIC_RE = /(password|passwd|pwd|token|access[_-]?token|refresh[_-]?token|api[_-]?key|apikey|secret|pin|cvv|cvc|authorization|bearer)/i;
+  const SENSITIVE_VALUE_RE = /(bearer\s+[a-z0-9._~+/-]+=*|api[_-]?key\s*[:=]\s*[^,\s]+|token\s*[:=]\s*[^,\s]+|password\s*[:=]\s*[^,\s]+|pin\s*[:=]\s*[^,\s]+|cvv\s*[:=]\s*[^,\s]+)/i;
+  const REDACTED = "[redacted-sensitive]";
+
+  function normalizeDiagnosticText(value) {
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  }
+
+  function sanitizeDiagnosticValue(name, value, maxLength) {
+    const attrName = normalizeDiagnosticText(name);
+    const attrValue = normalizeDiagnosticText(value);
+    if (!attrValue) return "";
+    if (SENSITIVE_DIAGNOSTIC_RE.test(attrName) || SENSITIVE_DIAGNOSTIC_RE.test(attrValue) || SENSITIVE_VALUE_RE.test(attrValue)) {
+      return REDACTED;
+    }
+    return attrValue.slice(0, maxLength || 120);
+  }
+
   function isVisibleForDiagnostic(el) {
     if (!el || !(el instanceof Element)) return false;
     const htmlEl = /** @type {HTMLElement} */ (el);
@@ -18,16 +36,18 @@
     if (!el || !(el instanceof Element)) return null;
     const tag = String(el.tagName || "").toLowerCase();
     const attrs = {
-      id: el.id || "",
-      className: typeof el.className === "string" ? el.className : "",
-      role: el.getAttribute && el.getAttribute("role") || "",
-      title: el.getAttribute && el.getAttribute("title") || "",
-      ariaLabel: el.getAttribute && el.getAttribute("aria-label") || "",
-      dataTestid: el.getAttribute && el.getAttribute("data-testid") || "",
-      name: el.getAttribute && el.getAttribute("name") || "",
-      type: el.getAttribute && el.getAttribute("type") || ""
+      id: sanitizeDiagnosticValue("id", el.id || ""),
+      className: sanitizeDiagnosticValue("class", typeof el.className === "string" ? el.className : ""),
+      role: sanitizeDiagnosticValue("role", el.getAttribute && el.getAttribute("role") || ""),
+      title: sanitizeDiagnosticValue("title", el.getAttribute && el.getAttribute("title") || ""),
+      ariaLabel: sanitizeDiagnosticValue("aria-label", el.getAttribute && el.getAttribute("aria-label") || ""),
+      dataTestid: sanitizeDiagnosticValue("data-testid", el.getAttribute && el.getAttribute("data-testid") || ""),
+      name: sanitizeDiagnosticValue("name", el.getAttribute && el.getAttribute("name") || ""),
+      type: sanitizeDiagnosticValue("type", el.getAttribute && el.getAttribute("type") || "")
     };
-    const text = String(el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 120);
+    const text = tag === "input" || tag === "textarea" || tag === "select"
+      ? ""
+      : sanitizeDiagnosticValue("text", el.textContent || "", 120);
     return {
       tag,
       visible: isVisibleForDiagnostic(el),
@@ -133,6 +153,8 @@
   const api = {
     isVisibleForDiagnostic,
     _isVisibleForDiagnostic: isVisibleForDiagnostic,
+    sanitizeDiagnosticValue,
+    _sanitizeDiagnosticValue: sanitizeDiagnosticValue,
     summarizeElementForDiagnostic,
     _summarizeElementForDiagnostic: summarizeElementForDiagnostic,
     collectSelectorDiagnostics,
