@@ -81,6 +81,50 @@
     return closestLabel ? String(closestLabel.textContent || "").trim() : "";
   }
 
+  function _cleanText(value) {
+    return String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+  }
+
+  function _controlKindForTarget(el) {
+    if (!_isInstance(el, "Element")) return "";
+    const tag = String(el.tagName || "").toLowerCase();
+    if (tag === "select") return "native-select";
+    if (tag === "textarea") return "textarea";
+    if (tag === "button") return "button";
+    const type = String((el.getAttribute && el.getAttribute("type")) || "").toLowerCase();
+    if (tag === "input") {
+      if (type === "checkbox") return "checkbox";
+      if (type === "radio") return "radio";
+      if (type === "button" || type === "submit" || type === "reset") return "button";
+      if (el.getAttribute && el.getAttribute("list")) return "datalist";
+      const role = String((el.getAttribute && el.getAttribute("role")) || "").toLowerCase();
+      if (role === "combobox" || (el.getAttribute && el.getAttribute("aria-autocomplete"))) return "autocomplete";
+      return "text-input";
+    }
+    return "";
+  }
+
+  function _visibleTextForTarget(el) {
+    if (!_isInstance(el, "Element")) return "";
+    const tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return "";
+    return _cleanText(el.innerText || el.textContent || "");
+  }
+
+  function _visibleSectionTitleForTarget(el) {
+    try {
+      const host = el && typeof el.closest === "function"
+        ? el.closest("section, article, main, aside, form, fieldset, [role='dialog'], [role='region']")
+        : null;
+      if (!host) return "";
+      const heading = host.querySelector("legend, h1, h2, h3, h4, h5, h6, [role='heading'], [aria-label]");
+      if (!heading || heading === el || (el.contains && el.contains(heading))) return "";
+      return _cleanText((heading.getAttribute && heading.getAttribute("aria-label")) || heading.textContent || "");
+    } catch (_e) {
+      return "";
+    }
+  }
+
   function buildKeyStepForTarget(target, key, buildSelector) {
     const step = { type: "key", key };
     if (!isEditableKeyTarget(target)) return step;
@@ -93,6 +137,18 @@
     if (type) controlRef.type = type;
     const label = _labelForKeyTarget(target);
     if (label) controlRef.label = label;
+    const placeholder = _cleanText(target.getAttribute && target.getAttribute("placeholder"));
+    if (placeholder) controlRef.placeholder = placeholder;
+    const name = _cleanText(target.getAttribute && target.getAttribute("name"));
+    if (name) controlRef.name = name;
+    const role = _cleanText(target.getAttribute && target.getAttribute("role")).toLowerCase();
+    if (role) controlRef.role = role;
+    const controlKind = _controlKindForTarget(target);
+    if (controlKind) controlRef.controlKind = controlKind;
+    const text = _visibleTextForTarget(target);
+    if (text) controlRef.text = text;
+    const visibleSectionTitle = _visibleSectionTitleForTarget(target);
+    if (visibleSectionTitle) controlRef.visibleSectionTitle = visibleSectionTitle;
     step.selector = selector;
     step.controlRef = controlRef;
     return step;

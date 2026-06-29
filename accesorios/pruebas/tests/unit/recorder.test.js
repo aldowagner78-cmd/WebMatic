@@ -12,6 +12,7 @@ globalThis.HTMLTextAreaElement = win.HTMLTextAreaElement;
 globalThis.HTMLSelectElement = win.HTMLSelectElement;
 
 const Recorder = require("../../../../src/modules/recorder/recorder.js");
+const RecorderEvents = require("../../../../src/modules/recorder/events/recorder-events.js");
 
 function resetBody(html) {
   win.document.body.innerHTML = html;
@@ -80,6 +81,25 @@ test("buildSelector: dom mutation keeps stable selector", () => {
 
   assert.equal(firstSelector, "#btn_123_20260613");
   assert.equal(secondSelector, "#btn_889_20260614");
+});
+
+test("recorder-events: key step conserva intencion semantica del control editable", () => {
+  resetBody('<label for="campo">Nombre</label><input id="campo" name="nombre" type="text" placeholder="Ingrese nombre">');
+  const el = win.document.getElementById("campo");
+  const step = RecorderEvents.buildKeyStepForTarget(el, "Enter", (target) => Recorder.buildSelector(target));
+  assert.equal(step.selector, "#campo");
+  assert.equal(step.controlRef.label, "Nombre");
+  assert.equal(step.controlRef.placeholder, "Ingrese nombre");
+  assert.equal(step.controlRef.name, "nombre");
+  assert.equal(step.controlRef.controlKind, "text-input");
+});
+
+test("recorder: campo sensible no guarda valor real en controlRef", () => {
+  resetBody('<label for="clave">Password</label><input id="clave" type="password" value="secreto123" placeholder="Password">');
+  const el = win.document.getElementById("clave");
+  const step = RecorderEvents.buildKeyStepForTarget(el, "Enter", (target) => Recorder.buildSelector(target));
+  assert.equal(step.controlRef && step.controlRef.value, undefined);
+  assert.equal(String(JSON.stringify(step.controlRef || {})).includes("secreto123"), false);
 });
 
 test("buildSelector: keeps stable simple id", () => {

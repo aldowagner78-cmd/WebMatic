@@ -64,6 +64,58 @@ Fecha: 2026-06-29
 - `CHANGELOG.md`
 - `CAMBIOS_REALIZADOS.md`
 - `accesorios/pruebas/tests/e2e/universal-resolution/run.js`
+## rc39-impl-2 intencion semantica basica + scoring contextual
+
+Fecha: 2026-06-29
+
+## Archivos modificados
+
+- `src/common/dom/element-finder.js`
+- `src/modules/inventory/page-inventory.js`
+- `src/modules/recorder/events/recorder-events.js`
+- `src/modules/player/player.js`
+- `accesorios/pruebas/tests/unit/element-finder.test.js`
+- `accesorios/pruebas/tests/unit/page-inventory.test.js`
+- `accesorios/pruebas/tests/unit/recorder.test.js`
+- `accesorios/pruebas/tests/unit/player.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+
+## Que se cambio
+
+- El inventario captura metadata opcional de intencion: `role`, `text`, `label`, `placeholder`, `name`, `controlKind`, `tag`, `type` y `visibleSectionTitle` cuando se puede calcular de forma segura.
+- `buildControlRef` conserva esa metadata y mantiene `altSelectors` para no degradar resoluciones con IDs dinamicos.
+- El grabador de teclas editables agrega metadata semantica basica al `controlRef`.
+- El player pasa `controlRef`/`intent` al resolver.
+- `element-finder` incorpora scoring contextual por placeholder, label, texto visible, role, name, controlKind y contexto cercano, manteniendo prioridad de visible/interactuable/editable.
+
+## Seguridad y compatibilidad
+
+- No se guarda el valor real de campos sensibles.
+- Macros antiguas sin metadata siguen resolviendo por selector/fallback legacy.
+- No se modifico `manifest.json`.
+- No se cambio UI ni storage/import/export.
+- No se agregaron dependencias nuevas.
+
+## Pruebas ejecutadas
+
+- `node -c src/common/dom/element-finder.js`
+- `node -c src/modules/inventory/page-inventory.js`
+- `node -c src/modules/recorder/events/recorder-events.js`
+- `node -c src/modules/recorder/normalizer/recording-normalizer.js`
+- `node -c src/modules/player/player.js`
+- `node --test accesorios/pruebas/tests/unit/element-finder.test.js accesorios/pruebas/tests/unit/page-inventory.test.js accesorios/pruebas/tests/unit/recorder.test.js accesorios/pruebas/tests/unit/player.test.js`
+- `npm test`
+- `npm run test:e2e:universal-resolution`
+- `npm run test:e2e:angular-material`
+- `npm run test:e2e:wait-for-navigate`
+- `npm run test:e2e:loop-navigate`
+
+## Riesgos pendientes
+
+- Si varios candidatos son accionables y tienen la misma evidencia semantica, el resolver conserva el desempate legacy por orden de selector/candidato. Queda pendiente una politica explicita de "empate peligroso" para no elegir cuando no haya evidencia suficiente.
+- `visibleSectionTitle` es best-effort y depende de headings/legend/aria-label cercanos; en paginas sin estructura semantica puede omitirse.
+
 - `accesorios/pruebas/tests/e2e/universal-resolution/fixture-common.css`
 - `accesorios/pruebas/tests/e2e/universal-resolution/fixture-wizard-hidden.html`
 - `accesorios/pruebas/tests/e2e/universal-resolution/fixture-duplicates.html`

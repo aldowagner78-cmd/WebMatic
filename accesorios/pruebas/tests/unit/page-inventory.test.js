@@ -149,6 +149,24 @@ test("captureControl: ignora elementos propios de WebMatic (id wm-/webmatic-)", 
   assert.equal(inv.captureControl(el), null);
 });
 
+test("captureControl: input con label y placeholder guarda intencion semantica", () => {
+  resetBody('<label for="email">Correo electronico</label><input id="email" name="email_usuario" type="email" placeholder="tu@email.com">');
+  const el = win.document.getElementById("email");
+  const c = inv.captureControl(el);
+  assert.equal(c.label, "Correo electronico");
+  assert.equal(c.placeholder, "tu@email.com");
+  assert.equal(c.name, "email_usuario");
+  assert.equal(c.controlKind, "text-input");
+});
+
+test("captureControl: boton con texto visible guarda role/text", () => {
+  resetBody('<button id="guardar" role="button"> Guardar cambios </button>');
+  const el = win.document.getElementById("guardar");
+  const c = inv.captureControl(el);
+  assert.equal(c.role, "button");
+  assert.equal(c.text, "Guardar cambios");
+});
+
 // ── captureInventory ──────────────────────────────────────────────────────────
 
 test("captureInventory: recorre el documento y devuelve url/title/controls", () => {
@@ -451,6 +469,18 @@ test("associateSteps: agrega controlRef solo a steps con control, sin tocar el r
   assert.equal(out[1].controlRef, undefined);
   // no muta el original
   assert.equal(steps[0].controlRef, undefined);
+});
+
+test("associateSteps: conserva controlRef con label/placeholder/text cuando existe", () => {
+  resetBody('<label for="buscar">Buscar</label><input id="buscar" placeholder="Nro expediente"><button id="go">Ir</button>');
+  const inventories = [inv.captureInventory(win.document)];
+  const out = inv.associateSteps([
+    { type: "input", selector: "#buscar", value: "123" },
+    { type: "click", selector: "#go" }
+  ], inventories);
+  assert.equal(out[0].controlRef.label, "Buscar");
+  assert.equal(out[0].controlRef.placeholder, "Nro expediente");
+  assert.equal(out[1].controlRef.text, "Ir");
 });
 
 // ── appendInventory ───────────────────────────────────────────────────────────

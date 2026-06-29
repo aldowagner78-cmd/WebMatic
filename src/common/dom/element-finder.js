@@ -268,6 +268,140 @@
     return type === "input" || type === "text" || type === "type" || type === "choose_option";
   }
 
+  function _text(value) {
+    return _defaultNormalizeText(value);
+  }
+
+  function _fold(value, options) {
+    const foldTextForCompare = options.foldTextForCompare || _defaultFoldText;
+    return foldTextForCompare(value);
+  }
+
+  function _attr(el, name) {
+    try {
+      return el && el.getAttribute ? _text(el.getAttribute(name)) : "";
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function _visibleText(el) {
+    if (!el) return "";
+    const tag = String(el.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return "";
+    return _text(el.innerText || el.textContent || "");
+  }
+
+  function _labelText(el) {
+    if (!el) return "";
+    try {
+      if (el.getAttribute) {
+        const aria = _text(el.getAttribute("aria-label"));
+        if (aria) return aria;
+        const labelledBy = _text(el.getAttribute("aria-labelledby"));
+        if (labelledBy && el.ownerDocument) {
+          const parts = labelledBy.split(/\s+/).map((id) => {
+            const node = el.ownerDocument.getElementById(id);
+            return node ? _text(node.textContent) : "";
+          }).filter(Boolean);
+          if (parts.length) return _text(parts.join(" "));
+        }
+      }
+      if (el.labels && el.labels.length) {
+        const fromLabels = Array.from(el.labels).map((label) => _text(label.textContent)).filter(Boolean).join(" ");
+        if (fromLabels) return _text(fromLabels);
+      }
+      const doc = el.ownerDocument || (typeof document !== "undefined" ? document : null);
+      if (el.id && doc && typeof doc.querySelector === "function") {
+        const id = String(el.id).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        const label = doc.querySelector(`label[for="${id}"]`);
+        if (label && label.textContent) return _text(label.textContent);
+      }
+      if (typeof el.closest === "function") {
+        const parentLabel = el.closest("label");
+        if (parentLabel && parentLabel.textContent) return _text(parentLabel.textContent);
+      }
+    } catch (_e) { /* ignore */ }
+    return "";
+  }
+
+  function _controlKind(el) {
+    const tag = String(el && el.tagName || "").toLowerCase();
+    if (tag === "select") return "native-select";
+    if (tag === "textarea") return "textarea";
+    const type = _attr(el, "type").toLowerCase();
+    if (tag === "button" || type === "button" || type === "submit" || type === "reset" || _attr(el, "role").toLowerCase() === "button") return "button";
+    if (tag === "input") {
+      if (type === "checkbox") return "checkbox";
+      if (type === "radio") return "radio";
+      if (_attr(el, "list")) return "datalist";
+      return "text-input";
+    }
+    return "";
+  }
+
+  function _contextText(el) {
+    try {
+      const host = el && typeof el.closest === "function"
+        ? el.closest("section, article, main, aside, form, fieldset, [role='dialog'], [role='region']")
+        : null;
+      if (!host) return "";
+      const heading = host.querySelector("legend, h1, h2, h3, h4, h5, h6, [role='heading'], [aria-label]");
+      if (!heading || heading === el || (el.contains && el.contains(heading))) return "";
+      return _text(heading.getAttribute && heading.getAttribute("aria-label") || heading.textContent || "");
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function _intentFromOptions(options) {
+    const raw = (options && typeof options.intent === "object" && options.intent) ||
+      (options && typeof options.controlRef === "object" && options.controlRef) ||
+      null;
+    if (!raw) return null;
+    const intent = {};
+    ["role", "text", "label", "placeholder", "name", "controlKind", "contextText", "visibleSectionTitle"].forEach((key) => {
+      const value = _text(raw[key]);
+      if (value) intent[key] = value;
+    });
+    return Object.keys(intent).length ? intent : null;
+  }
+
+  function _matchTextScore(actual, expected, exactScore, equalScore, containsScore, options) {
+    const a = _fold(actual, options);
+    const e = _fold(expected, options);
+    if (!a || !e) return 0;
+    if (a === e) return exactScore;
+    if (a.includes(e) || e.includes(a)) return containsScore;
+    return equalScore && _text(actual) === _text(expected) ? equalScore : 0;
+  }
+
+  function _semanticScore(el, intent, options) {
+    if (!intent) return { score: 0, reasons: [] };
+    let score = 0;
+    const reasons = [];
+    const add = (points, reason) => {
+      if (!points) return;
+      score += points;
+      reasons.push(reason);
+    };
+
+    add(_matchTextScore(_attr(el, "placeholder"), intent.placeholder, 28, 0, 12, options), "placeholder_match");
+    add(_matchTextScore(_labelText(el), intent.label, 30, 0, 14, options), "label_match");
+    add(_matchTextScore(_visibleText(el), intent.text, 32, 0, 12, options), "text_match");
+    add(_matchTextScore(_attr(el, "name"), intent.name, 16, 0, 8, options), "name_match");
+    add(_matchTextScore(_attr(el, "role"), intent.role, 18, 0, 0, options), "role_match");
+    add(_matchTextScore(_controlKind(el), intent.controlKind, 12, 0, 0, options), "control_kind_match");
+    add(
+      Math.max(
+        _matchTextScore(_contextText(el), intent.contextText, 10, 0, 5, options),
+        _matchTextScore(_contextText(el), intent.visibleSectionTitle, 10, 0, 5, options)
+      ),
+      "context_match"
+    );
+    return { score, reasons };
+  }
+
   function isElementActionableForWebMatic(el, actionType) {
     if (!isElementVisibleForWebMatic(el) || !isElementEnabledForWebMatic(el)) return false;
     if (_isWriteAction(actionType) && !isElementEditableForWebMatic(el)) return false;
@@ -297,6 +431,7 @@
     const options = opts && typeof opts === "object" ? opts : {};
     const doc = options.document || (typeof document !== "undefined" ? document : null);
     const actionType = options.actionType || "default";
+    const intent = _intentFromOptions(options);
     const selectors = [selector].concat(Array.isArray(options.fallbackSelectors) ? options.fallbackSelectors : [])
       .map((value) => String(value || "").trim())
       .filter(Boolean);
@@ -312,10 +447,12 @@
         if (seenElements.has(el)) return;
         seenElements.add(el);
         const diagnostic = _candidateDiagnostics(el, actionType);
+        const semantic = _semanticScore(el, intent, options);
         const score = (diagnostic.actionable ? 100 : 0)
           + (diagnostic.visible ? 30 : -50)
           + (diagnostic.enabled ? 20 : -60)
           + (!_isWriteAction(actionType) || diagnostic.editable ? 15 : -60)
+          + semantic.score
           - (selectorIndex * 5)
           - candidateIndex;
         candidates.push({
@@ -324,7 +461,7 @@
           selectorIndex,
           candidateIndex,
           score,
-          reasons: diagnostic.reasons,
+          reasons: diagnostic.reasons.concat(semantic.reasons),
           discarded: diagnostic.discarded,
           visible: diagnostic.visible,
           enabled: diagnostic.enabled,

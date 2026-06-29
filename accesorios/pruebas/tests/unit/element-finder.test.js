@@ -81,6 +81,51 @@ test("element-finder: fallbackSelectors conserva altSelectors cuando el primario
   assert.equal(found.id, "mat-input-8");
 });
 
+test("element-finder: dos inputs visibles con mismo selector elige por placeholder", () => {
+  const doc = setup(`
+    <input class="field" id="first" placeholder="Nombre">
+    <input class="field" id="second" placeholder="Email">
+  `);
+
+  const found = finder.findElement(".field", {
+    document: doc,
+    actionType: "input",
+    controlRef: { placeholder: "Email", controlKind: "text-input" }
+  });
+
+  assert.equal(found.id, "second");
+});
+
+test("element-finder: dos botones visibles elige por texto y role exactos", () => {
+  const doc = setup(`
+    <button class="action" role="button" id="cancel">Cancelar</button>
+    <button class="action" role="button" id="save">Guardar</button>
+  `);
+
+  const found = finder.findElement(".action", {
+    document: doc,
+    actionType: "click",
+    intent: { text: "Guardar", role: "button", controlKind: "button" }
+  });
+
+  assert.equal(found.id, "save");
+});
+
+test("element-finder: readonly vs editable con misma intencion elige editable", () => {
+  const doc = setup(`
+    <input class="email" id="readonly-email" placeholder="Email" readonly>
+    <input class="email" id="editable-email" placeholder="Email">
+  `);
+
+  const found = finder.findElement(".email", {
+    document: doc,
+    actionType: "input",
+    controlRef: { placeholder: "Email", controlKind: "text-input" }
+  });
+
+  assert.equal(found.id, "editable-email");
+});
+
 test("element-finder: caso legacy sin alternativa devuelve el unico candidato aunque no sea accionable", () => {
   const doc = setup('<button id="legacy-hidden" hidden>Viejo</button>');
 

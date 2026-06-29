@@ -263,13 +263,17 @@
   }
 
   function findElement(selector, step, vars) {
+    const controlRef = step && step.controlRef && typeof step.controlRef === "object" ? step.controlRef : null;
+    const intent = step && step.intent && typeof step.intent === "object" ? step.intent : controlRef;
     return _elementFinder().findElement(selector, {
       document,
       actionType: step && step.type,
       normalizeTextForCompare: _normalizeTextForCompare,
       foldTextForCompare: _foldTextForCompare,
       knownFallback: _findKnownGalleryControlFallback,
-      fallbackSelectors: _collectFallbackSelectorsForStep(step, selector, vars)
+      fallbackSelectors: _collectFallbackSelectorsForStep(step, selector, vars),
+      controlRef,
+      intent
     });
   }
 

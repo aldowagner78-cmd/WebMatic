@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-06-29] rc39-impl-2 intencion semantica basica y scoring contextual
+
+### Agregado
+- Inventario/controlRef agrega metadata opcional compatible: `placeholder`, `text`, `name`, `role`, `tag`, `type`, `controlKind`, `visibleSectionTitle` y conserva `altSelectors`.
+- `element-finder` suma scoring contextual por placeholder, label, texto visible, role, name, controlKind y contexto cercano.
+- Tests unitarios para seleccion por placeholder/texto/role, preservacion de controlRef enriquecido, campos sensibles sin valor real y player pasando metadata al resolver.
+
+### Modificado
+- El player pasa `controlRef`/`intent` al resolver sin romper `controlRef.altSelectors`.
+- El grabador de teclas editables agrega metadata semantica basica al `controlRef` cuando esta disponible.
+
+### Compatibilidad
+- No se modifico `manifest.json`.
+- No se cambio UI, storage/import/export ni release.
+- No se agregaron dependencias nuevas.
+- Macros antiguas sin metadata conservan comportamiento legacy.
+
+### Pendiente
+- Los empates peligrosos entre candidatos accionables siguen documentados como riesgo: por compatibilidad, el resolver mantiene orden legacy si el scoring no aporta evidencia suficiente.
+
 ## [2026-06-29] rc39-impl-1 motor universal visible/interactuable
 
 ### Agregado

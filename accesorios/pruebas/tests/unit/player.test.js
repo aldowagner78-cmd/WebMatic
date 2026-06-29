@@ -137,6 +137,29 @@ test("wait_for: usa controlRef.altSelectors si el selector primario dinamico no 
   assert.equal(result.ok, true);
 });
 
+test("player: pasa controlRef al resolver sin romper altSelectors", async () => {
+  resetBody(`
+    <input class="campo" id="nombre" placeholder="Nombre">
+    <input class="campo" id="email" placeholder="Email">
+  `);
+
+  const result = await runStep({
+    type: "input",
+    selector: ".campo",
+    value: "ana@example.com",
+    controlRef: {
+      selector: ".campo",
+      placeholder: "Email",
+      controlKind: "text-input",
+      altSelectors: ['input[placeholder="Email"]']
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("email").value, "ana@example.com");
+  assert.equal(win.document.getElementById("nombre").value, "");
+});
+
 
 test("playback visual focus: click fuera de viewport hace scroll antes del click", async () => {
   resetBody('<button id="target">Enviar</button>');

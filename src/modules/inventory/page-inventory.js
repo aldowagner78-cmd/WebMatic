@@ -156,6 +156,32 @@
     return "";
   }
 
+  function _cleanText(value) {
+    const text = String(value == null ? "" : value).replace(/\s+/g, " ").trim();
+    return text.length > 160 ? text.slice(0, 160).trim() : text;
+  }
+
+  function _visibleText(el) {
+    if (!el || !el.tagName) return "";
+    const tag = el.tagName.toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") return "";
+    return _cleanText(el.innerText || el.textContent || "");
+  }
+
+  function _visibleSectionTitle(el) {
+    try {
+      const host = el && typeof el.closest === "function"
+        ? el.closest("section, article, main, aside, form, fieldset, [role='dialog'], [role='region']")
+        : null;
+      if (!host) return "";
+      const heading = host.querySelector("legend, h1, h2, h3, h4, h5, h6, [role='heading'], [aria-label]");
+      if (!heading || heading === el || (el.contains && el.contains(heading))) return "";
+      return _cleanText((heading.getAttribute && heading.getAttribute("aria-label")) || heading.textContent || "");
+    } catch (_e) {
+      return "";
+    }
+  }
+
   /** Extrae las opciones de un <select> o de un <datalist> referenciado. */
   function _options(el, kind) {
     if (kind === "native-select" && el.options) {
@@ -217,9 +243,12 @@
       id: id || null,
       name: (el.getAttribute && el.getAttribute("name")) || null,
       label: _label(el),
+      placeholder: _cleanText((el.getAttribute && el.getAttribute("placeholder")) || ""),
+      text: _visibleText(el),
       tag: el.tagName.toLowerCase(),
       type: ((el.getAttribute && el.getAttribute("type")) || "").toLowerCase() || null,
       role: ((el.getAttribute && el.getAttribute("role")) || "").toLowerCase() || null,
+      visibleSectionTitle: _visibleSectionTitle(el) || null,
       visible: _isVisible(el),
       controlKind: kind,
       options: _options(el, kind)
@@ -685,11 +714,20 @@
     const selector = step.selector || step.from || "";
     const ctrl = findControlForSelector(selector, inventories);
     if (!ctrl) return null;
-    return {
+    const ref = {
       selector: ctrl.selector,
       controlKind: ctrl.controlKind,
       label: ctrl.label || ""
     };
+    if (Array.isArray(ctrl.altSelectors) && ctrl.altSelectors.length > 0) ref.altSelectors = ctrl.altSelectors.slice();
+    if (ctrl.placeholder) ref.placeholder = ctrl.placeholder;
+    if (ctrl.text) ref.text = ctrl.text;
+    if (ctrl.name) ref.name = ctrl.name;
+    if (ctrl.role) ref.role = ctrl.role;
+    if (ctrl.tag) ref.tag = ctrl.tag;
+    if (ctrl.type) ref.type = ctrl.type;
+    if (ctrl.visibleSectionTitle) ref.visibleSectionTitle = ctrl.visibleSectionTitle;
+    return ref;
   }
 
   /**
