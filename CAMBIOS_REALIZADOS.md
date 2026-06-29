@@ -1,5 +1,59 @@
 # Cambios realizados
 
+## rc39-impl-1: motor universal visible/interactuable
+
+Fecha: 2026-06-29
+
+## Archivos modificados
+
+- `src/common/dom/element-finder.js`
+- `src/modules/player/player.js`
+- `accesorios/pruebas/tests/unit/element-finder.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+
+## Que se cambio
+
+- Se agrego una primera capa incremental del resolver universal en `element-finder`.
+- `getCandidateElements` devuelve todos los candidatos posibles para CSS, XPath y pseudo-selector `tag[text="..."]`, incluyendo Shadow DOM abierto e iframes accesibles como antes.
+- `findBestElement` ordena candidatos y prioriza elementos visibles, habilitados y accionables.
+- Se agregaron validadores:
+  - `isElementVisibleForWebMatic`;
+  - `isElementEnabledForWebMatic`;
+  - `isElementEditableForWebMatic`;
+  - `isElementActionableForWebMatic`.
+- `findElement` mantiene el contrato legacy (`Element|null`) pero ya no devuelve ciegamente el primer match cuando hay un candidato visible/interactuable mejor.
+- `player.js` pasa `actionType` al resolver para diferenciar click, escritura, check, choose_option y wait_for sin reescribir acciones.
+
+## Tests agregados
+
+- `element-finder: si dos elementos coinciden, elige el visible sobre el hidden`.
+- `element-finder: descarta candidato con ancestro aria-hidden cuando hay alternativa visible`.
+- `element-finder: para TYPE prefiere input editable sobre readonly`.
+- `element-finder: para CLICK prefiere boton enabled sobre disabled`.
+- `element-finder: selector unico visible conserva comportamiento esperado`.
+- `element-finder: fallbackSelectors conserva altSelectors cuando el primario no existe`.
+- `element-finder: caso legacy sin alternativa devuelve el unico candidato aunque no sea accionable`.
+
+## Como se probo
+
+1. `node -c src/common/dom/element-finder.js`
+2. `node -c src/modules/player/player.js`
+3. `node --test accesorios/pruebas/tests/unit/element-finder.test.js`
+4. `npm test`
+5. `npm run test:e2e:universal-resolution`
+6. `npm run test:e2e:angular-material`
+7. `npm run test:e2e:wait-for-navigate`
+8. `npm run test:e2e:loop-navigate`
+
+## Pendiente / limites conocidos
+
+- Esta implementacion no agrega todavia grabacion por intencion ni target descriptors enriquecidos.
+- El scoring es una primera priorizacion por estado visible/interactuable; no resuelve aun contexto semantico completo, texto cercano, labels, wizard o formularios duplicados complejos.
+- Cross-origin iframes siguen limitados por el navegador.
+- Shadow DOM cerrado sigue fuera de alcance.
+- El fallback legacy conserva el unico candidato aunque no sea accionable para no romper macros antiguas; casos futuros deberian diagnosticar esto con mas claridad antes de ejecutar.
+
 ## Banco e2e simulado rc39 universal-resolution
 
 Fecha: 2026-06-29

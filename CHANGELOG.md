@@ -1,5 +1,23 @@
 # Changelog
 
+## [2026-06-29] rc39-impl-1 motor universal visible/interactuable
+
+### Agregado
+- `element-finder` ahora expone `getCandidateElements`, checks de visibilidad/estado/editabilidad/interactuabilidad y `findBestElement`.
+- Tests unitarios directos para resolver duplicados ocultos/visibles, `aria-hidden` en ancestros, `readonly`, `disabled`, selector unico visible, `fallbackSelectors`/`controlRef.altSelectors` y fallback legacy sin alternativa.
+
+### Modificado
+- `findElement` evalua todos los candidatos del selector y sus fallbacks, priorizando elementos visibles e interactuables antes de devolver un resultado.
+- El player pasa `actionType` al resolver para distinguir click, escritura y esperas sin cambiar el contrato legacy.
+
+### Compatibilidad
+- No se modifico `manifest.json`.
+- No se agregaron dependencias nuevas.
+- No se cambio UI ni almacenamiento/import/export.
+
+### Pendiente
+- Esta capa no implementa aun grabacion por intencion, scoring semantico completo, resolucion cross-origin ni diagnostico visible nuevo para usuario final.
+
 ## [2026-06-29] Banco e2e simulado rc39 universal-resolution
 
 ### Agregado

@@ -262,9 +262,10 @@
     return out;
   }
 
-    function findElement(selector, step, vars) {
+  function findElement(selector, step, vars) {
     return _elementFinder().findElement(selector, {
       document,
+      actionType: step && step.type,
       normalizeTextForCompare: _normalizeTextForCompare,
       foldTextForCompare: _foldTextForCompare,
       knownFallback: _findKnownGalleryControlFallback,
