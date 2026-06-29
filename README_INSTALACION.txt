@@ -1,89 +1,199 @@
-# Instalación y uso del parche WebMatic rc38
+# Instalación y uso — WebMatic Firefox 0.2.2
 
 ## Requisitos
 
+Para usuario final:
+
+- Firefox instalado.
+- Archivo firmado `WebMatic-Firefox-0.2.2-FIRMADO.xpi` o `041d0daa5df241fd8ad8-0.2.2.xpi`.
+
+Para desarrollo:
+
 - Windows con PowerShell o Linux con terminal.
 - Node.js instalado.
-- Proyecto WebMatic existente en:
-  - Windows: C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
-  - Linux: ~/Escritorio/WebMatic-dev/repo-modular
+- Proyecto en:
+  - Windows: `C:\Users\usuario\Desktop\WebMatic-dev\repo-modular`
+  - Linux: `~/Escritorio/WebMatic-dev/repo-modular`
 
-## Instalación del parche
+## Instalación en Firefox
 
-Antes de aplicar, crear copia de seguridad limpia, sin `node_modules`, `.git`, `dist`, `build` ni `web-ext-artifacts`.
+Ruta del XPI recomendado:
 
-Windows PowerShell:
-Ruta:
-C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
-
-Comando:
-Expand-Archive -Path C:\Users\usuario\Desktop\WebMatic-dev\WebMatic-rc38-loop-navigate-PARCHE.zip -DestinationPath . -Force
-
-Linux:
-Ruta:
-~/Escritorio/WebMatic-dev/repo-modular
-
-Comando:
-unzip -o ~/Escritorio/WebMatic-dev/WebMatic-rc38-loop-navigate-PARCHE.zip -d .
-
-## Ejecución / carga temporal en Firefox
-
-Ruta:
-C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
+```text
+C:\Users\usuario\Desktop\WebMatic-dev\backups\WebMatic-Firefox-0.2.2-FIRMADO.xpi
+```
 
 Pasos:
+
 1. Abrir Firefox.
-2. Entrar a `about:debugging#/runtime/this-firefox`.
-3. Elegir "Load Temporary Add-on...".
+2. Ir a `about:addons`.
+3. Abrir el menú de engranaje.
+4. Elegir `Instalar complemento desde archivo...`.
+5. Seleccionar el archivo `.xpi`.
+6. Confirmar la instalación.
+
+Resultado esperado:
+
+- WebMatic aparece como extensión instalada.
+- La extensión funciona sin cargarla temporalmente.
+- La interfaz muestra la versión funcional `v0.2.0-modular-rc38`.
+
+## Carga temporal para desarrollo
+
+Ruta:
+
+```text
+C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
+```
+
+Pasos:
+
+1. Abrir Firefox.
+2. Ir a `about:debugging#/runtime/this-firefox`.
+3. Elegir `Load Temporary Add-on...`.
 4. Seleccionar `manifest.json`.
 
 Resultado esperado:
-- WebMatic carga como extensión temporal.
-- La versión visible interna muestra `v0.2.0-modular-rc38`.
 
-## Modo demo / prueba manual sugerida
+- WebMatic carga en modo temporal.
+- Se puede probar sin reinstalar el XPI firmado.
 
-Este parche no cambia datos demo ni firma Firefox.
+## Uso básico
 
-Prueba manual recomendada:
-1. Crear o usar una macro con `NAVIGATE` y al menos una acción posterior.
-2. Reproducirla con el botón `▶▶ Bucle` en 2 o 3 repeticiones.
-3. Verificar que después de cada navegación la reproducción continúe y arranque la siguiente vuelta.
-4. Confirmar que `Detener` corta el bucle.
+1. Abrir la página web que se quiere automatizar.
+2. Abrir WebMatic desde el icono de la extensión.
+3. Pulsar **Grabar**.
+4. Hacer las acciones reales en la página.
+5. Pulsar **Detener**.
+6. Guardar la macro con un nombre claro.
+7. Reproducirla desde la lista de macros.
 
-Resultado esperado:
-- El bucle no queda detenido después de la primera navegación.
-- Se conserva el estado de repetición entre páginas.
+## Bucle
 
-## Pruebas automatizadas
+Para repetir una macro:
 
-Ruta:
-C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
+1. Seleccionar una macro.
+2. Elegir cantidad de repeticiones.
+3. Pulsar **▶▶ Bucle**.
 
-Comandos:
-node --test accesorios/pruebas/tests/unit/content-background-storage-regression.test.js
-node --test accesorios/pruebas/tests/unit/content-playback-banner.test.js
-node --test accesorios/pruebas/tests/unit/build-info.test.js
-node --test --test-name-pattern "navigate: hacia file" accesorios/pruebas/tests/unit/player.test.js
+La versión `0.2.2` conserva el bucle aunque la macro use `NAVIGATE`.
+
+## Datos sensibles
+
+WebMatic evita guardar valores reales de campos sensibles.
+
+Se tratan como sensibles:
+
+- Password.
+- PIN.
+- Token.
+- CVV.
+- Campos similares detectados por tipo, nombre, etiqueta o contexto.
+
+En el script se representan como `SENSITIVE_INPUT` o contenido redactado.
+
+## Exportar/importar macros
+
+Para mover macros entre computadoras:
+
+1. En WebMatic, abrir configuración/exportación.
+2. Usar backup completo o exportar macros.
+3. Copiar el archivo generado a la otra PC.
+4. Instalar WebMatic.
+5. Importar el backup.
+
+Recomendación: hacer backup antes de desinstalar Firefox, borrar perfiles o limpiar datos del navegador.
+
+## Modo demo
+
+Este proyecto no usa base de datos propia ni datos reales incluidos.
+
+Para probar sin datos reales se recomienda usar páginas públicas o fixtures locales de prueba. Los e2e simulados del repo cubren:
+
+```powershell
+npm run test:e2e:angular-material
+npm run test:e2e:wait-for-navigate
+npm run test:e2e:loop-navigate
+```
+
+## Pruebas
+
+Ruta Windows:
+
+```powershell
+cd C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
+```
+
+Pruebas completas:
+
+```powershell
 npm test
+```
+
+E2E simulados principales:
+
+```powershell
+npm run test:e2e:angular-material
+npm run test:e2e:wait-for-navigate
+npm run test:e2e:loop-navigate
+```
 
 Resultado esperado:
-- Todas las pruebas pasan.
-- `npm test` finaliza con `fail 0`.
 
-## Empaquetar ZIP limpio
+```text
+fail 0
+```
 
-Windows PowerShell:
-Ruta:
-C:\Users\usuario\Desktop\WebMatic-dev
+## Empaquetar / firmar Firefox
 
-Comando:
-robocopy .\repo-modular .\_zip_temp\repo-modular /E /XD node_modules .git dist build web-ext-artifacts .venv venv __pycache__ /XF *.pyc
-Compress-Archive -Path .\_zip_temp\repo-modular -DestinationPath .\WebMatic-repo-modular-rc38-LIMPIO.zip -Force
-Remove-Item .\_zip_temp -Recurse -Force
+La versión firmada actual es `0.2.2`.
+
+Para una futura firma:
+
+1. Actualizar `manifest.json` a una versión nueva.
+2. Crear carpeta limpia en `dist`.
+3. Ejecutar `web-ext lint`.
+4. Firmar con `web-ext sign --channel unlisted`.
+
+No incluir en la firma:
+
+```text
+node_modules
+.git
+dist anteriores
+web-ext-artifacts anteriores
+accesorios
+docs
+chromium
+```
 
 ## Problemas frecuentes
 
-- Si `Copy-Item` falla por rutas largas, usar ZIP limpio con `robocopy`.
-- Si `player.test.js` falla por `happy-dom`, ejecutar `npm install` primero.
-- No firmar Firefox todavía si falta validación manual/e2e del bucle.
+### El XPI no se instala
+
+Verificar que sea el archivo firmado `.xpi`, no un `.zip`.
+
+### La macro falla después de navegar
+
+Actualizar a Firefox `0.2.2` o superior. Esta versión corrige reanudación con navegación y bucle.
+
+### Un campo Angular Material cambia de ID
+
+WebMatic prioriza selectores estables como `placeholder`, `aria-label`, `label` o fallbacks de `controlRef.altSelectors`.
+
+### El password no aparece en la macro
+
+Es correcto. Los campos sensibles se redactan para evitar guardar datos reales.
+
+### El bucle solo ejecuta una vez
+
+Verificar que esté instalada la versión `0.2.2`. Versiones anteriores podían perder el estado del bucle al navegar.
+
+## ZIP / backup
+
+Backup estable recomendado:
+
+```text
+C:\Users\usuario\Desktop\WebMatic-dev\backups\WebMatic-Firefox-0.2.2-FIRMADO.xpi
+C:\Users\usuario\Desktop\WebMatic-dev\backups\WebMatic-v0.2.2-firefox.bundle
+```

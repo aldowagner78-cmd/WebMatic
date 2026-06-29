@@ -1,75 +1,133 @@
 # WebMatic
 
-Extension de automatizacion web modular para Firefox (Windows).
+WebMatic es una extensión de navegador para automatizar tareas web repetitivas: graba macros, las reproduce, permite editarlas visualmente, exportarlas/importarlas y repetirlas en bucle.
 
 ## Estado actual
 
-- **Grabador** (recorder): captura clicks, escritura, checkboxes/radios y selects.
-- **Reproductor** (player): ejecuta las macros paso a paso con reanudacion tras navegacion.
-- **Editor visual** de pasos para revisar y ajustar macros, con soporte de inventario/opciones para `choose_option` y autocompletados.
-- **Biblioteca** de macros guardadas con reproduccion directa desde la vista Reproducir.
-- **Captura de contenido** desde Reproducir para censar campos y guardar perfiles reutilizables de metadatos de pagina.
-- **Resumen de biblioteca e historial** en Reproducir: muestra macros/perfiles actuales y movimientos acumulados de importacion/exportacion.
-- **Import/Export** en JSON propio y backup completo de macros/configuracion.
-- Store central, contratos de acciones y docking/geometry manager.
+- **Versión Firefox firmada:** `0.2.2`.
+- **Versión funcional interna visible:** `v0.2.0-modular-rc38`.
+- **Rama de trabajo:** `modularizacion-base`.
+- **Navegador validado:** Firefox.
+- **Chrome/Edge:** pendiente para etapa posterior.
+- **Estado:** firmado, instalado y probado manualmente.
 
-### Pasos soportados (resumen)
+## Funciones principales
 
-Incluye navegacion, click/doble click, escritura, `check` (checkbox/radio), variables,
-extraccion, esperas, condicionales y bucles. El paso `choose_option` selecciona una
-opcion de un `<select>` por **value** y, si no coincide, por **texto visible**
-(tambien admite un campo `text` explicito).
+- Grabar navegación, clicks, escritura, checkboxes/radios, selects nativos, teclas y esperas.
+- Reproducir macros con banner de progreso, stop persistente y diagnóstico claro.
+- Editar macros desde editor visual y editor IIM.
+- Abrir el editor desde un error y resaltar el paso fallido.
+- Repetir macros con el botón **▶▶ Bucle**, incluyendo macros con `NAVIGATE`.
+- Insertar esperas inteligentes:
+  - `WAIT_FOR` después de `NAVIGATE` antes del primer selector accionable;
+  - `WAIT_FOR` antes de `CHOOSE_OPTION`;
+  - espera posterior a contenido dinámico cuando corresponde.
+- Usar selectores más robustos para páginas modernas, incluyendo Angular Material.
+- Proteger campos sensibles: password, PIN, token, CVV y similares se tratan como `SENSITIVE_INPUT` y no se guardan con valor real.
+- Exportar/importar macros y crear backup completo.
+- Capturar inventario de página para mejorar opciones del editor visual.
 
-## Ejecucion de pruebas
+## Archivos importantes
 
-```bash
+```text
+manifest.json
+src/content/content.js
+src/background/background.js
+src/modules/player/player.js
+src/modules/recorder/normalizer/recording-normalizer.js
+src/modules/ui/build-info.js
+src/help/help.html
+src/help/help.js
+```
+
+## Instalación como usuario final
+
+Usar el XPI firmado:
+
+```text
+web-ext-artifacts/041d0daa5df241fd8ad8-0.2.2.xpi
+```
+
+En Firefox:
+
+```text
+about:addons
+⚙️ > Instalar complemento desde archivo...
+Seleccionar el .xpi firmado
+```
+
+## Instalación temporal para desarrollo
+
+En Firefox:
+
+```text
+about:debugging#/runtime/this-firefox
+Load Temporary Add-on...
+Seleccionar manifest.json
+```
+
+## Comandos de desarrollo
+
+Ruta Windows:
+
+```powershell
+cd C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
+```
+
+Instalar dependencias:
+
+```powershell
+npm install
+```
+
+Ejecutar pruebas unitarias:
+
+```powershell
 npm test
 ```
 
-## Flujo recomendado para V2 (Firefox primero)
+Ejecutar e2e simulados principales:
 
-Ejecucion modular por fases:
-
-```bash
-npm run test:phase1:export-routes
+```powershell
+npm run test:e2e:angular-material
+npm run test:e2e:wait-for-navigate
+npm run test:e2e:loop-navigate
 ```
 
-Fase 1 valida rutas de guardado/exportacion y sanitizacion.
+Lint para carpeta Firefox limpia:
 
-Antes de publicar, ejecutar siempre en este orden:
-
-```bash
-npm run verify:v2:firefox:fast
+```powershell
+npx web-ext lint --source-dir .\dist\firefox-0.2.2
 ```
 
-Incluye:
-- tests unitarios
-- e2e de fixtures (modern/legacy/GeneXus/IAPOS simulado)
-- e2e seguro IAPOS
+## Firma Firefox 0.2.2
 
-Importante: `verify:v2:firefox:fast` es una validacion rapida y no habilita release por si sola.
+La firma final validada generó:
 
-Para validacion completa de extension en Firefox:
-
-```bash
-npm run verify:v2:firefox:full
+```text
+web-ext-artifacts/041d0daa5df241fd8ad8-0.2.2.xpi
 ```
 
-Ademas de lo anterior, agrega e2e de extension Firefox.
+Antes de firmar una nueva versión:
 
-Release gate recomendado: considerar candidato a release unicamente cuando `verify:v2:firefox:full` este en verde.
+1. Subir `manifest.json` a una versión no usada.
+2. Crear carpeta limpia de distribución.
+3. Correr tests.
+4. Correr `web-ext lint`.
+5. Firmar con `web-ext sign --channel unlisted`.
 
-Publicar recien cuando este flujo completo quede en verde y la validacion manual en Firefox sea correcta.
+## Backups estables
 
-## Carga manual en Firefox
+Backups recomendados:
 
-1. Abrir `about:debugging#/runtime/this-firefox`.
-2. Click en "Load Temporary Add-on...".
-3. Seleccionar `manifest.json`.
+```text
+backups/WebMatic-Firefox-0.2.2-FIRMADO.xpi
+backups/WebMatic-v0.2.2-firefox.bundle
+```
 
-## Flujo manual rapido
+## Pendientes recomendados
 
-1. En **Reproducir**, usar **Capturar contenido** si quieres censar campos/opciones de la pagina actual para reutilizarlos luego en el editor visual.
-2. Grabar o abrir una macro guardada y reproducirla desde la biblioteca.
-3. Exportar una macro individual o generar un backup completo desde **Configurar**.
-4. Importar macros, backups o metadatos segun el tipo de contenido que necesites restaurar.
+- Reducir los 2 warnings de `innerHTML` reportados por `web-ext lint`.
+- Validar Chrome/Edge en una etapa separada.
+- Mejorar documentación avanzada de casos reales y troubleshooting.
+- Mantener pruebas simuladas para cada bug corregido antes de firmar futuras versiones.

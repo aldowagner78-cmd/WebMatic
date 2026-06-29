@@ -1,5 +1,35 @@
 # Changelog
 
+## [2026-06-29] Ajuste de manual para usuario final
+
+### Modificado
+- `src/help/help.html` queda orientado a usuario final.
+- Se eliminaron del manual integrado referencias a instalación, firma, XPI, versiones internas, estado técnico, pruebas y respaldo del proyecto.
+- Se reorganizó el contenido en uso diario: inicio rápido, pantalla principal, grabar, reproducir, bucle, edición, datos sensibles, esperas, export/import y problemas frecuentes.
+
+### Pendiente
+- Mantener instrucciones de instalación/distribución fuera del manual integrado, en documentos separados cuando haga falta.
+
+## [2026-06-29] Documentación final Firefox 0.2.2
+
+### Agregado
+- Manual de usuario actualizado para Firefox `0.2.2` / `v0.2.0-modular-rc38`.
+- Instrucciones claras de instalación del XPI firmado.
+- Secciones de bucle, datos sensibles, selectores robustos, `WAIT_FOR`, export/import y problemas frecuentes.
+
+### Modificado
+- `README.md` pasa a describir el estado estable firmado `0.2.2`.
+- `README_INSTALACION.txt` deja de hablar de parche rc38 y pasa a documentar instalación/uso de la versión firmada.
+- `src/help/help.html` se reorganiza como manual final para usuario real.
+
+### Corregido
+- Documentación desactualizada que todavía describía etapas de parche en lugar de release firmado.
+
+### Pendiente
+- Reducir los 2 warnings conocidos de `innerHTML` en renderers del editor.
+- Validar Chrome/Edge en etapa separada.
+
+
 ## [2026-06-29] v0.2.0-modular-rc38
 
 ### Agregado
