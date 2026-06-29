@@ -1,4 +1,4 @@
-# Instalación y uso del parche WebMatic rc36
+# Instalación y uso del parche WebMatic rc37
 
 ## Requisitos
 
@@ -25,7 +25,7 @@ Ruta:
 C:\Users\usuario\Desktop\WebMatic-dev\repo-modular
 
 Comando:
-Expand-Archive -Path C:\Users\usuario\Desktop\WebMatic-dev\WebMatic-rc36-wait-for-navigate-PARCHE.zip -DestinationPath . -Force
+Expand-Archive -Path C:\Users\usuario\Desktop\WebMatic-dev\WebMatic-rc37-login-sensitive-submit-PARCHE.zip -DestinationPath . -Force
 
 Linux:
 Ruta:
@@ -38,7 +38,7 @@ Ruta:
 ~/Escritorio/WebMatic-dev/repo-modular
 
 Comando:
-unzip -o ~/Escritorio/WebMatic-dev/WebMatic-rc36-wait-for-navigate-PARCHE.zip -d .
+unzip -o ~/Escritorio/WebMatic-dev/WebMatic-rc37-login-sensitive-submit-PARCHE.zip -d .
 
 ## Ejecución / carga temporal en Firefox
 
@@ -53,7 +53,7 @@ Pasos:
 
 Resultado esperado:
 - WebMatic carga como extensión temporal.
-- La versión visible interna muestra v0.2.0-modular-rc36.
+- La versión visible interna muestra v0.2.0-modular-rc37.
 
 ## Modo demo / prueba manual sugerida
 
@@ -145,3 +145,29 @@ Resultado esperado:
 - Las pruebas pasan.
 - La macro nueva no depende de un `WAIT SECONDS` fijo entre navegación y primera acción.
 - No se modifica `manifest.json`.
+
+
+## Prueba específica rc37
+
+Objetivo:
+Confirmar que login/password/submit se graban sin filtrar secretos y sin perder la acción real.
+
+Casos esperados:
+- Si el usuario pega o modifica un password, la macro debe mostrar:
+```iim
+// SENSITIVE_INPUT SELECTOR="#password" CONTENT="[REDACTED]"
+```
+- El valor real del password no debe aparecer en líneas visibles ni en `WM_JSON`.
+- Si un botón Login/Ingresar/Logout dispara navegación, la macro debe conservar el `CLICK` real antes de `NAVIGATE` cuando sea una acción de autenticación.
+
+Pruebas recomendadas:
+```powershell
+node --test accesorios/pruebas/tests/unit/build-info.test.js
+node --test accesorios/pruebas/tests/unit/iim-adapter.test.js
+npm test
+```
+
+Resultado esperado:
+- Las pruebas pasan.
+- `manifest.json` no se modifica.
+- No se firma Firefox todavía.

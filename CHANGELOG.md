@@ -1,5 +1,31 @@
 # Changelog
 
+## [2026-06-27] v0.2.0-modular-rc37
+
+### Agregado
+- Marcador seguro `SENSITIVE_INPUT` para campos sensibles cuando el usuario pega o modifica un password/token, sin guardar el valor real.
+- Captura de intención de submit para botones `submit` y botones de login detectables, conservando el click antes de la navegación.
+- Conservación de clicks de login/logout/submit antes de `NAVIGATE` para evitar que la macro quede como navegación directa solamente.
+
+### Modificado
+- `content.js` ya no descarta silenciosamente inputs sensibles: registra un paso redactado con `sensitive: true` y `value: ""`.
+- `content.js` marca clicks de submit con `_wmSubmitIntent` y evita duplicados entre `click` y `submit`.
+- La limpieza de pasos mantiene clicks de autenticación/logout cuando la acción real dispara navegación.
+- Versión visible interna actualizada a `v0.2.0-modular-rc37`.
+
+### Corregido
+- Caso rc37: password pegado no queda perdido ni filtra el secreto.
+- Caso rc37: login/logout dejan evidencia de acción real y no solo `NAVIGATE` directo.
+
+### Pendiente
+- Validación e2e simulada con Codex/Playwright para login/password/submit/logout.
+- Actualización completa del manual de usuario antes de firma Firefox 0.2.2.
+
+### Compatibilidad
+- No se modificó `manifest.json`.
+- No se cambió versión firmada Firefox.
+- No se agregaron dependencias nuevas.
+
 ## [2026-06-27] v0.2.0-modular-rc36
 
 ### Agregado

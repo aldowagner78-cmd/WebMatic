@@ -164,3 +164,52 @@ Comando agregado:
 Resultado ejecutado:
 - `npm run test:e2e:wait-for-navigate`: pass.
 - `npm test`: 510 pass, 0 fail.
+
+
+## Actualizacion rc37 - login, datos sensibles y submit real
+
+### Archivos modificados
+- `src/content/content.js`
+- `src/modules/ui/build-info.js`
+- `accesorios/pruebas/tests/unit/build-info.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+- `README_INSTALACION.txt`
+
+### Qué se cambió
+- Se registra un marcador seguro para campos sensibles (`sensitive: true`, `value: ""`) en lugar de ignorarlos.
+- Se cubre el caso de password pegado sin guardar el valor real.
+- Se marca la intención de submit en botones de login/enviar.
+- Se evita que la limpieza elimine clicks de login/logout/submit cuando van seguidos de navegación.
+- Se evita duplicar el submit cuando el navegador dispara `click` y luego `submit`.
+- Se actualiza la versión visible interna a `v0.2.0-modular-rc37`.
+
+### Por qué se cambió
+- En pruebas públicas el login funcionaba, pero el password pegado podía no quedar representado como sensible.
+- El click de Login/Logout podía limpiarse y quedar reemplazado por un `NAVIGATE`, perdiendo la acción real.
+- El objetivo de rc37 es mejorar autenticación y datos sensibles sin guardar secretos ni tocar la firma Firefox.
+
+### Cómo probar
+
+Windows PowerShell:
+Ruta:
+`C:\Users\usuario\Desktop\WebMatic-dev\repo-modular`
+
+Comandos:
+```powershell
+node --test accesorios/pruebas/tests/unit/build-info.test.js
+node --test accesorios/pruebas/tests/unit/iim-adapter.test.js
+npm test
+```
+
+Validación esperada:
+- `build-info.test.js`: pass.
+- `iim-adapter.test.js`: pass.
+- `npm test`: fail 0.
+- Una macro de login debe conservar click real de submit/login si dispara navegación.
+- Un password pegado debe quedar como `SENSITIVE_INPUT` redactado, sin valor real.
+
+### Cómo revertir
+- Restaurar backup anterior al parche rc37.
+- O revertir el commit rc37.
+- No hace falta tocar `manifest.json`, porque este parche no lo modifica.

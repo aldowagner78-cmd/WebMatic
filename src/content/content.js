@@ -177,6 +177,26 @@
       const enrichedStep = _sfControlRefForStep(step);
       chrome.runtime.sendMessage({ type: "FRAME_STEP_CAPTURED", step: enrichedStep }, () => { void chrome.runtime.lastError; });
     }
+    const _sfSensitiveCaptureAt = new WeakMap();
+    function _sfSendSensitiveMarker(t) {
+      if (!(t instanceof Element)) return false;
+      const sel = _sel(t);
+      if (!sel || !_isSensitiveInputTarget(t, sel)) return false;
+      if (t.readOnly || t.disabled) return false;
+      const now = Date.now();
+      const last = _sfSensitiveCaptureAt.get(t) || 0;
+      if (now - last < 700) return true;
+      _sfSensitiveCaptureAt.set(t, now);
+      if (_isRecording) flashElement(t);
+      _send({
+        type: "input",
+        selector: sel,
+        value: "",
+        sensitive: true,
+        inputType: t instanceof HTMLInputElement ? String(t.getAttribute("type") || t.type || "").toLowerCase() : ""
+      });
+      return true;
+    }
     document.addEventListener("click", (e) => {
       let t = e.target;
       if (!(t instanceof Element)) return;
@@ -228,7 +248,10 @@
         _send({ type: "choose_option", selector: _sel(t), value: t.value });
         return;
       }
-      if (_isSensitiveInputTarget(t, _sel(t))) return;
+      if (_isSensitiveInputTarget(t, _sel(t))) {
+        _sfSendSensitiveMarker(t);
+        return;
+      }
       _send({ type: "input", selector: _sel(t), value: t.value });
     }, true);
     document.addEventListener("keydown", (e) => {
@@ -292,12 +315,21 @@
       flashElement(srcEl);
       _send({ type: "extract", selector: _sel(srcEl), variable: _lastCopiedVar });
     }, true);
+    document.addEventListener("paste", (e) => {
+      if (!_isRecording) return;
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      _sfSendSensitiveMarker(t);
+    }, true);
     // Override change listener above to substitute paste value
     document.addEventListener("change", (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement) && !(t instanceof HTMLTextAreaElement) && !(t instanceof HTMLSelectElement)) return;
       if (t.readOnly || t.disabled) return;
-      if (_isSensitiveInputTarget(t, _sel(t))) return;
+      if (_isSensitiveInputTarget(t, _sel(t))) {
+        _sfSendSensitiveMarker(t);
+        return;
+      }
       if (_isRecording && _lastCopiedText !== null && _lastCopiedVar !== null && t.value.trim() === _lastCopiedText) {
         _send({ type: "input", selector: _sel(t), value: `{{!${_lastCopiedVar}}}` });
       }
@@ -314,7 +346,10 @@
         clearTimeout(_sfCeTimer);
         _sfCeTimer = setTimeout(() => {
           const val = (t.innerText || t.textContent || "").trim();
-          if (_isSensitiveInputTarget(t, _sel(t))) return;
+          if (_isSensitiveInputTarget(t, _sel(t))) {
+            _sfSendSensitiveMarker(t);
+            return;
+          }
           flashElement(t);
           _send({ type: "input", selector: _sel(t), value: val });
         }, 400);
@@ -323,7 +358,10 @@
 
       if (!_isTextEntryCaptureTarget(t)) return;
       if (t.readOnly || t.disabled) return;
-      if (_isSensitiveInputTarget(t, _sel(t))) return;
+      if (_isSensitiveInputTarget(t, _sel(t))) {
+        _sfSendSensitiveMarker(t);
+        return;
+      }
 
       clearTimeout(_sfTextTimer);
       _sfTextTimer = setTimeout(() => {
@@ -6142,7 +6180,12 @@
     const tag = String(el.tagName || "").toLowerCase();
     ref.selector = ref.selector || String(selector || "");
     ref.tag = ref.tag || tag;
-    const type = el instanceof HTMLInputElement ? String(el.getAttribute("type") || "text").toLowerCase() : "";
+    let type = "";
+    if (el instanceof HTMLInputElement) {
+      type = String(el.getAttribute("type") || el.type || "text").toLowerCase();
+    } else if (typeof HTMLButtonElement !== "undefined" && el instanceof HTMLButtonElement) {
+      type = String(el.getAttribute("type") || el.type || "submit").toLowerCase();
+    }
     if (type && !ref.type) ref.type = type;
     const name = el.getAttribute && el.getAttribute("name");
     if (name && !ref.name) ref.name = String(name);
@@ -6171,6 +6214,71 @@
     const ref = _controlRefForRecordedTarget(el, step.selector, step.controlRef);
     if (!ref) return step;
     return Object.assign({}, step, { controlRef: ref });
+  }
+
+  const _sensitiveInputCaptureAt = new WeakMap();
+  const _submitIntentCaptureAt = new WeakMap();
+  const SENSITIVE_INPUT_MARKER_COOLDOWN_MS = 700;
+  const SUBMIT_INTENT_CAPTURE_COOLDOWN_MS = 700;
+
+  function _isSubmitIntentTarget(el) {
+    if (!(el instanceof Element)) return false;
+    try {
+      const tag = String(el.tagName || "").toLowerCase();
+      const type = String(
+        el instanceof HTMLInputElement || (typeof HTMLButtonElement !== "undefined" && el instanceof HTMLButtonElement)
+          ? (el.getAttribute("type") || el.type || "")
+          : (el.getAttribute && el.getAttribute("type")) || ""
+      ).toLowerCase();
+      if (tag === "button") return !type || type === "submit";
+      if (tag === "input") return type === "submit" || type === "image";
+      return false;
+    } catch (_e) {
+      return false;
+    }
+  }
+
+  function _captureSensitiveInputMarkerForRecording(target, emitStep) {
+    if (!(target instanceof Element)) return false;
+    if (_isInsideWebMaticUi(target, { inlinePanelId: INLINE_REC_PANEL_ID })) return false;
+    if (!_isSensitiveInputTarget(target, "")) return false;
+    if (target.readOnly || target.disabled) return false;
+
+    const selector = buildSelector(target);
+    if (!selector) return false;
+
+    const now = Date.now();
+    const last = _sensitiveInputCaptureAt.get(target) || 0;
+    if (now - last < SENSITIVE_INPUT_MARKER_COOLDOWN_MS) return true;
+    _sensitiveInputCaptureAt.set(target, now);
+
+    if (typeof flashElement === "function") flashElement(target);
+    _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selector), emitStep);
+    emitStep({
+      type: "input",
+      selector,
+      value: "",
+      sensitive: true,
+      inputType: target instanceof HTMLInputElement ? String(target.getAttribute("type") || target.type || "").toLowerCase() : ""
+    });
+    return true;
+  }
+
+  function _captureSubmitIntentForRecording(target, emitStep) {
+    if (!(target instanceof Element)) return false;
+    if (_isInsideWebMaticUi(target, { inlinePanelId: INLINE_REC_PANEL_ID })) return false;
+    if (!_isSubmitIntentTarget(target)) return false;
+
+    const selector = buildSelector(target);
+    if (!selector) return false;
+
+    const now = Date.now();
+    const last = _submitIntentCaptureAt.get(target) || 0;
+    if (now - last < SUBMIT_INTENT_CAPTURE_COOLDOWN_MS) return true;
+    _submitIntentCaptureAt.set(target, now);
+
+    emitStep({ type: "click", selector, _wmSubmitIntent: true });
+    return true;
   }
 
   function buildSelector(element) {
@@ -6257,7 +6365,9 @@
 
     const selector = buildSelector(target);
     if (!selector) return false;
-    if (_isSensitiveInputTarget(target, selector)) return false;
+    if (_isSensitiveInputTarget(target, selector)) {
+      return _captureSensitiveInputMarkerForRecording(target, emitStep);
+    }
 
     const rawValue = isContentEditable
       ? String(target.innerText || target.textContent || "").trim()
@@ -6577,7 +6687,12 @@
       // If this click is on an element that wasn't present at the previous click,
       // inject a wait_for so playback waits for it to appear.
       _checkAndInjectWaitFor(_waitForSelectorForTarget(target, clickSel));
-      captureStep({ type: "click", selector: clickSel });
+      const clickStep = { type: "click", selector: clickSel };
+      if (_isSubmitIntentTarget(target)) {
+        _submitIntentCaptureAt.set(target, Date.now());
+        clickStep._wmSubmitIntent = true;
+      }
+      captureStep(clickStep);
       _startPostClickObserver(clickSel, captureStep);
     };
 
@@ -6627,7 +6742,10 @@
         recordedValue = `{{!${recorderRuntime.lastCopiedVar}}}`;
       }
       const inpSel = buildSelector(target);
-      if (_isSensitiveInputTarget(target, inpSel)) return;
+      if (_isSensitiveInputTarget(target, inpSel)) {
+        _captureSensitiveInputMarkerForRecording(target, captureStep);
+        return;
+      }
       _checkAndInjectWaitFor(_waitForSelectorForTarget(target, inpSel));
       captureStep({ type: "input", selector: inpSel, value: recordedValue });
     };
@@ -6678,7 +6796,10 @@
 
       const selector = buildSelector(target);
       if (!selector) return;
-      if (_isSensitiveInputTarget(target, selector)) return;
+      if (_isSensitiveInputTarget(target, selector)) {
+        _captureSensitiveInputMarkerForRecording(target, captureStep);
+        return;
+      }
 
       // Capture real input stream, not only final state/blur.
       // Required for live filters, GeneXus searches, autocomplete and AJAX fields
@@ -6699,7 +6820,10 @@
 
       const selector = buildSelector(target);
       if (!selector) return;
-      if (_isSensitiveInputTarget(target, selector)) return;
+      if (_isSensitiveInputTarget(target, selector)) {
+        _captureSensitiveInputMarkerForRecording(target, captureStep);
+        return;
+      }
 
       // Fallback for legacy pages/key combos such as Ctrl+A + Backspace.
       setTimeout(() => {
@@ -6780,7 +6904,23 @@
       captureStep({ type: "extract", selector: buildSelector(srcEl), variable: varName });
     };
 
+    const onPaste = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (_isInsideWebMaticUi(target)) return;
+      _captureSensitiveInputMarkerForRecording(target, captureStep);
+    };
+
+    const onSubmit = (event) => {
+      const submitter = event && event.submitter instanceof Element ? normalizeCaptureTarget(event.submitter) : null;
+      if (!(submitter instanceof Element)) return;
+      if (_isInsideWebMaticUi(submitter)) return;
+      _captureSubmitIntentForRecording(submitter, captureStep);
+    };
+
     document.addEventListener("copy", onCopy, true);
+    document.addEventListener("paste", onPaste, true);
+    document.addEventListener("submit", onSubmit, true);
 
     // ── contenteditable input (debounced 400ms) ──────────────────────────────
     const onContentEditableInput = (event) => {
@@ -6790,7 +6930,10 @@
       clearTimeout(recorderRuntime._ceTimer);
       recorderRuntime._ceTimer = setTimeout(() => {
         const val = (target.innerText || target.textContent || "").trim();
-        if (_isSensitiveInputTarget(target, buildSelector(target))) return;
+        if (_isSensitiveInputTarget(target, buildSelector(target))) {
+          _captureSensitiveInputMarkerForRecording(target, captureStep);
+          return;
+        }
         flashElement(target);
         captureStep({ type: "input", selector: buildSelector(target), value: val });
       }, 400);
@@ -6909,6 +7052,8 @@
       document.removeEventListener("dragstart", onDragStart, true);
       document.removeEventListener("drop", onDrop, true);
       document.removeEventListener("copy", onCopy, true);
+      document.removeEventListener("paste", onPaste, true);
+      document.removeEventListener("submit", onSubmit, true);
       document.removeEventListener("input", onContentEditableInput, true);
       document.removeEventListener("dblclick", onDblClick, true);
       document.removeEventListener("mouseover", onMouseOver, true);
@@ -7117,7 +7262,12 @@
       flashElement(t);
       const clickSel = buildSelector(t);
       _checkAndInjectWaitFor(_waitForSelectorForTarget(t, clickSel), addStep);
-      addStep({ type: "click", selector: clickSel });
+      const clickStep = { type: "click", selector: clickSel };
+      if (_isSubmitIntentTarget(t)) {
+        _submitIntentCaptureAt.set(t, Date.now());
+        clickStep._wmSubmitIntent = true;
+      }
+      addStep(clickStep);
       _startPostClickObserver(clickSel, addStep);
     };
 
@@ -7153,7 +7303,10 @@
       const val = (lastCopiedText !== null && lastCopiedVar !== null && raw.trim() === lastCopiedText)
         ? `{{!${lastCopiedVar}}}` : raw;
       const sel = buildSelector(t);
-      if (_isSensitiveInputTarget(t, sel)) return;
+      if (_isSensitiveInputTarget(t, sel)) {
+        _captureSensitiveInputMarkerForRecording(t, addStep);
+        return;
+      }
       _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
       addStep({ type: "input", selector: sel, value: val });
     };
@@ -7247,6 +7400,20 @@
       flashElement(el); addStep({ type: "extract", selector: buildSelector(el), variable: vn });
     };
 
+    const _onPaste = (e) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (_isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID })) return;
+      _captureSensitiveInputMarkerForRecording(t, addStep);
+    };
+
+    const _onSubmit = (e) => {
+      const submitter = e && e.submitter instanceof Element ? normalizeCaptureTarget(e.submitter) : null;
+      if (!(submitter instanceof Element)) return;
+      if (_isInsideWebMaticUi(submitter, { inlinePanelId: INLINE_REC_PANEL_ID })) return;
+      _captureSubmitIntentForRecording(submitter, addStep);
+    };
+
     const _onTextInput = (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;
@@ -7265,7 +7432,10 @@
 
       const selector = buildSelector(t);
       if (!selector) return;
-      if (_isSensitiveInputTarget(t, selector)) return;
+      if (_isSensitiveInputTarget(t, selector)) {
+        _captureSensitiveInputMarkerForRecording(t, addStep);
+        return;
+      }
 
       const prevTimer = _inlineTextInputTimers.get(t);
       if (prevTimer) {
@@ -7290,7 +7460,10 @@
       // preserving same-field states separated by a real pause.
       const selector = buildSelector(t);
       if (!selector) return;
-      if (_isSensitiveInputTarget(t, selector)) return;
+      if (_isSensitiveInputTarget(t, selector)) {
+        _captureSensitiveInputMarkerForRecording(t, addStep);
+        return;
+      }
       setTimeout(() => {
         try { _captureCurrentTextValueForRecording(t, addStep, lastCopiedText, lastCopiedVar); } catch (_e) { /* ignore */ }
       }, 0);
@@ -7303,7 +7476,10 @@
       clearTimeout(_ceTimer);
       _ceTimer = setTimeout(() => {
         const val = (t.innerText || t.textContent || "").trim();
-        if (_isSensitiveInputTarget(t, buildSelector(t))) return;
+        if (_isSensitiveInputTarget(t, buildSelector(t))) {
+          _captureSensitiveInputMarkerForRecording(t, addStep);
+          return;
+        }
         flashElement(t); addStep({ type: "input", selector: buildSelector(t), value: val });
       }, 400);
     };
@@ -7356,6 +7532,8 @@
     document.addEventListener("keyup",     _onTextKeyup,true);
     document.addEventListener("dblclick",  _onDblClick, true);
     document.addEventListener("copy",      _onCopy,     true);
+    document.addEventListener("paste",     _onPaste,    true);
+    document.addEventListener("submit",    _onSubmit,   true);
     document.addEventListener("input",     _onTextInput,true);
     document.addEventListener("input",     _onCeInput,  true);
     document.addEventListener("mouseover", _onMouseOver,true);
@@ -7375,6 +7553,8 @@
         frameDoc.addEventListener("keyup",    _onTextKeyup,true);
         frameDoc.addEventListener("dblclick", _onDblClick, true);
         frameDoc.addEventListener("copy",     _onCopy,     true);
+        frameDoc.addEventListener("paste",    _onPaste,    true);
+        frameDoc.addEventListener("submit",   _onSubmit,   true);
         frameDoc.addEventListener("input",    _onTextInput,true);
         frameDoc.addEventListener("input",    _onCeInput,  true);
         frameDoc.addEventListener("dragstart", _onDragStart, true);
@@ -7392,6 +7572,8 @@
         frameDoc.removeEventListener("keyup",    _onTextKeyup,true);
         frameDoc.removeEventListener("dblclick", _onDblClick, true);
         frameDoc.removeEventListener("copy",     _onCopy,     true);
+        frameDoc.removeEventListener("paste",    _onPaste,    true);
+        frameDoc.removeEventListener("submit",   _onSubmit,   true);
         frameDoc.removeEventListener("input",    _onTextInput,true);
         frameDoc.removeEventListener("input",    _onCeInput,  true);
         frameDoc.removeEventListener("dragstart", _onDragStart, true);
@@ -7424,6 +7606,8 @@
       document.removeEventListener("keyup",     _onTextKeyup,true);
       document.removeEventListener("dblclick",  _onDblClick, true);
       document.removeEventListener("copy",      _onCopy,     true);
+      document.removeEventListener("paste",     _onPaste,    true);
+      document.removeEventListener("submit",    _onSubmit,   true);
       document.removeEventListener("input",     _onTextInput,true);
       document.removeEventListener("input",     _onCeInput,  true);
       document.removeEventListener("mouseover", _onMouseOver,true);
@@ -7580,6 +7764,25 @@
       .trim()
       .toLowerCase();
 
+    const _isLikelyAuthNavigationClick = (step) => {
+      if (!step || step.type !== "click") return false;
+      if (step._wmSubmitIntent === true) return true;
+      const ref = step.controlRef || {};
+      const type = String(ref.type || step.inputType || "").toLowerCase();
+      if (type === "submit") return true;
+      const haystack = _norm([
+        step.selector,
+        ref.selector,
+        ref.id,
+        ref.name,
+        ref.label,
+        ref.role,
+        ref.type,
+        step.label
+      ].filter(Boolean).join(" "));
+      return /(login|log in|signin|sign in|logout|log out|ingresar|iniciar sesion|acceder|salir|cerrar sesion|submit|enviar)/.test(haystack);
+    };
+
     // Pass 0: discard malformed selector-bearing steps.
     // A step like CLICK SELECTOR="" is never replayable and must not be saved.
     const pass0safe = (Array.isArray(steps) ? steps : []).filter((step) => !_isInvalidCapturedStep(step));
@@ -7723,6 +7926,7 @@
       }
 
       if (!nextStep || nextStep.type !== "navigate" || !nextStep.url) return true;
+      if (_isLikelyAuthNavigationClick(step)) return true;
       // If navigation is explicitly recorded next, the prior click is redundant
       // and often brittle across locales/AB-tests. Keep navigate as source of truth.
       return false;
