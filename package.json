@@ -10,6 +10,7 @@
     "test:e2e:legacy": "node accesorios/pruebas/tests/e2e/run.js",
     "test:e2e:fixtures": "node accesorios/pruebas/tests/e2e/fixtures-flow/run.js",
     "test:e2e:angular-material": "node accesorios/pruebas/tests/e2e/angular-material-selectors/run.js",
+    "test:e2e:flyer-wizard": "node accesorios/pruebas/tests/e2e/flyer-wizard/run.js",
     "test:e2e:universal-resolution": "node accesorios/pruebas/tests/e2e/universal-resolution/run.js",
     "test:e2e:wait-for-navigate": "node accesorios/pruebas/tests/e2e/wait-for-after-navigate/run.js",
     "test:e2e:loop-navigate": "node accesorios/pruebas/tests/e2e/loop-navigate/run.js",

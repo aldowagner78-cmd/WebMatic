@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fixture flyer wizard</title>
+  <link rel="stylesheet" href="./fixture.css">
+</head>
+<body>
+  <main class="shell">
+    <section id="intro" class="intro">
+      <p class="eyebrow">Asistente local</p>
+      <h1>Flyer clinico prompt builder</h1>
+      <p>Fixture autocontenido para validar resolucion universal en un wizard SPA.</p>
+      <button type="button" class="primary-action generic-action" data-action="start">Comenzar</button>
+    </section>
+
+    <section id="wizard" class="wizard" hidden aria-label="Wizard flyer clinico">
+      <nav class="steps" aria-label="Pasos">
+        <span data-step-label="institucion" class="active">Institucion</span>
+        <span data-step-label="tipo">Tipo</span>
+        <span data-step-label="contenido">Contenido</span>
+        <span data-step-label="diseno">Diseno</span>
+        <span data-step-label="resultado">Resultado</span>
+      </nav>
+
+      <section class="panel active" data-panel="institucion" aria-labelledby="title-institucion">
+        <h2 id="title-institucion">Institucion</h2>
+        <label>Nombre
+          <input class="wizard-field" name="institution_name" placeholder="Dato principal" autocomplete="off">
+        </label>
+        <label>Contacto
+          <input class="wizard-field" name="institution_contact" placeholder="Dato secundario" autocomplete="off">
+        </label>
+        <div class="toolbar">
+          <button type="button" class="back-action generic-action">Volver</button>
+          <button type="button" class="next-action generic-action">Siguiente</button>
+          <button type="button" class="final-candidate generic-action">Finalizar</button>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="tipo" aria-labelledby="title-tipo">
+        <h2 id="title-tipo">Tipo</h2>
+        <input class="wizard-field hidden-decoy" placeholder="Dato principal" value="NO_TOCAR_TIPO">
+        <div class="choices">
+          <button type="button" class="choice-action generic-action" data-type="guardia">Guardia</button>
+          <button type="button" class="choice-action generic-action" data-type="campania">Campania</button>
+        </div>
+        <div class="toolbar">
+          <button type="button" class="back-action generic-action">Volver</button>
+          <button type="button" class="next-action generic-action">Siguiente</button>
+          <button type="button" class="final-candidate generic-action">Finalizar</button>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="contenido" aria-labelledby="title-contenido">
+        <h2 id="title-contenido">Contenido</h2>
+        <input class="wizard-field hidden-decoy" placeholder="Dato secundario" value="NO_TOCAR_CONTENIDO">
+        <label>Mensaje
+          <textarea class="wizard-field" name="main_content" placeholder="Texto del flyer"></textarea>
+        </label>
+        <div class="toolbar">
+          <button type="button" class="back-action generic-action">Volver</button>
+          <button type="button" class="next-action generic-action">Siguiente</button>
+          <button type="button" class="final-candidate generic-action">Finalizar</button>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="diseno" aria-labelledby="title-diseno">
+        <h2 id="title-diseno">Diseno</h2>
+        <input class="wizard-field hidden-decoy" placeholder="Dato principal" value="NO_TOCAR_DISENO">
+        <label>Estilo visual
+          <input class="wizard-field" name="visual_style" placeholder="Dato secundario" autocomplete="off">
+        </label>
+        <div class="toolbar">
+          <button type="button" class="back-action generic-action">Volver</button>
+          <button type="button" class="next-action generic-action">Siguiente</button>
+          <button type="button" class="final-candidate generic-action">Finalizar</button>
+        </div>
+      </section>
+
+      <section class="panel" data-panel="resultado" aria-labelledby="title-resultado">
+        <h2 id="title-resultado">Resultado</h2>
+        <input class="wizard-field hidden-decoy" placeholder="Dato principal" value="NO_TOCAR_RESULTADO">
+        <output id="prompt-output" aria-live="polite"></output>
+        <div class="toolbar">
+          <button type="button" class="back-action generic-action">Volver</button>
+          <button type="button" class="copy-action generic-action">Copiar prompt</button>
+          <button type="button" class="finish-action final-candidate generic-action">Finalizar</button>
+        </div>
+      </section>
+    </section>
+
+    <section class="summary" aria-label="Estado">
+      <div id="current-step">intro</div>
+      <div id="copy-status">pending</div>
+      <div id="flow-result">pending</div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const order = ["institucion", "tipo", "contenido", "diseno", "resultado"];
+      const state = {
+        step: -1,
+        institution: "",
+        contact: "",
+        type: "",
+        content: "",
+        design: "",
+        copied: false,
+        visited: []
+      };
+
+      const intro = document.querySelector("#intro");
+      const wizard = document.querySelector("#wizard");
+      const currentStep = document.querySelector("#current-step");
+      const copyStatus = document.querySelector("#copy-status");
+      const flowResult = document.querySelector("#flow-result");
+      const promptOutput = document.querySelector("#prompt-output");
+
+      function activePanel() {
+        return document.querySelector(".panel.active");
+      }
+
+      function render() {
+        document.querySelectorAll(".panel").forEach((panel, index) => {
+          panel.classList.toggle("active", index === state.step);
+        });
+        document.querySelectorAll("[data-step-label]").forEach((label) => {
+          label.classList.toggle("active", label.dataset.stepLabel === order[state.step]);
+        });
+        currentStep.textContent = state.step < 0 ? "intro" : order[state.step];
+        if (order[state.step] === "resultado") {
+          promptOutput.textContent = [
+            "Institucion: " + state.institution,
+            "Contacto: " + state.contact,
+            "Tipo: " + state.type,
+            "Contenido: " + state.content,
+            "Diseno: " + state.design
+          ].join(" | ");
+        }
+      }
+
+      function collectVisibleFields() {
+        const panel = activePanel();
+        if (!panel) return;
+        panel.querySelectorAll("input, textarea").forEach((field) => {
+          if (field.name === "institution_name") state.institution = field.value;
+          if (field.name === "institution_contact") state.contact = field.value;
+          if (field.name === "main_content") state.content = field.value;
+          if (field.name === "visual_style") state.design = field.value;
+        });
+      }
+
+      function goTo(index) {
+        if (index < 0 || index >= order.length) return;
+        state.step = index;
+        state.visited.push(order[index]);
+        render();
+      }
+
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        if (!button) return;
+
+        if (button.dataset.action === "start") {
+          intro.hidden = true;
+          wizard.hidden = false;
+          goTo(0);
+          return;
+        }
+
+        if (button.classList.contains("choice-action")) {
+          state.type = button.dataset.type || "";
+          document.querySelectorAll(".choice-action").forEach((item) => item.classList.remove("selected"));
+          button.classList.add("selected");
+          return;
+        }
+
+        if (button.classList.contains("back-action")) {
+          collectVisibleFields();
+          goTo(state.step - 1);
+          return;
+        }
+
+        if (button.classList.contains("next-action")) {
+          collectVisibleFields();
+          goTo(state.step + 1);
+          return;
+        }
+
+        if (button.classList.contains("copy-action")) {
+          collectVisibleFields();
+          state.copied = Boolean(promptOutput.textContent);
+          copyStatus.textContent = state.copied ? "copied" : "empty";
+          return;
+        }
+
+        if (button.classList.contains("finish-action")) {
+          collectVisibleFields();
+          const correctOrder = state.visited.join(">") === "institucion>tipo>contenido>diseno>resultado";
+          const untouchedDecoys = Array.from(document.querySelectorAll(".hidden-decoy"))
+            .every((field) => String(field.value).startsWith("NO_TOCAR_"));
+          const complete = state.institution === "Clinica Norte"
+            && state.contact === "Turnos al 0800"
+            && state.type === "campania"
+            && state.content === "Vacunacion antigripal sin turno previo"
+            && state.design === "Claro, accesible, verde salud"
+            && state.copied
+            && correctOrder
+            && untouchedDecoys;
+          flowResult.textContent = complete ? "prompt-ready" : "invalid-flow";
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
