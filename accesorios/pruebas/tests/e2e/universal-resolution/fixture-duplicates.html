@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Universal resolution - duplicates</title>
+  <link rel="stylesheet" href="./fixture-common.css">
+  <style>
+    .covered-wrap {
+      position: relative;
+      display: inline-block;
+      margin-right: 12px;
+    }
+
+    .mini-cover {
+      position: absolute;
+      inset: 0;
+      background: rgba(31, 41, 51, 0.08);
+      z-index: 2;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Duplicados y candidatos interactuables</h1>
+
+    <section hidden>
+      <label for="hidden-email">Email oculto</label>
+      <input id="hidden-email" placeholder="Correo electronico" value="hidden">
+    </section>
+
+    <section>
+      <label for="visible-email">Email visible</label>
+      <input id="visible-email" placeholder="Correo electronico">
+    </section>
+
+    <section>
+      <div class="covered-wrap">
+        <button class="universal-choice" data-choice="covered">Elegir</button>
+        <div class="mini-cover" aria-hidden="true"></div>
+      </div>
+      <button class="universal-choice" data-choice="disabled" disabled>Elegir</button>
+      <button class="universal-choice" data-choice="active">Elegir</button>
+    </section>
+
+    <div id="duplicates-status" class="status">idle</div>
+  </main>
+
+  <script>
+    document.querySelectorAll(".universal-choice").forEach((button) => {
+      button.addEventListener("click", () => {
+        document.getElementById("duplicates-status").textContent = button.dataset.choice;
+      });
+    });
+  </script>
+</body>
+</html>
