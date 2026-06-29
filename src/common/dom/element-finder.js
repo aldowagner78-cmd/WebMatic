@@ -402,6 +402,41 @@
     return { score, reasons };
   }
 
+  function _hasDecisiveSemanticEvidence(candidate) {
+    if (!candidate || !Array.isArray(candidate.semanticReasons)) return false;
+    return candidate.semanticReasons.some((reason) => [
+      "placeholder_match",
+      "label_match",
+      "text_match",
+      "name_match",
+      "context_match"
+    ].includes(reason));
+  }
+
+  function _detectDangerousAmbiguity(candidates, actionType) {
+    const actionable = candidates.filter((item) => item && item.actionable && item.visible);
+    if (actionable.length < 2) return null;
+
+    const best = actionable[0];
+    const close = actionable.filter((item) => Math.abs((best.rankScore || 0) - (item.rankScore || 0)) <= 3);
+    if (close.length < 2) return null;
+
+    const bestHasIdentity = _hasDecisiveSemanticEvidence(best);
+    const challengerWithIdentity = close.slice(1).some(_hasDecisiveSemanticEvidence);
+    const semanticLead = close.reduce((lead, item) => {
+      if (item === best) return lead;
+      return Math.min(lead, (best.semanticScore || 0) - (item.semanticScore || 0));
+    }, Infinity);
+
+    if (bestHasIdentity && !challengerWithIdentity && semanticLead >= 12) return null;
+
+    return {
+      actionType,
+      candidates: close,
+      reason: "similar_actionable_candidates_without_decisive_semantics"
+    };
+  }
+
   function isElementActionableForWebMatic(el, actionType) {
     if (!isElementVisibleForWebMatic(el) || !isElementEnabledForWebMatic(el)) return false;
     if (_isWriteAction(actionType) && !isElementEditableForWebMatic(el)) return false;
@@ -448,19 +483,22 @@
         seenElements.add(el);
         const diagnostic = _candidateDiagnostics(el, actionType);
         const semantic = _semanticScore(el, intent, options);
-        const score = (diagnostic.actionable ? 100 : 0)
+        const rankScore = (diagnostic.actionable ? 100 : 0)
           + (diagnostic.visible ? 30 : -50)
           + (diagnostic.enabled ? 20 : -60)
           + (!_isWriteAction(actionType) || diagnostic.editable ? 15 : -60)
           + semantic.score
-          - (selectorIndex * 5)
-          - candidateIndex;
+          - (selectorIndex * 5);
+        const score = rankScore - candidateIndex;
         candidates.push({
           element: el,
           selector: sel,
           selectorIndex,
           candidateIndex,
           score,
+          rankScore,
+          semanticScore: semantic.score,
+          semanticReasons: semantic.reasons,
           reasons: diagnostic.reasons.concat(semantic.reasons),
           discarded: diagnostic.discarded,
           visible: diagnostic.visible,
@@ -481,6 +519,27 @@
       return a.candidateIndex - b.candidateIndex;
     });
 
+    const ambiguity = _detectDangerousAmbiguity(candidates, actionType);
+    if (ambiguity) {
+      return {
+        element: null,
+        status: "ambiguous",
+        candidates,
+        ambiguity,
+        discarded: candidates.filter((item) => !item.actionable).map((item) => ({
+          element: item.element,
+          selector: item.selector,
+          reasons: item.discarded
+        })),
+        diagnostics: {
+          technicalCode: "RESOLVER_AMBIGUOUS",
+          userMessage: "No encontre un elemento unico con suficiente certeza."
+        }
+      };
+    }
+
+    // Compat legacy: si solo hay un candidato, incluso no accionable, se conserva
+    // el fallback historico para macros antiguas sin metadata semantica.
     const best = candidates[0] || null;
     return {
       element: best ? best.element : null,

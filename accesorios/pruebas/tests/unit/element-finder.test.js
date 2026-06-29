@@ -81,6 +81,33 @@ test("element-finder: fallbackSelectors conserva altSelectors cuando el primario
   assert.equal(found.id, "mat-input-8");
 });
 
+test("element-finder: dos botones visibles iguales sin metadata quedan ambiguos", () => {
+  const doc = setup(`
+    <button class="danger" id="first">Eliminar</button>
+    <button class="danger" id="second">Eliminar</button>
+  `);
+
+  const best = finder.findBestElement(".danger", { document: doc, actionType: "click" });
+  const found = finder.findElement(".danger", { document: doc, actionType: "click" });
+
+  assert.equal(best.status, "ambiguous");
+  assert.equal(best.diagnostics.technicalCode, "RESOLVER_AMBIGUOUS");
+  assert.equal(found, null);
+});
+
+test("element-finder: dos inputs visibles iguales sin metadata quedan ambiguos", () => {
+  const doc = setup(`
+    <input class="field" id="first">
+    <input class="field" id="second">
+  `);
+
+  const best = finder.findBestElement(".field", { document: doc, actionType: "input" });
+  const found = finder.findElement(".field", { document: doc, actionType: "input" });
+
+  assert.equal(best.status, "ambiguous");
+  assert.equal(found, null);
+});
+
 test("element-finder: dos inputs visibles con mismo selector elige por placeholder", () => {
   const doc = setup(`
     <input class="field" id="first" placeholder="Nombre">
@@ -91,6 +118,21 @@ test("element-finder: dos inputs visibles con mismo selector elige por placehold
     document: doc,
     actionType: "input",
     controlRef: { placeholder: "Email", controlKind: "text-input" }
+  });
+
+  assert.equal(found.id, "second");
+});
+
+test("element-finder: dos inputs visibles con mismo selector elige por label", () => {
+  const doc = setup(`
+    <label for="first">Nombre</label><input class="field" id="first">
+    <label for="second">Email</label><input class="field" id="second">
+  `);
+
+  const found = finder.findElement(".field", {
+    document: doc,
+    actionType: "input",
+    controlRef: { label: "Email", controlKind: "text-input" }
   });
 
   assert.equal(found.id, "second");
