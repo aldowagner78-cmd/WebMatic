@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-06-30] rc40B-2 grabacion GeneXus/IAPOS reproducible
+
+### Agregado
+- El normalizador inserta `WAIT_FOR` antes de la primera accion interactiva cuando cambia `_wmBlockKey`, cubriendo transiciones GeneXus/listado-detalle-auditar sin `NAVIGATE` visible intermedio.
+- Tests unitarios para la macro IAPOS esperada con `WAIT_FOR #vAUTORIZAR_0001` y `WAIT_FOR #vERROR`.
+
+### Modificado
+- La grabacion principal de selects nativos conserva `value`, `text` visible e `index`.
+- `controlRef` de selects grabados incorpora `id`, `name`, `label`, `controlKind` y `options` cuando estan disponibles.
+- El flash rojo de grabacion se dispara despues de que el step fue aceptado por el buffer local/top-frame, evitando pintar intentos invalidos.
+
+### Compatibilidad
+- No se modifico `manifest.json`, README, help, dist, firma ni UI general.
+- No se agregaron dependencias nuevas.
+- No se inventan pasos de confirmacion no clickeados por el usuario.
+
 ## [2026-06-30] rc40A CHOOSE_OPTION robusto
 
 ### Agregado

@@ -1,5 +1,39 @@
 # Cambios realizados
 
+## rc40B-2: grabacion GeneXus/IAPOS reproducible
+
+Fecha: 2026-06-30
+
+## Archivos modificados
+
+- `src/content/content.js`
+- `src/modules/recorder/normalizer/recording-normalizer.js`
+- `accesorios/pruebas/tests/unit/recorder.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+
+## Que se cambio
+
+- El normalizador detecta cambios de `_wmBlockKey` entre acciones reales y agrega `WAIT_FOR` antes de la primera accion interactiva del nuevo bloque.
+- La regla cubre `click`, `input`, `text`, `choose_option` y `check`, y no duplica waits si ya existe uno equivalente pegado antes.
+- La grabacion principal de select nativo ahora guarda `value`, `text` visible e `index`.
+- El `controlRef` de selects grabados conserva metadata de intencion y opciones (`id`, `name`, `label`, `controlKind`, `options`) cuando estan disponibles.
+- El flash rojo de grabacion se mueve despues de la aceptacion del step en el buffer/local top-frame.
+- En iframes, si no se puede confirmar aceptacion de vuelta desde background, no se muestra falso exito.
+
+## Tests agregados
+
+- Macro GeneXus/IAPOS con `WAIT_FOR #vAUTORIZAR_0001` antes del click.
+- Macro GeneXus/IAPOS con `WAIT_FOR #vERROR` antes de `CHOOSE_OPTION`.
+- No duplicacion de `WAIT_FOR` al cambiar de bloque si ya existia.
+
+## Compatibilidad
+
+- No se modifico `manifest.json`.
+- No se toco README, help, dist, firma ni web-ext-artifacts.
+- No se agregaron dependencias.
+- rc40A `CHOOSE_OPTION` robusto se mantiene.
+
 ## rc40A: CHOOSE_OPTION robusto y aditivo
 
 Fecha: 2026-06-30

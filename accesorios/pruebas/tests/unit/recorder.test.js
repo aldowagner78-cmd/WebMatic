@@ -1047,6 +1047,41 @@ test("normalizeRecordedSteps [E]: select nativo click+choose_option+click option
   ]);
 });
 
+test("normalizeRecordedSteps: GeneXus/IAPOS inserta wait_for al cambiar de bloque", () => {
+  const steps = [
+    { type: "navigate", url: "https://iapos.test/auauditcabe_ww?M,0", _wmBlockKey: "iapos.test/auauditcabe_ww" },
+    { type: "wait_for", selector: "#vDETALLES_0001", timeout: 10000, _autoWait: true, _wmBlockKey: "iapos.test/auauditcabe_ww" },
+    { type: "click", selector: "#vDETALLES_0001", _wmBlockKey: "iapos.test/auauditcabe_ww" },
+    { type: "click", selector: "#vAUTORIZAR_0001", _wmBlockKey: "iapos.test/auauditdetalle_ww" },
+    { type: "choose_option", selector: "#vERROR", value: "47", text: "DETALLE AUTORIZADO", index: 1, _wmBlockKey: "iapos.test/audaauditar" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(
+    out.map((s) => ({ type: s.type, selector: s.selector, value: s.value, text: s.text, index: s.index, block: s._wmBlockKey })),
+    [
+      { type: "navigate", selector: undefined, value: undefined, text: undefined, index: undefined, block: "iapos.test/auauditcabe_ww" },
+      { type: "wait_for", selector: "#vDETALLES_0001", value: undefined, text: undefined, index: undefined, block: "iapos.test/auauditcabe_ww" },
+      { type: "click", selector: "#vDETALLES_0001", value: undefined, text: undefined, index: undefined, block: "iapos.test/auauditcabe_ww" },
+      { type: "wait_for", selector: "#vAUTORIZAR_0001", value: undefined, text: undefined, index: undefined, block: "iapos.test/auauditdetalle_ww" },
+      { type: "click", selector: "#vAUTORIZAR_0001", value: undefined, text: undefined, index: undefined, block: "iapos.test/auauditdetalle_ww" },
+      { type: "wait_for", selector: "#vERROR", value: undefined, text: undefined, index: undefined, block: "iapos.test/audaauditar" },
+      { type: "choose_option", selector: "#vERROR", value: "47", text: "DETALLE AUTORIZADO", index: 1, block: "iapos.test/audaauditar" }
+    ]
+  );
+});
+
+test("normalizeRecordedSteps: no duplica wait_for existente al cambiar de bloque", () => {
+  const steps = [
+    { type: "click", selector: "#vDETALLES_0001", _wmBlockKey: "iapos.test/auauditcabe_ww" },
+    { type: "wait_for", selector: "#vAUTORIZAR_0001", timeout: 10000, _autoWait: true, _wmBlockKey: "iapos.test/auauditdetalle_ww" },
+    { type: "click", selector: "#vAUTORIZAR_0001", _wmBlockKey: "iapos.test/auauditdetalle_ww" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.equal(out.filter((s) => s.type === "wait_for" && s.selector === "#vAUTORIZAR_0001").length, 1);
+});
+
 test("normalizeRecordedSteps: choose_option+click option redundante se compacta", () => {
   const steps = [
     { type: "choose_option", selector: "#pais", value: "AR", text: "Argentina", index: 1 },

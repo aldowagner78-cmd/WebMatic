@@ -767,10 +767,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sender.tab.id,
         { type: "FRAME_STEP_CAPTURED", step: message.step },
         { frameId: 0 },
-        () => { void chrome.runtime.lastError; }
+        (resp) => {
+          const err = chrome.runtime.lastError;
+          if (err) {
+            sendResponse({ accepted: false, error: err.message || String(err) });
+            return;
+          }
+          sendResponse(resp || { accepted: false });
+        }
       );
+      return true;
     }
-    return false;
+    sendResponse({ accepted: false });
+    return true;
   }
 
   if (isBackgroundMessage("OPEN_HELP_PAGE")) {

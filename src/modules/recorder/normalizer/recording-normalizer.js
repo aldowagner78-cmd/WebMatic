@@ -554,6 +554,52 @@
       return result;
     };
 
+    const isInteractiveBlockAction = (step) => !!(
+      step &&
+      step.selector &&
+      (step.type === "click" || step.type === "input" || step.type === "text" || step.type === "choose_option" || step.type === "check")
+    );
+
+    const sameWaitForSelector = (waitStep, selector) => !!(
+      waitStep &&
+      waitStep.type === "wait_for" &&
+      String(waitStep.selector || "") === String(selector || "")
+    );
+
+    const insertWaitForOnBlockChange = (arr) => {
+      const result = [];
+      let lastRealBlockKey = "";
+
+      for (const step of arr) {
+        const blockKey = step && step._wmBlockKey ? String(step._wmBlockKey) : "";
+        const prevBlockKey = lastRealBlockKey;
+
+        if (
+          isInteractiveBlockAction(step) &&
+          blockKey &&
+          prevBlockKey &&
+          blockKey !== prevBlockKey &&
+          !sameWaitForSelector(result[result.length - 1], step.selector)
+        ) {
+          result.push({
+            type: "wait_for",
+            selector: step.selector,
+            timeout: 10000,
+            _autoWait: true,
+            _wmBlockKey: blockKey
+          });
+        }
+
+        result.push(step);
+
+        if (step && !isAutoWait(step) && !isWait(step) && !isBaselineOrAuto(step) && blockKey) {
+          lastRealBlockKey = blockKey;
+        }
+      }
+
+      return result;
+    };
+
     const preferWaitForAfterDynamicClick = (arr) => {
       const result = [];
       for (let i = 0; i < arr.length; i += 1) {
@@ -581,7 +627,9 @@
         compactTextInputsConfirmedByEnter(
           insertWaitForAfterNavigate(
             insertWaitForBeforeChooseOption(
-              compactNativeSelectClicks(inferMissingEnterSelector(out))
+              insertWaitForOnBlockChange(
+                compactNativeSelectClicks(inferMissingEnterSelector(out))
+              )
             )
           )
         )

@@ -6862,7 +6862,7 @@
       if (target instanceof HTMLSelectElement) {
         const selSel = buildSelector(target);
         _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selSel));
-        captureStepAndFlash({ type: "choose_option", selector: selSel, value: target.value }, target);
+        captureStepAndFlash({ type: "choose_option", selector: selSel, value: target.value, text: selected.text, index: selected.index }, target);
         return;
       }
       // Dynamic copy/paste: if pasted value matches last copied text, use variable reference
@@ -7433,7 +7433,7 @@
       if (t instanceof HTMLSelectElement) {
         const sel = buildSelector(t);
         _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
-        addStepAndFlash({ type: "choose_option", selector: sel, value: t.value }, t);
+        addStepAndFlash({ type: "choose_option", selector: sel, value: t.value, text: selected.text, index: selected.index }, t);
         return;
       }
       const raw = t.value;
@@ -10714,3 +10714,4 @@
 
   console.log("[WebMatic] Bootstrap completado.");
 })(typeof globalThis !== "undefined" ? globalThis : window);
+
