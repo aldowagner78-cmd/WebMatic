@@ -1649,6 +1649,14 @@
     return Array.isArray(steps) ? steps.map((step) => ({ ...step })) : [];
   }
 
+  function _sanitizeRecordedPageContext(steps) {
+    const normalizerApi = globalScope.WebMaticRecordingNormalizer;
+    if (normalizerApi && typeof normalizerApi.sanitizePageContextSteps === "function") {
+      return normalizerApi.sanitizePageContextSteps(steps);
+    }
+    return Array.isArray(steps) ? steps.map((step) => ({ ...step })) : [];
+  }
+
   const themePalettes = {
     light: [
       { accentColor: "#059669", surfaceColor: "#f0fdf4" },
@@ -6516,14 +6524,21 @@
   }
 
   function _resolveStepBlockKey(step) {
-    if (!step || typeof step !== "object") return recorderRuntime.activeBlockKey || _contextKeyFromUrl(window.location.href);
+    const currentKey = _contextKeyFromUrl(window.location.href);
+    if (!step || typeof step !== "object") return currentKey || recorderRuntime.activeBlockKey || "";
     if (step.type === "navigate") return _contextKeyFromUrl(step.url || window.location.href);
     if (step.type === "open_tab" || step.type === "switch_tab") {
       const candidate = step.url || window.location.href;
       return _contextKeyFromUrl(candidate);
     }
     if (step.type === "close_tab") return recorderRuntime.activeBlockKey || _contextKeyFromUrl(window.location.href);
-    return recorderRuntime.activeBlockKey || _contextKeyFromUrl(window.location.href);
+    return currentKey || recorderRuntime.activeBlockKey || "";
+  }
+
+  function _recordedEventUrlForStep(step) {
+    if (!step || typeof step !== "object") return "";
+    if (step.type === "navigate" || step.type === "open_tab" || step.type === "switch_tab" || step.type === "close_tab") return "";
+    return String(window.location.href || "");
   }
 
   // ── Auto wait_for injection ────────────────────────────────────────────────
@@ -6697,10 +6712,12 @@
 
   function captureStep(step) {
     step = _withControlRefForRecording(step);
-    if (_isInvalidCapturedStep(step)) return;
+    if (_isInvalidCapturedStep(step)) return null;
     _cancelPostClickObserverForStep(step);
     const blockKey = _resolveStepBlockKey(step);
     const stamped = Object.assign({ _ts: Date.now() }, step);
+    const eventUrl = _recordedEventUrlForStep(step);
+    if (eventUrl && !stamped._wmEventUrl) stamped._wmEventUrl = eventUrl;
     if (blockKey) {
       stamped._wmBlockKey = blockKey;
       const prevKey = recorderRuntime.activeBlockKey || "";
@@ -6716,6 +6733,15 @@
     }
     chrome.runtime.sendMessage({ type: "RECORD_STEP", step: stamped }, () => { void chrome.runtime.lastError; });
     store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: stamped });
+    return stamped;
+  }
+
+  function captureStepAndFlash(step, target) {
+    const captured = captureStep(step);
+    if (captured && target instanceof Element && typeof flashElement === "function") {
+      flashElement(target);
+    }
+    return captured;
   }
 
   function startRecorderSession() {
@@ -6768,8 +6794,7 @@
         setTimeout(() => {
           const lastTs = _lastCheckChangeAt.get(checkTarget) || 0;
           if (Date.now() - lastTs < 120) return;
-          flashElement(checkTarget);
-          captureStep({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked });
+          captureStepAndFlash({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked }, checkTarget);
         }, 30);
         return;
         }
@@ -6787,14 +6812,12 @@
         try {
           const navUrl = new URL(navAnchor.getAttribute("href") || "", window.location.href).href;
           if (navUrl && !navUrl.startsWith("javascript:")) {
-            flashElement(navAnchor);
-            captureStep({ type: "navigate", url: navUrl });
+            captureStepAndFlash({ type: "navigate", url: navUrl }, navAnchor);
             return;
           }
         } catch (_e) {}
       }
       target = normalizeCaptureTarget(target);
-      flashElement(target);
       const clickSel = buildSelector(target);
       // If this click is on an element that wasn't present at the previous click,
       // inject a wait_for so playback waits for it to appear.
@@ -6804,7 +6827,7 @@
         _submitIntentCaptureAt.set(target, Date.now());
         clickStep._wmSubmitIntent = true;
       }
-      captureStep(clickStep);
+      captureStepAndFlash(clickStep, target);
       _startPostClickObserver(clickSel, captureStep);
     };
 
@@ -6818,14 +6841,13 @@
       }
       // Skip readonly and disabled fields — value can't be set by user
       if (target.readOnly || target.disabled) return;
-      flashElement(target);
       // For checkboxes capture the boolean checked state, not the raw .value attr
       if (target instanceof HTMLInputElement && target.type === "checkbox") {
         const preferTs = _preferClickOnCheckTargetAt.get(target) || 0;
         if (Date.now() - preferTs < 600) return;
         if (!_isInteractableCaptureTarget(target)) return;
         _lastCheckChangeAt.set(target, Date.now());
-        captureStep({ type: "check", selector: buildSelector(target), checked: target.checked });
+        captureStepAndFlash({ type: "check", selector: buildSelector(target), checked: target.checked }, target);
         return;
       }
       // Radio buttons: record as check with checked:true (the selected option)
@@ -6834,13 +6856,13 @@
         if (Date.now() - preferTs < 600) return;
         if (!_isInteractableCaptureTarget(target)) return;
         _lastCheckChangeAt.set(target, Date.now());
-        captureStep({ type: "check", selector: buildSelector(target), checked: true });
+        captureStepAndFlash({ type: "check", selector: buildSelector(target), checked: true }, target);
         return;
       }
       if (target instanceof HTMLSelectElement) {
         const selSel = buildSelector(target);
         _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selSel));
-        captureStep({ type: "choose_option", selector: selSel, value: target.value });
+        captureStepAndFlash({ type: "choose_option", selector: selSel, value: target.value }, target);
         return;
       }
       // Dynamic copy/paste: if pasted value matches last copied text, use variable reference
@@ -6859,7 +6881,7 @@
         return;
       }
       _checkAndInjectWaitFor(_waitForSelectorForTarget(target, inpSel));
-      captureStep({ type: "input", selector: inpSel, value: recordedValue });
+      captureStepAndFlash({ type: "input", selector: inpSel, value: recordedValue }, target);
     };
 
     const onKeydown = (event) => {
@@ -6870,8 +6892,7 @@
       // Special navigation keys → capture as key step
       if (["Enter", "Tab", "Escape"].includes(event.key)) {
         _flushActiveTextInputForRecording(captureStep, recorderRuntime.lastCopiedText, recorderRuntime.lastCopiedVar, null);
-        if (target instanceof Element) flashElement(target);
-        captureStep(_buildKeyStepForTarget(target, event.key));
+        captureStepAndFlash(_buildKeyStepForTarget(target, event.key), target instanceof Element ? target : null);
         return;
       }
       // Printable chars → capture as text step; store will merge via Recorder.mergeKeySteps
@@ -6969,8 +6990,7 @@
       if (!(dropTarget instanceof Element)) return;
       const to = buildSelector(dropTarget) || "";
       if (!to || to === src) return;
-      flashElement(dropTarget);
-      captureStep({ type: "drag_drop", from: src, to });
+      captureStepAndFlash({ type: "drag_drop", from: src, to }, dropTarget);
     };
 
     document.addEventListener("click", onClick, true);
@@ -7012,8 +7032,7 @@
       recorderRuntime.lastCopiedText = copiedText;
       recorderRuntime.lastCopiedVar = varName;
 
-      flashElement(srcEl);
-      captureStep({ type: "extract", selector: buildSelector(srcEl), variable: varName });
+      captureStepAndFlash({ type: "extract", selector: buildSelector(srcEl), variable: varName }, srcEl);
     };
 
     const onPaste = (event) => {
@@ -7046,8 +7065,7 @@
           _captureSensitiveInputMarkerForRecording(target, captureStep);
           return;
         }
-        flashElement(target);
-        captureStep({ type: "input", selector: buildSelector(target), value: val });
+        captureStepAndFlash({ type: "input", selector: buildSelector(target), value: val }, target);
       }, 400);
     };
     document.addEventListener("input", onContentEditableInput, true);
@@ -7062,8 +7080,7 @@
         if (anchor) target = anchor;
       }
       target = normalizeCaptureTarget(target);
-      flashElement(target);
-      captureStep({ type: "dblclick", selector: buildSelector(target) });
+      captureStepAndFlash({ type: "dblclick", selector: buildSelector(target) }, target);
     };
     document.addEventListener("dblclick", onDblClick, true);
 
@@ -7099,8 +7116,7 @@
       recorderRuntime._hoverTimer = setTimeout(() => {
         if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
         if (_hoverEl !== t || !_hoverSeen) return;
-        flashElement(t);
-        captureStep({ type: "hover", selector: buildSelector(t) });
+        captureStepAndFlash({ type: "hover", selector: buildSelector(t) }, t);
       }, 800);
     };
     document.addEventListener("mouseover", onMouseOver, true);
@@ -7313,13 +7329,26 @@
 
     function addStep(step) {
       step = _withControlRefForRecording(step);
-      if (_isInvalidCapturedStep(step)) return;
+      if (_isInvalidCapturedStep(step)) return null;
       _cancelPostClickObserverForStep(step);
       const fullStep = Object.assign({ _ts: Date.now() }, step);
+      const blockKey = _resolveStepBlockKey(step);
+      const eventUrl = _recordedEventUrlForStep(step);
+      if (blockKey) fullStep._wmBlockKey = blockKey;
+      if (eventUrl && !fullStep._wmEventUrl) fullStep._wmEventUrl = eventUrl;
       buffer.push(fullStep);
       // Persistir en background para sobrevivir navegaciones
       try { chrome.runtime.sendMessage({ type: "INLINE_RECORD_STEP", step: fullStep }, () => { void chrome.runtime.lastError; }); } catch (_) {}
       _updateCount();
+      return fullStep;
+    }
+
+    function addStepAndFlash(step, target) {
+      const captured = addStep(step);
+      if (captured && target instanceof Element && typeof flashElement === "function") {
+        flashElement(target);
+      }
+      return captured;
     }
 
     // ── Event handlers (same logic as startRecorderSession but writing to buffer) ──
@@ -7348,8 +7377,7 @@
         setTimeout(() => {
           const lastTs = _lastInlineCheckChangeAt.get(checkTarget) || 0;
           if (Date.now() - lastTs < 120) return;
-          flashElement(checkTarget);
-          addStep({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked });
+          addStepAndFlash({ type: "check", selector: buildSelector(checkTarget), checked: checkTarget.type === "radio" ? true : checkTarget.checked }, checkTarget);
         }, 30);
         return;
         }
@@ -7364,14 +7392,12 @@
         try {
           const navUrl = new URL(navAnchor.getAttribute("href") || "", window.location.href).href;
           if (navUrl && !navUrl.startsWith("javascript:")) {
-            flashElement(navAnchor);
-            addStep({ type: "navigate", url: navUrl });
+            addStepAndFlash({ type: "navigate", url: navUrl }, navAnchor);
             return;
           }
         } catch (_e) {}
       }
       t = normalizeCaptureTarget(t);
-      flashElement(t);
       const clickSel = buildSelector(t);
       _checkAndInjectWaitFor(_waitForSelectorForTarget(t, clickSel), addStep);
       const clickStep = { type: "click", selector: clickSel };
@@ -7379,7 +7405,7 @@
         _submitIntentCaptureAt.set(t, Date.now());
         clickStep._wmSubmitIntent = true;
       }
-      addStep(clickStep);
+      addStepAndFlash(clickStep, t);
       _startPostClickObserver(clickSel, addStep);
     };
 
@@ -7388,13 +7414,12 @@
       if (!(t instanceof HTMLInputElement) && !(t instanceof HTMLTextAreaElement) && !(t instanceof HTMLSelectElement)) return;
       if (_isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID, floating: false })) return;
       if (t.readOnly || t.disabled) return;
-      flashElement(t);
       if (t instanceof HTMLInputElement && t.type === "checkbox") {
         const preferTs = _preferInlineClickOnCheckTargetAt.get(t) || 0;
         if (Date.now() - preferTs < 600) return;
         if (!_isInteractableCaptureTarget(t)) return;
         _lastInlineCheckChangeAt.set(t, Date.now());
-        addStep({ type: "check", selector: buildSelector(t), checked: t.checked });
+        addStepAndFlash({ type: "check", selector: buildSelector(t), checked: t.checked }, t);
         return;
       }
       if (t instanceof HTMLInputElement && t.type === "radio") {
@@ -7402,13 +7427,13 @@
         if (Date.now() - preferTs < 600) return;
         if (!_isInteractableCaptureTarget(t)) return;
         _lastInlineCheckChangeAt.set(t, Date.now());
-        addStep({ type: "check", selector: buildSelector(t), checked: true });
+        addStepAndFlash({ type: "check", selector: buildSelector(t), checked: true }, t);
         return;
       }
       if (t instanceof HTMLSelectElement) {
         const sel = buildSelector(t);
         _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
-        addStep({ type: "choose_option", selector: sel, value: t.value });
+        addStepAndFlash({ type: "choose_option", selector: sel, value: t.value }, t);
         return;
       }
       const raw = t.value;
@@ -7420,7 +7445,7 @@
         return;
       }
       _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
-      addStep({ type: "input", selector: sel, value: val });
+      addStepAndFlash({ type: "input", selector: sel, value: val }, t);
     };
 
     const _onKeydown = (e) => {
@@ -7428,8 +7453,7 @@
       if (t instanceof Element && _isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID, floating: false })) return;
       if (["Enter", "Tab", "Escape"].includes(e.key)) {
         _flushActiveTextInputForRecording(addStep, lastCopiedText, lastCopiedVar, null);
-        if (t instanceof Element) flashElement(t);
-        addStep(_buildKeyStepForTarget(t, e.key)); return;
+        addStepAndFlash(_buildKeyStepForTarget(t, e.key), t instanceof Element ? t : null); return;
       }
       if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
         if (_isTextEntryCaptureTarget(t)) return;
@@ -7476,8 +7500,7 @@
       if (!(dropTarget instanceof Element)) return;
       const to = buildSelector(dropTarget) || "";
       if (!to || to === src) return;
-      flashElement(dropTarget);
-      addStep({ type: "drag_drop", from: src, to });
+      addStepAndFlash({ type: "drag_drop", from: src, to }, dropTarget);
     };
 
     const _onDblClick = (e) => {
@@ -7488,8 +7511,7 @@
         const anchor = t.closest("a[href]"); if (anchor) t = anchor;
       }
       t = normalizeCaptureTarget(t);
-      flashElement(t);
-      addStep({ type: "dblclick", selector: buildSelector(t) });
+      addStepAndFlash({ type: "dblclick", selector: buildSelector(t) }, t);
     };
 
     const _onCopy = (e) => {
@@ -7509,7 +7531,7 @@
       if (!el || !(el instanceof Element) || el.closest("#webmatic-panel-root")) return;
       varCounter++; const vn = `VAR${varCounter}`;
       lastCopiedText = txt; lastCopiedVar = vn;
-      flashElement(el); addStep({ type: "extract", selector: buildSelector(el), variable: vn });
+      addStepAndFlash({ type: "extract", selector: buildSelector(el), variable: vn }, el);
     };
 
     const _onPaste = (e) => {
@@ -7592,7 +7614,7 @@
           _captureSensitiveInputMarkerForRecording(t, addStep);
           return;
         }
-        flashElement(t); addStep({ type: "input", selector: buildSelector(t), value: val });
+        addStepAndFlash({ type: "input", selector: buildSelector(t), value: val }, t);
       }, 400);
     };
 
@@ -7621,7 +7643,7 @@
       _hoverTimer = setTimeout(() => {
         if (_hoverObs) { _hoverObs.disconnect(); _hoverObs = null; }
         if (_hoverEl !== t || !_hoverSeen) return;
-        flashElement(t); addStep({ type: "hover", selector: buildSelector(t) });
+        addStepAndFlash({ type: "hover", selector: buildSelector(t) }, t);
       }, 800);
     };
 
@@ -7869,6 +7891,13 @@
         return String(rawUrl || "");
       }
     };
+    const _isLikelyDynamicGeneXusUrl = (rawUrl) => {
+      const normalizerApi = globalScope.WebMaticRecordingNormalizer;
+      if (normalizerApi && typeof normalizerApi.isLikelyDynamicGeneXusUrl === "function") {
+        return normalizerApi.isLikelyDynamicGeneXusUrl(rawUrl);
+      }
+      return /(?:auauditdetalle_ww|audaauditar)\?[^#]{40,}/i.test(String(rawUrl || ""));
+    };
     const _norm = (v) => String(v == null ? "" : v)
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
@@ -8024,10 +8053,27 @@
       return true;
     });
 
-    // Pass 3c: remove click steps that are only a prelude to a navigate.
+    // Pass 3c: remove redundant dynamic GeneXus navigates after real clicks,
+    // then remove generic click preludes for legacy deterministic playback.
+    const pass3cDynamicNavigateSkip = new Set();
+    pass3b.forEach((step, i, arr) => {
+      if (!step || step.type !== "click" || !step.selector) return;
+      let nextIdx = -1;
+      for (let j = i + 1; j < arr.length; j++) {
+        if (arr[j].type === "wait" || arr[j].type === "wait_for") continue;
+        nextIdx = j;
+        break;
+      }
+      const nextStep = nextIdx >= 0 ? arr[nextIdx] : null;
+      if (nextStep && nextStep.type === "navigate" && _isLikelyDynamicGeneXusUrl(nextStep.url)) {
+        pass3cDynamicNavigateSkip.add(nextIdx);
+      }
+    });
+
     // This keeps the replay deterministic when the click already caused the
     // navigation and a later navigate step encodes the real destination.
     const pass3c = pass3b.filter((step, i, arr) => {
+      if (pass3cDynamicNavigateSkip.has(i)) return false;
       if (step.type !== "click" || !step.selector) return true;
 
       let nextStep = null;
@@ -8038,6 +8084,7 @@
       }
 
       if (!nextStep || nextStep.type !== "navigate" || !nextStep.url) return true;
+      if (_isLikelyDynamicGeneXusUrl(nextStep.url)) return true;
       if (_isLikelyAuthNavigationClick(step)) return true;
       // If navigation is explicitly recorded next, the prior click is redundant
       // and often brittle across locales/AB-tests. Keep navigate as source of truth.
@@ -8110,12 +8157,19 @@
       (_stableWaitTargetTypes.has(step.type) ||
         (step.type === "key" && String(step.key || "").toLowerCase() === "enter"))
     );
-    const _isTransparentAfterNavigate = (step) => !!(
+    const _stepBlockKey = (step) => String(step && step._wmBlockKey || "");
+    const _sameOrUnknownBlock = (a, b) => {
+      const ak = _stepBlockKey(a);
+      const bk = _stepBlockKey(b);
+      return !ak || !bk || ak === bk;
+    };
+    const _isTransparentAfterNavigate = (step, navigateStep) => !!(
       step &&
       ((step.type === "wait" && step._autoWait === true) ||
         step._baselineDefault ||
         step._fast ||
-        step.type === "capture_defaults")
+        step.type === "capture_defaults") &&
+      _sameOrUnknownBlock(step, navigateStep)
     );
     const pass4InjectAfter = new Map();
     const pass4Skip = new Set();
@@ -8125,7 +8179,7 @@
       if (!step || step.type !== "navigate") continue;
 
       let j = i + 1;
-      while (j < pass3d.length && _isTransparentAfterNavigate(pass3d[j])) j += 1;
+      while (j < pass3d.length && _isTransparentAfterNavigate(pass3d[j], step)) j += 1;
 
       const next = pass3d[j];
       if (!next || next.type === "navigate") continue;
@@ -8137,7 +8191,8 @@
           selector: next.selector,
           timeout: 10000,
           _autoWait: true,
-          visible: true
+          visible: true,
+          ...(_stepBlockKey(next) ? { _wmBlockKey: _stepBlockKey(next) } : {})
         });
         for (let k = i + 1; k < j; k++) {
           if (pass3d[k] && pass3d[k].type === "wait" && pass3d[k]._autoWait === true) pass4Skip.add(k);
@@ -8208,7 +8263,7 @@
       }
       return true;
     });
-    return pass6;
+    return _sanitizeRecordedPageContext(pass6);
   }
 
   /**
@@ -8363,6 +8418,10 @@
       ? String(withBootstrap.find((s) => s && typeof s === "object" && s._wmBlockKey)._wmBlockKey || "")
       : "";
     const blockKey = firstStepKey || fallbackKey;
+    const defaultsKey = _contextKeyFromUrl(window.location.href);
+    if (blockKey && defaultsKey && blockKey !== defaultsKey) {
+      return withBootstrap;
+    }
     const normalizedDefaults = blockKey
       ? defaults.map((s) => ({ ...s, _wmBlockKey: blockKey }))
       : defaults;
@@ -8384,9 +8443,30 @@
   function _ensureRecordingBootstrapNavigate(steps) {
     const list = Array.isArray(steps) ? steps.slice() : [];
     if (list.length === 0 && !recorderRuntime.recordingStartUrl) return list;
-    if (list[0] && _isNavigationLikeStep(list[0])) return list;
+    const realTypes = new Set(["click", "dblclick", "input", "text", "check", "choose_option", "key", "hover", "scroll_to", "extract", "drag_drop"]);
+    const firstReal = list.find((step) => step && realTypes.has(step.type) && !step._baselineDefault && !step._fast);
+    if (list[0] && _isNavigationLikeStep(list[0])) {
+      if (
+        firstReal &&
+        firstReal._wmEventUrl &&
+        list[0].type === "navigate" &&
+        list[0].url !== firstReal._wmEventUrl
+      ) {
+        return [
+          {
+            ...list[0],
+            url: firstReal._wmEventUrl,
+            _wmBlockKey: firstReal._wmBlockKey || _contextKeyFromUrl(firstReal._wmEventUrl),
+            _wmBlockStart: true,
+            _wmBootstrapFromFirstEvent: true
+          },
+          ...list.slice(1)
+        ];
+      }
+      return list;
+    }
 
-    const startUrl = recorderRuntime.recordingStartUrl || window.location.href;
+    const startUrl = (firstReal && firstReal._wmEventUrl) || recorderRuntime.recordingStartUrl || window.location.href;
     if (!startUrl) return list;
 
     const bootstrap = { type: "navigate", url: startUrl };

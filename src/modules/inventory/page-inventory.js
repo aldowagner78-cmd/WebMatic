@@ -462,6 +462,26 @@
     return out;
   }
 
+  function _contextKeyFromUrl(rawUrl) {
+    try {
+      const base = (typeof location !== "undefined" && location.href) ? location.href : "https://webmatic.local/";
+      const u = new URL(String(rawUrl || ""), base);
+      const host = String(u.host || "").toLowerCase();
+      const path = String(u.pathname || "").replace(/\/+$/, "") || "/";
+      return `${host}${path}`;
+    } catch (_e) {
+      return "";
+    }
+  }
+
+  function _inventoriesForStep(step, inventories) {
+    const list = Array.isArray(inventories) ? inventories : [];
+    const key = String(step && step._wmBlockKey || "");
+    if (!key) return list;
+    const scoped = list.filter((inv) => _contextKeyFromUrl(inv && inv.url) === key);
+    return scoped.length > 0 ? scoped : list;
+  }
+
   /**
    * Localiza el control asociado a un selector dentro de los inventarios.
    * Prioridad: coincidencia exacta del selector principal → selector alternativo →
@@ -712,7 +732,7 @@
   function buildControlRef(step, inventories) {
     if (!step) return null;
     const selector = step.selector || step.from || "";
-    const ctrl = findControlForSelector(selector, inventories);
+    const ctrl = findControlForSelector(selector, _inventoriesForStep(step, inventories));
     if (!ctrl) return null;
     const ref = {
       selector: ctrl.selector,

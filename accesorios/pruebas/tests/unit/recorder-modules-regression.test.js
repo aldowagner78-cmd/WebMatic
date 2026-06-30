@@ -175,3 +175,80 @@ test("post-click dynamic observer: no duplica candidato ya visible al click", ()
 
   assert.equal(picked, null);
 });
+
+test("normalizer GeneXus: no mezcla baseline/wait_for de listado dentro de detalle", () => {
+  const steps = normalizer.sanitizePageContextSteps([
+    {
+      type: "navigate",
+      url: "https://iapos.test/servlet/auauditdetalle_ww?token=" + "x".repeat(48),
+      _wmBlockKey: "iapos.test/servlet/auauditdetalle_ww",
+      _wmBlockStart: true
+    },
+    {
+      type: "input",
+      selector: "#vDETALLES_0001",
+      value: "",
+      _baselineDefault: true,
+      _fast: true,
+      _wmBlockKey: "iapos.test/servlet/auauditdetalle_ww"
+    },
+    {
+      type: "click",
+      selector: "#vDETALLES_0001",
+      _wmBlockKey: "iapos.test/servlet/auauditcabe_ww",
+      _wmEventUrl: "https://iapos.test/servlet/auauditcabe_ww"
+    },
+    {
+      type: "wait_for",
+      selector: "#vDETALLES_0001",
+      _autoWait: true,
+      _wmBlockKey: "iapos.test/servlet/auauditcabe_ww"
+    }
+  ]);
+
+  assert.equal(steps[0].url, "https://iapos.test/servlet/auauditcabe_ww");
+  assert.equal(steps.some((s) => s._baselineDefault && s._wmBlockKey !== "iapos.test/servlet/auauditcabe_ww"), false);
+  assert.equal(steps.some((s) => s.type === "wait_for" && s.selector === "#vDETALLES_0001" && s._wmBlockKey !== "iapos.test/servlet/auauditcabe_ww"), false);
+});
+
+test("normalizer GeneXus: conserva pageKey de eventos reales listado y detalle", () => {
+  const steps = normalizer.sanitizePageContextSteps([
+    {
+      type: "navigate",
+      url: "https://iapos.test/servlet/auauditdetalle_ww?parm=" + "1".repeat(50),
+      _wmBlockKey: "iapos.test/servlet/auauditdetalle_ww",
+      _wmBlockStart: true
+    },
+    {
+      type: "click",
+      selector: "#vDETALLES_0001",
+      _wmBlockKey: "iapos.test/servlet/auauditcabe_ww",
+      _wmEventUrl: "https://iapos.test/servlet/auauditcabe_ww"
+    },
+    {
+      type: "click",
+      selector: "#vAUTORIZAR_0001",
+      _wmBlockKey: "iapos.test/servlet/auauditdetalle_ww",
+      _wmEventUrl: "https://iapos.test/servlet/auauditdetalle_ww?parm=" + "2".repeat(50)
+    }
+  ]);
+
+  assert.equal(steps[0].url, "https://iapos.test/servlet/auauditcabe_ww");
+  assert.equal(steps.find((s) => s.selector === "#vDETALLES_0001")._wmBlockKey, "iapos.test/servlet/auauditcabe_ww");
+  assert.equal(steps.find((s) => s.selector === "#vAUTORIZAR_0001")._wmBlockKey, "iapos.test/servlet/auauditdetalle_ww");
+});
+
+test("normalizer GeneXus: detecta URLs dinamicas largas conservadoramente", () => {
+  assert.equal(
+    normalizer.isLikelyDynamicGeneXusUrl("https://iapos.test/servlet/auauditdetalle_ww?token=" + "a".repeat(32)),
+    true
+  );
+  assert.equal(
+    normalizer.isLikelyDynamicGeneXusUrl("https://iapos.test/servlet/audaauditar?parm=" + "b".repeat(32)),
+    true
+  );
+  assert.equal(
+    normalizer.isLikelyDynamicGeneXusUrl("https://iapos.test/servlet/auauditcabe_ww"),
+    false
+  );
+});

@@ -41,6 +41,15 @@ test("content recorder: accion real cancela observador post-click dinamico", () 
   assert.equal(cancelCalls.length >= 2, true);
 });
 
+test("content recorder: indicador visual se dispara despues de captura aceptada", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /function captureStepAndFlash\(step, target\)/);
+  assert.match(source, /const captured = captureStep\(step\);/);
+  assert.match(source, /if \(captured && target instanceof Element/);
+  assert.match(source, /function addStepAndFlash\(step, target\)/);
+  assert.match(source, /const captured = addStep\(step\);/);
+});
+
 test("background flow: tabs-navigation cubre restricted, openIfMissing y pending playback", () => {
   assert.equal(tabsNavigation.isRestrictedUrl("chrome://extensions"), true);
   assert.equal(tabsNavigation.isRestrictedUrl("https://example.test/"), false);

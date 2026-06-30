@@ -25,6 +25,7 @@
     const isWait = (s) => !!(s && s.type === "wait");
     const isAutoWait = (s) => !!(s && s.type === "wait" && s._autoWait === true);
     const isBaselineOrAuto = (s) => !!(s && (s._baselineDefault || s._fast));
+    const stepBlockKey = (s) => String(s && s._wmBlockKey || "");
     const stepValue = (s) => String(s && s.value == null ? "" : s.value);
     const sameInputSnapshot = (a, b) => !!(
       isInputLike(a) &&
@@ -488,9 +489,10 @@
       return step.type === "key" && String(step.key || "").toLowerCase() === "enter";
     };
 
-    const isTransparentAfterNavigate = (step) => !!(
+    const isTransparentAfterNavigate = (step, navigateStep) => !!(
       step &&
       (isAutoWait(step) || step._baselineDefault || step._fast || step.type === "capture_defaults")
+      && (!stepBlockKey(step) || !stepBlockKey(navigateStep) || stepBlockKey(step) === stepBlockKey(navigateStep))
     );
 
     const insertWaitForAfterNavigate = (arr) => {
@@ -502,7 +504,7 @@
         if (!step || step.type !== "navigate") continue;
 
         let j = i + 1;
-        while (j < arr.length && isTransparentAfterNavigate(arr[j])) j += 1;
+        while (j < arr.length && isTransparentAfterNavigate(arr[j], step)) j += 1;
 
         const next = arr[j];
         if (!next || next.type === "navigate") continue;
@@ -514,7 +516,8 @@
             selector: next.selector,
             timeout: 10000,
             _autoWait: true,
-            visible: true
+            visible: true,
+            ...(stepBlockKey(next) ? { _wmBlockKey: stepBlockKey(next) } : {})
           });
 
           for (let k = i + 1; k < j; k += 1) {
@@ -662,10 +665,103 @@
     return normalizeRecordedSteps(withRealWaits);
   }
 
+  function isLikelyDynamicGeneXusUrl(rawUrl) {
+    try {
+      const u = new URL(String(rawUrl || ""), "https://webmatic.local/");
+      const path = String(u.pathname || "").toLowerCase();
+      const pageLooksDynamic = /(?:^|\/)(?:auauditdetalle_ww|audaauditar)(?:$|[/?#])/.test(path);
+      if (!pageLooksDynamic) return false;
+      const query = String(u.search || "");
+      if (query.length >= 40) return true;
+      for (const value of u.searchParams.values()) {
+        if (String(value || "").length >= 24) return true;
+      }
+      return false;
+    } catch (_e) {
+      return /(?:auauditdetalle_ww|audaauditar)\?[^#]{40,}/i.test(String(rawUrl || ""));
+    }
+  }
+
+  function sanitizePageContextSteps(steps) {
+    const list = Array.isArray(steps) ? steps : [];
+    const realTypes = new Set([
+      "click",
+      "dblclick",
+      "input",
+      "text",
+      "check",
+      "choose_option",
+      "key",
+      "hover",
+      "scroll_to",
+      "extract",
+      "drag_drop"
+    ]);
+    const blockKey = (s) => String(s && s._wmBlockKey || "");
+    const isRealUserStep = (s) => !!(
+      s &&
+      realTypes.has(s.type) &&
+      !s._baselineDefault &&
+      !s._fast &&
+      !(s.type === "wait" || s.type === "wait_for")
+    );
+
+    const firstReal = list.find(isRealUserStep) || null;
+    const firstRealKey = blockKey(firstReal);
+    const firstRealUrl = String(firstReal && firstReal._wmEventUrl || "");
+    const out = [];
+
+    for (let i = 0; i < list.length; i += 1) {
+      const step = list[i];
+      if (!step || typeof step !== "object") continue;
+
+      if ((step._baselineDefault || step._fast || step.type === "capture_defaults") && firstRealKey) {
+        const key = blockKey(step);
+        if (key && key !== firstRealKey) continue;
+      }
+
+      if (step.type === "wait_for") {
+        let prevBlock = "";
+        for (let j = out.length - 1; j >= 0; j -= 1) {
+          const prev = out[j];
+          if (!prev || prev.type === "wait") continue;
+          prevBlock = blockKey(prev);
+          break;
+        }
+        const key = blockKey(step);
+        if (prevBlock && key && key !== prevBlock) continue;
+      }
+
+      if (
+        i === 0 &&
+        step.type === "navigate" &&
+        firstReal &&
+        firstRealUrl &&
+        firstRealUrl !== step.url &&
+        (isLikelyDynamicGeneXusUrl(step.url) || (firstRealKey && blockKey(step) && firstRealKey !== blockKey(step)))
+      ) {
+        out.push({
+          ...step,
+          url: firstRealUrl,
+          _wmBlockKey: firstRealKey || blockKey(step),
+          _wmBlockStart: true,
+          _wmBootstrapFromFirstEvent: true
+        });
+        continue;
+      }
+
+      out.push({ ...step });
+    }
+
+    return out;
+  }
+
   const api = {
     mergeKeySteps,
     normalizeRecordedSteps,
-    dedupeFieldRuns
+    dedupeFieldRuns,
+    sanitizePageContextSteps,
+    isLikelyDynamicGeneXusUrl
   };
 
   globalScope.WebMaticRecordingNormalizer = api;
