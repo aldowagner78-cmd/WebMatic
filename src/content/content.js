@@ -245,7 +245,14 @@
         return;
       }
       if (t instanceof HTMLSelectElement) {
-        _send({ type: "choose_option", selector: _sel(t), value: t.value });
+        const selected = t.options && t.selectedIndex >= 0 ? t.options[t.selectedIndex] : null;
+        _send({
+          type: "choose_option",
+          selector: _sel(t),
+          value: t.value,
+          text: selected ? String(selected.text || selected.innerText || selected.textContent || "").trim() : "",
+          index: t.selectedIndex
+        });
         return;
       }
       if (_isSensitiveInputTarget(t, _sel(t))) {

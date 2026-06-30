@@ -1968,16 +1968,54 @@ test("choose_option: campo text explícito selecciona por texto visible", async 
   assert.equal(win.document.getElementById("pais").value, "br");
 });
 
+test("choose_option: value invalido usa fallback text exacto", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "choose_option", selector: "#pais", value: "47", text: "Brasil" });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("pais").value, "br");
+});
+
+test("choose_option: usa index si value/text no alcanzan", async () => {
+  resetBody(SELECT_HTML);
+  const result = await runStep({ type: "choose_option", selector: "#pais", value: "no-aplica", text: "No existe", index: 2 });
+  assert.equal(result.ok, true);
+  assert.equal(win.document.getElementById("pais").value, "uy");
+});
+
+test("choose_option: GeneXus/IAPOS #vERROR queda en value 47", async () => {
+  resetBody(`
+    <select id="vERROR">
+      <option value="0">(Ninguno)</option>
+      <option value="47">DETALLE AUTORIZADO</option>
+    </select>
+  `);
+  const el = win.document.getElementById("vERROR");
+  el.selectedIndex = 0;
+  const result = await runStep({
+    type: "choose_option",
+    selector: "#vERROR",
+    value: "47",
+    text: "DETALLE AUTORIZADO",
+    index: 1
+  });
+  assert.equal(result.ok, true);
+  assert.equal(el.value, "47");
+});
+
 test("choose_option: dispara eventos input y change", async () => {
   resetBody(SELECT_HTML);
   const el = win.document.getElementById("pais");
-  let inputFired = false, changeFired = false;
+  let inputFired = false, changeFired = false, blurFired = false, focusoutFired = false;
   el.addEventListener("input", () => { inputFired = true; });
   el.addEventListener("change", () => { changeFired = true; });
+  el.addEventListener("blur", () => { blurFired = true; });
+  el.addEventListener("focusout", () => { focusoutFired = true; });
   const result = await runStep({ type: "choose_option", selector: "#pais", value: "br" });
   assert.equal(result.ok, true);
   assert.equal(inputFired, true, "debe disparar input");
   assert.equal(changeFired, true, "debe disparar change");
+  assert.equal(blurFired, true, "debe disparar blur");
+  assert.equal(focusoutFired, true, "debe disparar focusout");
 });
 
 test("choose_option: falla controlada si el selector no existe", async () => {

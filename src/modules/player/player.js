@@ -509,9 +509,10 @@
     throw new Error("WebMaticActionInputValue no esta disponible");
   }
 
-  function setInputValue(el, value) {
+  function setInputValue(el, value, options = {}) {
     return _actionInputValue().setInputValue(el, value, {
-      document
+      document,
+      ...options
     });
   }
 
@@ -982,6 +983,24 @@
           }
 
           // Resuelve la opción: primero por value, luego por texto visible exacto.
+          const _resolvedIndexRaw = step.index != null ? expandVariables(String(step.index), vars) : "";
+          const _resolvedIndex = _resolvedIndexRaw !== "" && Number.isInteger(Number(_resolvedIndexRaw))
+            ? Number(_resolvedIndexRaw)
+            : NaN;
+
+          const _formatChooseDiagnostic = (result, wanted) => {
+            const parts = [
+              `choose_option no pudo seleccionar ${wanted} en ${selector}`,
+              `actual value="${result && result.actualValue != null ? result.actualValue : String(el.value || "")}"`,
+              `actual text="${result && result.actualText != null ? result.actualText : ""}"`,
+              `actual index=${result && result.actualIndex != null ? result.actualIndex : el.selectedIndex}`
+            ];
+            if (result && Array.isArray(result.attempts) && result.attempts.length) {
+              parts.push(`intentos=${result.attempts.join("->")}`);
+            }
+            return parts.join("; ");
+          };
+
           const _findOption = (needle) => {
             const opts = Array.from(el.options || []);
             const byValue = opts.find((o) => String(o.value) === String(needle));
@@ -997,6 +1016,30 @@
           const _selectByNeedle = (needle) => {
             const opt = _findOption(needle);
             if (!opt) {
+              if (String(needle) === String(_resolvedValue) && _resolvedText) {
+                _selectByNeedle(_resolvedText);
+                return;
+              }
+              if (String(needle) === String(_resolvedValue) && Number.isInteger(_resolvedIndex)) {
+                const result = setInputValue(el, "", { optionIndex: _resolvedIndex });
+                if (result && result.ok) {
+                  if (step.variable) vars[step.variable] = result.value;
+                  resolve();
+                  return;
+                }
+                reject(new Error(_formatChooseDiagnostic(result || {}, `index:${_resolvedIndex}`)));
+                return;
+              }
+              if (String(needle) === String(_resolvedText) && Number.isInteger(_resolvedIndex)) {
+                const result = setInputValue(el, "", { optionIndex: _resolvedIndex });
+                if (result && result.ok) {
+                  if (step.variable) vars[step.variable] = result.value;
+                  resolve();
+                  return;
+                }
+                reject(new Error(_formatChooseDiagnostic(result || {}, `index:${_resolvedIndex}`)));
+                return;
+              }
               if (Date.now() - start < timeoutMs) {
                 setTimeout(attempt, retryMs);
               } else {
@@ -1004,10 +1047,16 @@
               }
               return;
             }
-            setInputValue(el, opt.value);
-            el.dispatchEvent(new Event("input", { bubbles: true }));
-            if (step.variable) vars[step.variable] = opt.value;
-            resolve();
+            const result = setInputValue(el, opt.value, {
+              optionText: _resolvedText || (opt.text || opt.innerText || opt.textContent || ""),
+              optionIndex: step.index
+            });
+            if (result && result.ok) {
+              if (step.variable) vars[step.variable] = result.value;
+              resolve();
+              return;
+            }
+            reject(new Error(_formatChooseDiagnostic(result || {}, String(needle))));
           };
 
           const _applyAndResolve = (v) => {
@@ -1027,8 +1076,21 @@
             return;
           }
 
+          if (Number.isInteger(_resolvedIndex)) {
+            const result = setInputValue(el, "", { optionIndex: _resolvedIndex });
+            if (result && result.ok) {
+              if (step.variable) vars[step.variable] = result.value;
+              resolve();
+              return;
+            }
+            reject(new Error(_formatChooseDiagnostic(result || {}, `index:${_resolvedIndex}`)));
+            return;
+          }
+
           if (step._testValue !== undefined) {
-            _applyAndResolve(String(step._testValue));
+            const result = setInputValue(el, String(step._testValue));
+            if (step.variable) vars[step.variable] = result && result.ok ? result.value : String(step._testValue);
+            resolve();
             return;
           }
 

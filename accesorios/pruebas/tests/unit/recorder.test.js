@@ -1047,6 +1047,19 @@ test("normalizeRecordedSteps [E]: select nativo click+choose_option+click option
   ]);
 });
 
+test("normalizeRecordedSteps: choose_option+click option redundante se compacta", () => {
+  const steps = [
+    { type: "choose_option", selector: "#pais", value: "AR", text: "Argentina", index: 1 },
+    { type: "click", selector: "#pais option:nth-of-type(2)" }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out, [
+    { type: "wait_for", selector: "#pais", timeout: 10000, _autoWait: true },
+    { type: "choose_option", selector: "#pais", value: "AR", text: "Argentina", index: 1 }
+  ]);
+});
+
 test("normalizeRecordedSteps [E2]: click+choose_option sin click option tambien se compacta", () => {
   const steps = [
     { type: "click", selector: "#provincia" },

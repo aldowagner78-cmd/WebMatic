@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>GeneXus select fixture</title>
+  <link rel="stylesheet" href="./fixture-common.css">
+</head>
+<body>
+  <main>
+    <label for="vERROR">Error</label>
+    <select id="vERROR">
+      <option value="0">(Ninguno)</option>
+      <option value="47">DETALLE AUTORIZADO</option>
+    </select>
+    <output id="gx-status">0</output>
+  </main>
+  <script>
+    window.__gxEvents = [];
+    const select = document.getElementById("vERROR");
+    ["input", "change", "blur", "focusout"].forEach((name) => {
+      select.addEventListener(name, () => {
+        window.__gxEvents.push(name);
+        document.getElementById("gx-status").textContent = select.value;
+      });
+    });
+  </script>
+</body>
+</html>

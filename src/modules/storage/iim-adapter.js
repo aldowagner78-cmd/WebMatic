@@ -289,6 +289,7 @@
         let line = `CHOOSE_OPTION SELECTOR=${_quote(step.selector)}`;
         if (step.value) line += ` VALUE=${_quote(step.value)}`;
         if (step.text) line += ` TEXT=${_quote(step.text)}`;
+        if (step.index !== undefined && step.index !== null && step.index !== "") line += ` INDEX=${_quote(step.index)}`;
         if (step.variable) line += ` VAR=${_quote(step.variable)}`;
         lines.push(line);
         return;
@@ -481,9 +482,11 @@
         const sel = _parseParam(l, "SELECTOR");
         const value = _parseParam(l, "VALUE");
         const text = _parseParam(l, "TEXT");
+        const index = _parseParam(l, "INDEX");
         const variable = _parseParam(l, "VAR");
         const step = { type: "choose_option", selector: sel, value: value || "", variable: variable || "" };
         if (text) step.text = text;
+        if (index !== "") step.index = Number.isFinite(Number(index)) ? Number(index) : index;
         steps.push(step);
       } else if (l.startsWith("KEY")) {
         const key = _parseParam(l, "CODE");

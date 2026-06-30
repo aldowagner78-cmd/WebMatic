@@ -1,5 +1,22 @@
 # Changelog
 
+## [2026-06-30] rc40A CHOOSE_OPTION robusto
+
+### Agregado
+- `CHOOSE_OPTION` en selects nativos aplica capas aditivas: `value` legacy primero, fallback por `text` exacto y fallback por `index` grabado.
+- Verificacion final con diagnostico claro cuando la opcion no queda seleccionada.
+- Grabacion de selects enriquecida con `value`, `text` e `index`.
+- E2E simulado GeneXus/IAPOS para `#vERROR` con opcion `47` / `DETALLE AUTORIZADO`.
+
+### Modificado
+- Selects disparan `input`, `change`, `blur` y `focusout` al seleccionar.
+- Normalizer compacta `CHOOSE_OPTION + CLICK option:nth-of-type(...)` redundante.
+- IIM conserva `INDEX` en `CHOOSE_OPTION` sin romper `VALUE`/`TEXT` legacy.
+
+### Compatibilidad
+- No se modifico `manifest.json`, dist, firma ni UI general.
+- No se agregaron dependencias nuevas.
+
 ## [2026-06-29] rc39-impl-2 intencion semantica basica y scoring contextual
 
 ### Agregado

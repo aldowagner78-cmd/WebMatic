@@ -1,5 +1,40 @@
 # Cambios realizados
 
+## rc40A: CHOOSE_OPTION robusto y aditivo
+
+Fecha: 2026-06-30
+
+## Archivos modificados
+
+- `src/modules/player/actions/action-input-value.js`
+- `src/modules/player/player.js`
+- `src/content/content.js`
+- `src/modules/storage/iim-adapter.js`
+- `src/modules/recorder/normalizer/recording-normalizer.js`
+- `accesorios/pruebas/tests/unit/player.test.js`
+- `accesorios/pruebas/tests/unit/iim-adapter.test.js`
+- `accesorios/pruebas/tests/unit/recorder.test.js`
+- `accesorios/pruebas/tests/e2e/universal-resolution/run.js`
+- `accesorios/pruebas/tests/e2e/universal-resolution/fixture-genexus-select.html`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+
+## Que se cambio
+
+- `CHOOSE_OPTION` mantiene la logica legacy por `value` como primera capa.
+- Si el select no queda seleccionado, reintenta por `text` exacto y luego por `index`.
+- La seleccion final se verifica y, si falla, devuelve un diagnostico con value/text/index actual e intentos aplicados.
+- Se disparan `input`, `change`, `blur` y `focusout` para selects nativos/GeneXus.
+- La grabacion de selects guarda `value`, `text` e `index`.
+- El normalizer elimina clicks redundantes sobre `option:nth-of-type(...)` cuando ya existe el `CHOOSE_OPTION` del mismo select.
+- El adapter IIM exporta/importa `INDEX` de forma aditiva.
+
+## Compatibilidad
+
+- No se modifico `manifest.json`.
+- No se toco `dist`, firma, web-ext-artifacts ni UI general.
+- No se agregaron dependencias.
+
 ## rc39-impl-1: motor universal visible/interactuable
 
 Fecha: 2026-06-29

@@ -508,6 +508,11 @@ test("exportToIim: choose_option con text genera CHOOSE_OPTION TEXT", () => {
   assert.ok(script.includes('CHOOSE_OPTION SELECTOR="#pais" TEXT="Brasil"'));
 });
 
+test("exportToIim: choose_option con index genera CHOOSE_OPTION INDEX", () => {
+  const script = adapter.exportToIim({ steps: [{ type: "choose_option", selector: "#pais", value: "br", text: "Brasil", index: 1 }] });
+  assert.ok(script.includes('CHOOSE_OPTION SELECTOR="#pais" VALUE="br" TEXT="Brasil" INDEX="1"'));
+});
+
 test("importFromIim: CHOOSE_OPTION legacy con VALUE parsea", () => {
   const legacy = [
     "VERSION BUILD=1000",
@@ -533,14 +538,27 @@ test("importFromIim: CHOOSE_OPTION legacy con TEXT parsea", () => {
   assert.equal(steps[0].text, "Brasil");
 });
 
+test("importFromIim: CHOOSE_OPTION legacy con INDEX parsea", () => {
+  const legacy = [
+    "VERSION BUILD=1000",
+    "TAB T=1",
+    'CHOOSE_OPTION SELECTOR="#pais" VALUE="br" TEXT="Brasil" INDEX="1"'
+  ].join("\n");
+  const { steps } = adapter.importFromIim(legacy);
+  assert.equal(steps.length, 1);
+  assert.equal(steps[0].type, "choose_option");
+  assert.equal(steps[0].index, 1);
+});
+
 test("round-trip: choose_option con value + text + variable sin pérdida (IIM + WM_JSON)", () => {
-  const steps = [{ type: "choose_option", selector: "#pais", value: "br", text: "Brasil", variable: "PAIS" }];
+  const steps = [{ type: "choose_option", selector: "#pais", value: "br", text: "Brasil", index: 1, variable: "PAIS" }];
   const rt = roundTrip(steps);
   assert.equal(rt.length, 1);
   assert.equal(rt[0].type, "choose_option");
   assert.equal(rt[0].selector, "#pais");
   assert.equal(rt[0].value, "br");
   assert.equal(rt[0].text, "Brasil");
+  assert.equal(rt[0].index, 1);
   assert.equal(rt[0].variable, "PAIS");
 });
 

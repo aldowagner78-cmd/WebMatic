@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 
 const FIXTURE_DIR = __dirname;
+const REPO_ROOT = path.resolve(__dirname, "../../../../..");
 const PORT = 18089;
 const BASE_URL = `http://localhost:${PORT}`;
 
@@ -190,6 +191,26 @@ async function remount(page) {
   await expectText(page, "#remount-status", "value:RC39:remounted");
 }
 
+async function genexusSelect(page) {
+  await page.goto(`${BASE_URL}/fixture-genexus-select.html`, { waitUntil: "load", timeout: 10000 });
+  await page.addScriptTag({ path: path.join(REPO_ROOT, "src/modules/player/actions/action-input-value.js") });
+  const result = await page.evaluate(() => {
+    const select = document.querySelector("#vERROR");
+    return window.WebMaticActionInputValue.setInputValue(select, "47", {
+      document,
+      optionText: "DETALLE AUTORIZADO",
+      optionIndex: 1
+    });
+  });
+  if (!result || result.ok !== true) throw new Error(`choose_option robusto fallo: ${JSON.stringify(result)}`);
+  const value = await page.$eval("#vERROR", (el) => el.value);
+  if (value !== "47") throw new Error(`#vERROR esperaba value 47, obtuvo ${value}`);
+  const events = await page.evaluate(() => window.__gxEvents || []);
+  for (const name of ["input", "change", "blur", "focusout"]) {
+    if (!events.includes(name)) throw new Error(`faltó evento ${name}: ${events.join(",")}`);
+  }
+}
+
 async function main() {
   console.log("[universal-resolution] iniciando banco local en", BASE_URL);
   const server = await startServer();
@@ -208,6 +229,7 @@ async function main() {
     await runCase(results, "boton cubierto por overlay", () => overlay(page));
     await runCase(results, "boton disabled habilitado tarde", () => disabledLate(page));
     await runCase(results, "campo desmontado y remontado", () => remount(page));
+    await runCase(results, "GeneXus/IAPOS select #vERROR robusto", () => genexusSelect(page));
   } finally {
     if (context) await context.close();
     if (browser) await browser.close();

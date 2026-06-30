@@ -450,10 +450,9 @@
           break;
         }
         const prevStep = prevIdx >= 0 ? arr[prevIdx] : null;
-        if (!prevStep || prevStep.type !== "click" || prevStep.selector !== sel) continue;
-
-        // Paso previo es click sobre el mismo selector → marcar para eliminar
-        remove.add(prevIdx);
+        if (prevStep && prevStep.type === "click" && prevStep.selector === sel) {
+          remove.add(prevIdx);
+        }
 
         // Buscar si el paso siguiente (ignorando auto-waits) es click sobre option hijo
         let nextIdx = -1;
