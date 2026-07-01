@@ -321,3 +321,20 @@
 - Conserva los `WAIT_FOR` automÃ¡ticos de preparaciÃ³n cuando la grabaciÃ³n cambia de bloque/pÃ¡gina GeneXus.
 - Mantiene la grabaciÃ³n robusta de selects nativos con `value`, `text` e `index` sin duplicar `choose_option`.
 - Pendiente: prueba real final completa en IAPOS antes de firmar 0.2.4.
+
+## 2026-07-01 - rc40C selector temporal WebMatic
+
+### Cambios
+- Se bloqueó el uso de selectores internos temporales data-wm-* como selectores principales, alternativos, controlRef e inventario.
+- Se corrigió el caso real detectado en lyer-clinico-prompt-builder, donde podía grabarse [data-wm-hl="1"].
+- Se conservaron los flujos GeneXus/IAPOS, WAIT_FOR, CHOOSE_OPTION value/text/index y feedback visual.
+
+### Validación
+- npm test: 574/574 OK.
+- e2e principales OK.
+- QA headed OK.
+- Página externa flyer-clinico-prompt-builder OK.
+- Fixture GeneXus/IAPOS simulado OK.
+
+### Pendiente
+- Antes de volver a firmar, subir versión a 0.2.5.

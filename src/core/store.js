@@ -44,6 +44,24 @@
   const contracts = globalScope.WebMaticContracts || fallbackContracts;
   const { ActionTypes, Modes, PanelSides } = contracts;
 
+  function canMergeDraftStep(previous, next) {
+    return !!(
+      previous &&
+      next &&
+      next._merge === true &&
+      previous.type === "text" &&
+      next.type === "text" &&
+      previous.selector &&
+      previous.selector === next.selector
+    );
+  }
+
+  function cleanMergeStep(step) {
+    const clean = { ...(step || {}) };
+    delete clean._merge;
+    return clean;
+  }
+
   const defaultState = Object.freeze({
     ui: {
       panelVisible: false,
@@ -272,13 +290,16 @@
         if (!action.payload) {
           return state;
         }
-        // _merge: true → replace the last step instead of appending (for text keystroke merging)
+        // _merge only applies to consecutive text keystrokes on the same selector.
         if (action.payload._merge && state.draft.steps.length > 0) {
-          const { _merge, ...stepData } = action.payload;
-          const steps = [...state.draft.steps.slice(0, -1), stepData];
+          const prevStep = state.draft.steps[state.draft.steps.length - 1];
+          const nextStep = cleanMergeStep(action.payload);
+          const steps = canMergeDraftStep(prevStep, action.payload)
+            ? [...state.draft.steps.slice(0, -1), nextStep]
+            : [...state.draft.steps, nextStep];
           return {
             ...state,
-            draft: { ...state.draft, steps },
+            draft: { ...state.draft, stepsCount: state.draft.stepsCount + (canMergeDraftStep(prevStep, action.payload) ? 0 : 1), steps },
             runtime: { ...state.runtime, statusMessage: "Paso capturado" }
           };
         }

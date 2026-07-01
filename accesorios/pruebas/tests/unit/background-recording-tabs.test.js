@@ -148,6 +148,34 @@ function bootBackground(initialTabs) {
   return harness;
 }
 
+test("background: _merge atrasado no reemplaza un click ya grabado", () => {
+  const h = bootBackground([
+    { id: 1, url: "https://site-a.test/home", active: true }
+  ]);
+
+  h.sendRuntimeMessage({ type: "INLINE_RECORDING_STARTED" }, { tab: { id: 1 } });
+  h.sendRuntimeMessage({
+    type: "INLINE_RECORD_STEP",
+    step: { type: "text", selector: "#search", value: "qa" }
+  }, { tab: { id: 1 } });
+  h.sendRuntimeMessage({
+    type: "INLINE_RECORD_STEP",
+    step: { type: "click", selector: "#createInstitutionButton" }
+  }, { tab: { id: 1 } });
+  h.sendRuntimeMessage({
+    type: "INLINE_RECORD_STEP",
+    step: { type: "text", selector: "#search", value: "qa!", _merge: true }
+  }, { tab: { id: 1 } });
+
+  const stop = h.sendRuntimeMessage({ type: "INLINE_RECORDING_STOP_REQUEST" }, { tab: { id: 1 } });
+
+  assert.deepEqual(stop.steps, [
+    { type: "text", selector: "#search", value: "qa" },
+    { type: "click", selector: "#createInstitutionButton" },
+    { type: "text", selector: "#search", value: "qa!" }
+  ]);
+});
+
 test("background: mantiene flotante y registra switch_tab al cambiar de pestaña durante grabación", () => {
   const h = bootBackground([
     { id: 1, url: "https://site-a.test/home", active: true },

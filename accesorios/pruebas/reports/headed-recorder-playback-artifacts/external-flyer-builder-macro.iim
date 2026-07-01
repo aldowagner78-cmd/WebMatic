@@ -1,0 +1,32 @@
+VERSION BUILD=1000
+TAB T=1
+NAVIGATE URL="https://aldowagner78-cmd.github.io/flyer-clinico-prompt-builder/"
+// WAIT_FOR SELECTOR="#themeColorSelector" TIMEOUT=10000
+CHOOSE_OPTION SELECTOR="#themeColorSelector" VALUE="green" TEXT="Verde" INDEX="2"
+CLICK SELECTOR="#startAssistantButton"
+// WAIT_FOR SELECTOR="#workflowTitle" TIMEOUT=10000
+CLICK SELECTOR="#createInstitutionButton"
+// WAIT_FOR SELECTOR="#clinicFields" TIMEOUT=10000
+CLICK SELECTOR="[data-institution-mode=\"full\"]"
+// WAIT_FOR SELECTOR="#clinicFullFields" TIMEOUT=10000
+TYPE SELECTOR="[data-path=\"clinic.name\"]" CONTENT="Clinica QA WebMatic"
+// WAIT_FOR SELECTOR="[data-path=\"clinic.institutionType\"]" TIMEOUT=10000
+CHOOSE_OPTION SELECTOR="[data-path=\"clinic.institutionType\"]" VALUE="Clínica" TEXT="Clínica" INDEX="1"
+TYPE SELECTOR="[data-path=\"clinic.name\"]" CONTENT="Clinica QA WebMatic"
+TYPE SELECTOR="[data-path=\"clinic.address\"]" CONTENT="Av. QA 123"
+TYPE SELECTOR="[data-path=\"clinic.primaryPhone\"]" CONTENT="3415550101"
+TYPE SELECTOR="[data-path=\"clinic.email\"]" CONTENT="qa@example.test"
+// WAIT_FOR SELECTOR="[data-path=\"clinic.defaultPrimaryColor\"]" TIMEOUT=10000
+CHOOSE_OPTION SELECTOR="[data-path=\"clinic.defaultPrimaryColor\"]" VALUE="azul" TEXT="Azul" INDEX="6"
+// WAIT_FOR SELECTOR="[data-path=\"clinic.defaultSecondaryColor\"]" TIMEOUT=10000
+CHOOSE_OPTION SELECTOR="[data-path=\"clinic.defaultSecondaryColor\"]" VALUE="verdeAgua" TEXT="Verde agua" INDEX="8"
+TYPE SELECTOR="[data-path=\"clinic.email\"]" CONTENT="qa@example.test"
+// WAIT_FOR SELECTOR="#saveInstitutionAndContinueButton" TIMEOUT=10000
+CLICK SELECTOR="#saveInstitutionAndContinueButton"
+CLICK SELECTOR="[data-piece-select=\"professionalFlyer\"]"
+// WAIT_FOR SELECTOR="#prestaciones" TIMEOUT=10000
+TYPE SELECTOR="[data-path=\"professional.fullName\"]" CONTENT="QA Gomez"
+TYPE SELECTOR="[data-path=\"professional.license\"]" CONTENT="MP 00000"
+// WAIT_FOR SELECTOR="[data-path=\"specialty.primaryProfessionalSpecialty\"]" TIMEOUT=10000
+CHOOSE_OPTION SELECTOR="[data-path=\"specialty.primaryProfessionalSpecialty\"]" VALUE="Cardiologia" TEXT="Cardiologia" INDEX=""
+TYPE SELECTOR="[data-path=\"professional.license\"]" CONTENT="MP 00000"

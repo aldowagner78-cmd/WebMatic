@@ -12,6 +12,11 @@
     if (!_isInstance(element, "Element")) return element;
 
     let target = element;
+    const clickableOwner = target.closest("button, a[href], [role='button'], [role='link']");
+    if (_isInstance(clickableOwner, "Element") && clickableOwner !== target) {
+      return clickableOwner;
+    }
+
     const svgTag = (el) => {
       const t = String(el && el.tagName ? el.tagName : "").toLowerCase();
       return t === "path" || t === "svg" || t === "g" || t === "use";
@@ -34,11 +39,19 @@
   function isInteractableCaptureTarget(el) {
     try {
       if (!_isInstance(el, "Element")) return false;
-      if (_isInstance(el, "HTMLElement") && el.hidden) return false;
       const view = (el.ownerDocument && el.ownerDocument.defaultView) || globalScope;
-      const cs = view && typeof view.getComputedStyle === "function"
-        ? view.getComputedStyle(el)
-        : null;
+      let current = el;
+      while (_isInstance(current, "Element")) {
+        if (_isInstance(current, "HTMLElement") && current.hidden) return false;
+        if (current.getAttribute && String(current.getAttribute("aria-hidden") || "").toLowerCase() === "true") return false;
+        if (current.hasAttribute && current.hasAttribute("inert")) return false;
+        const currentStyle = view && typeof view.getComputedStyle === "function"
+          ? view.getComputedStyle(current)
+          : null;
+        if (currentStyle && (currentStyle.display === "none" || currentStyle.visibility === "hidden")) return false;
+        current = current.parentElement;
+      }
+      const cs = view && typeof view.getComputedStyle === "function" ? view.getComputedStyle(el) : null;
       if (cs && (cs.display === "none" || cs.visibility === "hidden" || cs.pointerEvents === "none")) return false;
       if (el.getClientRects && el.getClientRects().length === 0) return false;
       return true;

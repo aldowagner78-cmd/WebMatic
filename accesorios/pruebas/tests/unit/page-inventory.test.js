@@ -113,6 +113,34 @@ test("captureControl: altSelectors descarta atributos internos temporales WebMat
   assert.equal(c.altSelectors.some((selector) => /data-wm-/i.test(selector)), false);
 });
 
+test("captureControl: selector principal nunca usa data-wm-* aunque el elemento solo tenga highlight", () => {
+  resetBody('<button data-wm-hl="1">Crear nueva institucion</button>');
+  const el = win.document.querySelector("button");
+  const c = inv.captureControl(el);
+  assert.ok(c);
+  assert.equal(/data-wm-/i.test(c.selector), false);
+  assert.equal(c.altSelectors.some((selector) => /data-wm-/i.test(selector)), false);
+});
+
+test("captureControl: inventario no propaga selector interno de recorder contaminado", () => {
+  const previousRecorder = globalThis.WebMaticRecorder;
+  globalThis.WebMaticRecorder = {
+    buildSelector() {
+      return '[data-wm-hl="1"]';
+    }
+  };
+  try {
+    resetBody('<button data-wm-hl="1" aria-label="Crear institucion">Crear nueva institucion</button>');
+    const el = win.document.querySelector("button");
+    const c = inv.captureControl(el);
+    assert.ok(c);
+    assert.equal(/data-wm-/i.test(c.selector), false);
+    assert.equal(c.altSelectors.some((selector) => /data-wm-/i.test(selector)), false);
+  } finally {
+    globalThis.WebMaticRecorder = previousRecorder;
+  }
+});
+
 test("captureControl: Angular Material conserva selector estable y evita id dinamico como alternativa", () => {
   resetBody('<input id="mat-input-3" placeholder="Buscar Nro. de Expediente:" aria-label="Buscar expediente">');
   const el = win.document.getElementById("mat-input-3");

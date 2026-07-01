@@ -40,3 +40,7 @@ webmatic-dom-inventory*.json
 *.log
 .DS_Store
 Thumbs.db
+
+# Artefactos pesados o temporales de QA headed
+accesorios/pruebas/reports/headed-recorder-playback-artifacts/videos/
+accesorios/pruebas/reports/headed-recorder-playback-artifacts/*failure*.png

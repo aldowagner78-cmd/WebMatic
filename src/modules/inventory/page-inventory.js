@@ -53,11 +53,23 @@
   function _primarySelector(el) {
     const rec = globalScope.WebMaticRecorder;
     if (rec && typeof rec.buildSelector === "function") {
-      try { return rec.buildSelector(el); } catch (e) { /* fallback */ }
+      try {
+        const selector = rec.buildSelector(el);
+        if (selector && !_isWebMaticInternalSelector(selector)) return selector;
+      } catch (e) { /* fallback */ }
     }
     const selectorApi = _selectorApi();
     if (selectorApi && typeof selectorApi.buildSelector === "function") {
-      try { return selectorApi.buildSelector(el); } catch (e) { /* fallback */ }
+      try {
+        const selector = selectorApi.buildSelector(el);
+        if (selector && !_isWebMaticInternalSelector(selector)) return selector;
+      } catch (e) { /* fallback */ }
+    }
+    if (selectorApi && typeof selectorApi.buildStableFallbackSelectors === "function") {
+      try {
+        const fallback = _firstNonInternalSelector(selectorApi.buildStableFallbackSelectors(el, ""));
+        if (fallback) return fallback;
+      } catch (e) { /* fallback */ }
     }
     // Fallback mínimo y genérico.
     if (el.id) return "#" + el.id;
@@ -69,6 +81,15 @@
 
   function _isWebMaticInternalSelector(selector) {
     return /\[\s*data-wm-/i.test(String(selector || ""));
+  }
+
+  function _firstNonInternalSelector(candidates) {
+    if (!Array.isArray(candidates)) return "";
+    for (const candidate of candidates) {
+      const sel = String(candidate || "").trim();
+      if (sel && !_isWebMaticInternalSelector(sel)) return sel;
+    }
+    return "";
   }
 
   function _sanitizeAltSelectors(alts) {
@@ -250,7 +271,7 @@
 
     const kind = _controlKind(el);
     const primary = _primarySelector(el);
-    if (!primary) return null;
+    if (!primary || _isWebMaticInternalSelector(primary)) return null;
 
     const control = {
       selector: primary,
@@ -754,6 +775,7 @@
       controlKind: ctrl.controlKind,
       label: ctrl.label || ""
     };
+    if (_isWebMaticInternalSelector(ref.selector)) return null;
     if (Array.isArray(ctrl.altSelectors) && ctrl.altSelectors.length > 0) ref.altSelectors = ctrl.altSelectors.slice();
     if (ctrl.placeholder) ref.placeholder = ctrl.placeholder;
     if (ctrl.text) ref.text = ctrl.text;

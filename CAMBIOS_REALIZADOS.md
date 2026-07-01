@@ -492,3 +492,33 @@ CÃ³mo probar:
 
 CÃ³mo revertir:
 - Restaurar los archivos de este parche desde el ZIP previo o revertir el commit rc40B-4.
+
+## rc40C - Limpieza definitiva de metadata temporal de resaltado
+
+### Archivos principales modificados
+- src/common/selectors/selector-builder.js
+- src/content/content.js
+- src/modules/inventory/page-inventory.js
+- src/modules/recorder/events/recorder-events.js
+- src/background/background.js
+- src/core/store.js
+
+### Qué cambió
+- Se impide que data-wm-hl o cualquier data-wm-* interno de WebMatic entre en macros grabadas.
+- Se limpian selectores principales, alternativos, controlRef e inventario.
+- Se agregaron pruebas unitarias y QA headed para evitar regresión.
+
+### Por qué
+- En página real externa, el resaltador visual podía contaminar la macro con [data-wm-hl="1"].
+
+### Cómo probar
+- npm test
+- npm run test:e2e:universal-resolution
+- npm run test:e2e:flyer-wizard
+- npm run test:e2e:angular-material
+- npm run test:e2e:wait-for-navigate
+- npm run test:e2e:loop-navigate
+- node accesorios/pruebas/tests/e2e/headed-recorder-playback/run.js
+
+### Cómo revertir
+- Revertir el commit de esta etapa.

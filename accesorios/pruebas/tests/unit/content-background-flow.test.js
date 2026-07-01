@@ -50,6 +50,54 @@ test("content recorder: indicador visual se dispara despues de captura aceptada"
   assert.match(source, /const captured = addStep\(step\);/);
 });
 
+test("content recorder: pointerdown captura botones dinamicos sin duplicar click", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /function _pointerClickFallbackTarget\(rawTarget\)/);
+  assert.match(source, /function _recordPointerClickFallback\(rawTarget, emitStep, emitStepAndFlash/);
+  assert.match(source, /_wmPointerFallback: true/);
+  assert.match(source, /event\.type !== "pointerdown" && event\.type !== "pointerup"/);
+  assert.match(source, /e\.type !== "pointerdown" && e\.type !== "pointerup"/);
+  assert.match(source, /function _consumeImmediatePointerCaptureDuplicate\(pending, selector\)/);
+  assert.match(source, /window\.addEventListener\("pointerdown", _onPointerDown, true\)/);
+  assert.match(source, /_consumeRecentPointerClickFallback\(pendingPointerClickFallback, clickSel\)/);
+  assert.match(source, /_consumeRecentPointerClickFallback\(_pendingPointerClickFallback, clickSel\)/);
+});
+
+test("content recorder: no hace flush de texto oculto tras transiciones dinamicas", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /function _captureCurrentTextValueForRecording\(target, emitStep, copiedText, copiedVar\)/);
+  assert.match(source, /if \(!_isInteractableCaptureTarget\(target\)\) return false;/);
+  assert.match(source, /const pass4cSkip = new Set\(\);/);
+  assert.match(source, /duplicateBeforeClick/);
+});
+
+test("content inline recorder: al detener conserva pasos locales aun con respuesta del background", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /const backgroundSteps = \(resp && Array\.isArray\(resp\.steps\)\) \? resp\.steps : \[\];/);
+  assert.match(source, /const allSteps = backgroundSteps\.length > 0 \? backgroundSteps\.slice\(\) : buffer\.slice\(\);/);
+  assert.match(source, /if \(buffer\.length > 0 && backgroundSteps\.length > 0\)/);
+  assert.match(source, /const seenLocalKeys = new Set\(allSteps\.map/);
+  assert.match(source, /allSteps\.push\(step\);/);
+  assert.match(source, /const filtered = _cleanupSteps\(allSteps\);/);
+});
+
+test("content inline recorder: captura select nativo con snapshot definido", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /function _captureInlineSelectChange\(target\) \{/);
+  assert.match(source, /const selected = _selectedOptionSnapshot\(target\);/);
+  assert.match(source, /type: "choose_option", selector: sel, value: selected\.value, text: selected\.text, index: selected\.index/);
+});
+
+test("content recorder: captura select nativo tambien desde input y deduplica change", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /const _lastSelectCaptureAt = new WeakMap\(\);/);
+  assert.match(source, /const captureSelectChange = \(target\) =>/);
+  assert.match(source, /if \(target instanceof HTMLSelectElement\) \{\s+captureSelectChange\(target\);/);
+  assert.match(source, /last && last\.key === key && Date\.now\(\) - last\.ts < 250/);
+  assert.match(source, /const _lastInlineSelectCaptureAt = new WeakMap\(\);/);
+  assert.match(source, /function _captureInlineSelectChange\(target\)/);
+});
+
 test("background flow: tabs-navigation cubre restricted, openIfMissing y pending playback", () => {
   assert.equal(tabsNavigation.isRestrictedUrl("chrome://extensions"), true);
   assert.equal(tabsNavigation.isRestrictedUrl("https://example.test/"), false);
@@ -160,5 +208,8 @@ test("content recorder: limpia selectores internos de highlight en controlRef", 
   const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
   assert.match(source, /function _sanitizeRecorderAltSelectors\(alts\)/);
   assert.match(source, /_isWebMaticTransientSelector\(sel\)/);
+  assert.match(source, /_isWebMaticTransientSelector\(ref\.selector\)/);
+  assert.match(source, /delete ref\.selector/);
   assert.match(source, /delete ref\.altSelectors/);
+  assert.match(source, /const cleanSelector = _isWebMaticTransientSelector\(selector\)/);
 });

@@ -105,6 +105,23 @@ test("recorder helper modules preserve normalization, defaults and capture guard
   );
 });
 
+test("capture target: promueve descendientes decorativos al boton clickeable", () => {
+  document.body.innerHTML = `
+    <button id="startAssistantButton"><strong>IMAGEN</strong><span>Crear pieza</span></button>
+  `;
+
+  assert.equal(
+    recorderEvents.normalizeCaptureTarget(document.querySelector("#startAssistantButton strong")),
+    document.getElementById("startAssistantButton")
+  );
+});
+
+test("capture target: no considera interactuable un input dentro de ancestro oculto", () => {
+  document.body.innerHTML = `<section style="display:none"><input id="email" value="qa@example.test"></section>`;
+
+  assert.equal(recorderEvents.isInteractableCaptureTarget(document.getElementById("email")), false);
+});
+
 test("post-click dynamic observer: detecta elemento existente que pasa a visible", () => {
   document.body.innerHTML = `
     <button id="start">Start</button>

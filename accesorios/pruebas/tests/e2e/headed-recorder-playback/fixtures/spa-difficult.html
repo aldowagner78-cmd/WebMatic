@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>QA SPA difficult fixture</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; }
+    .step { display: none; border: 1px solid #d0d7de; border-radius: 6px; padding: 16px; max-width: 680px; }
+    .step.active { display: block; }
+    .overlay { position: absolute; inset: 0; background: rgba(255,255,255,.75); display: grid; place-items: center; }
+    .box { position: relative; min-height: 90px; }
+  </style>
+</head>
+<body>
+  <h1>SPA difficult controls</h1>
+  <section class="step active" data-step="1">
+    <button type="button" class="next-action">Siguiente</button>
+    <button type="button" class="next-action">Siguiente</button>
+  </section>
+  <section class="step" data-step="2">
+    <div id="late-mount"></div>
+    <button type="button" id="late-enable" disabled>Guardar</button>
+  </section>
+  <section class="step" data-step="3">
+    <div class="box">
+      <button type="button" id="covered-button">Boton cubierto</button>
+      <div class="overlay" id="overlay">Overlay temporal</div>
+    </div>
+    <div id="shadow-host"></div>
+    <iframe title="fixture iframe" srcdoc="<button id='inside-frame' type='button'>Dentro iframe</button>"></iframe>
+  </section>
+  <script>
+    const steps = Array.from(document.querySelectorAll(".step"));
+    document.querySelectorAll(".next-action")[1].addEventListener("click", () => {
+      steps[0].classList.remove("active");
+      steps[1].classList.add("active");
+      setTimeout(() => {
+        document.getElementById("late-mount").innerHTML = '<label>Dato tardio<input placeholder="Dato repetido"></label><label>Dato tardio<input placeholder="Dato repetido"></label><select id="native-select"><option value="0">(Ninguno)</option><option value="47">DETALLE AUTORIZADO</option></select>';
+        document.getElementById("late-enable").disabled = false;
+      }, 1200);
+    });
+    document.getElementById("late-enable").addEventListener("click", () => {
+      steps[1].classList.remove("active");
+      steps[2].classList.add("active");
+      setTimeout(() => document.getElementById("overlay").remove(), 1000);
+    });
+    const root = document.getElementById("shadow-host").attachShadow({ mode: "open" });
+    root.innerHTML = '<button id="shadow-action" type="button">Shadow action</button>';
+  </script>
+</body>
+</html>

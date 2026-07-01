@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>QA GeneXus IAPOS fixture</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #f5f7fb;
+      color: #1f2937;
+    }
+
+    main {
+      max-width: 760px;
+      margin: 32px auto;
+      padding: 24px;
+      background: #fff;
+      border: 1px solid #d9e2ef;
+      border-radius: 6px;
+    }
+
+    .row {
+      display: grid;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-top: 18px;
+    }
+
+    input[type="image"] {
+      width: 120px;
+      height: 38px;
+      border: 1px solid #1f6feb;
+      border-radius: 4px;
+      background: #2563eb;
+      color: #fff;
+      padding: 6px;
+    }
+
+    input[type="image"]:disabled,
+    button:disabled {
+      opacity: .45;
+      cursor: wait;
+    }
+
+    button {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid #0f766e;
+      border-radius: 4px;
+      background: #0f766e;
+      color: #fff;
+    }
+
+    #detail-screen {
+      display: none;
+      border-top: 1px solid #d9e2ef;
+      margin-top: 24px;
+      padding-top: 18px;
+    }
+
+    #gx_ajax_notification {
+      min-height: 22px;
+      margin-top: 16px;
+      color: #0f766e;
+      font-weight: 700;
+    }
+
+    #resultado[data-state="autorizado"] {
+      color: #166534;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Autorizaciones IAPOS - GeneXus simulado</h1>
+    <p>Fixture local sin credenciales ni backend real.</p>
+
+    <section id="list-screen">
+      <h2>Listado de solicitudes</h2>
+      <p>Solicitud 0001: practica ambulatoria pendiente.</p>
+      <input id="vDETALLES_0001" name="vDETALLES_0001" type="image" alt="Ver detalles" title="Ver detalles" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==">
+    </section>
+
+    <section id="detail-screen" aria-live="polite">
+      <h2>Detalle de solicitud</h2>
+      <input id="GXState" type="hidden" value="{&quot;Screen&quot;:&quot;DETALLE&quot;,&quot;Row&quot;:&quot;0001&quot;}">
+
+      <label class="row" for="vERROR">
+        Estado de autorizacion
+        <select id="vERROR" name="vERROR">
+          <option value="0">(Ninguno)</option>
+          <option value="47">DETALLE AUTORIZADO</option>
+        </select>
+      </label>
+
+      <div class="toolbar">
+        <input id="vAUTORIZAR_0001" name="vAUTORIZAR_0001" type="image" alt="Autorizar detalle" title="Autorizar detalle" disabled src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==">
+        <button id="confirmar" type="button" disabled>Confirmar</button>
+      </div>
+
+      <div id="gx_ajax_notification" role="status"></div>
+      <output id="resultado" data-state="pendiente">Pendiente</output>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const detailButton = document.getElementById("vDETALLES_0001");
+      const list = document.getElementById("list-screen");
+      const detail = document.getElementById("detail-screen");
+      const select = document.getElementById("vERROR");
+      const auth = document.getElementById("vAUTORIZAR_0001");
+      const confirm = document.getElementById("confirmar");
+      const notification = document.getElementById("gx_ajax_notification");
+      const result = document.getElementById("resultado");
+
+      window.__qaEvents = [];
+
+      function mark(eventName) {
+        window.__qaEvents.push({ eventName, at: Date.now() });
+      }
+
+      detailButton.addEventListener("click", function (event) {
+        event.preventDefault();
+        mark("detalle-click");
+        notification.textContent = "gx_ajax_notification: cargando detalle...";
+        history.pushState({ screen: "detail" }, "", "#detalle-0001");
+        setTimeout(function () {
+          list.style.display = "none";
+          detail.style.display = "block";
+          notification.textContent = "gx_ajax_notification: detalle listo";
+          mark("detalle-visible");
+        }, 1200);
+      });
+
+      select.addEventListener("change", function () {
+        mark("select-change-" + select.value);
+        notification.textContent = "gx_ajax_notification: validando seleccion...";
+        auth.disabled = true;
+        confirm.disabled = true;
+        setTimeout(function () {
+          auth.disabled = select.value !== "47";
+          notification.textContent = auth.disabled ? "gx_ajax_notification: pendiente" : "gx_ajax_notification: listo para autorizar";
+          mark("autorizar-enabled");
+        }, 900);
+      });
+
+      auth.addEventListener("click", function (event) {
+        event.preventDefault();
+        mark("autorizar-click");
+        notification.textContent = "gx_ajax_notification: autorizando...";
+        setTimeout(function () {
+          confirm.disabled = false;
+          notification.textContent = "gx_ajax_notification: confirmar disponible";
+          mark("confirmar-enabled");
+        }, 900);
+      });
+
+      confirm.addEventListener("click", function () {
+        mark("confirmar-click");
+        result.dataset.state = "autorizado";
+        result.textContent = "DETALLE AUTORIZADO";
+        notification.textContent = "gx_ajax_notification: operacion finalizada";
+      });
+    }());
+  </script>
+</body>
+</html>

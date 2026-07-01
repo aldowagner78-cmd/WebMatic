@@ -163,6 +163,48 @@ test("buildStableFallbackSelectors: no graba atributos internos de highlight Web
   assert.equal(alts.some((selector) => /data-wm-/i.test(selector)), false);
 });
 
+test("buildSelector: elemento resaltado con id real usa el id y nunca data-wm-hl", () => {
+  resetBody('<button id="crear-institucion" data-wm-hl="1">Crear nueva institucion</button>');
+  const el = win.document.querySelector("button");
+  const selector = Recorder.buildSelector(el);
+  assert.equal(selector, "#crear-institucion");
+  assert.equal(/data-wm-/i.test(selector), false);
+});
+
+test("buildSelector: elemento sin id/name con data-wm-hl cae a selector estable no interno", () => {
+  resetBody('<button data-wm-hl="1">Crear nueva institucion</button>');
+  const el = win.document.querySelector("button");
+  const selector = Recorder.buildSelector(el);
+  assert.ok(selector, "debe construir un selector alternativo estable");
+  assert.equal(/data-wm-/i.test(selector), false);
+  assert.equal(selector, 'button[text="Crear nueva institucion"]');
+});
+
+test("buildSelector: ignora cualquier atributo interno data-wm-* como selector principal", () => {
+  resetBody('<button data-wm-picker="1" data-wm-hl="1">Continuar</button>');
+  const el = win.document.querySelector("button");
+  const selector = Recorder.buildSelector(el);
+  assert.ok(selector, "debe usar texto o estructura antes que data-wm-*");
+  assert.equal(/data-wm-/i.test(selector), false);
+});
+
+test("recorder/content: click sobre elemento resaltado no genera selector ni controlRef data-wm", () => {
+  resetBody('<button data-wm-hl="1" aria-label="Crear institucion">Crear nueva institucion</button>');
+  const el = win.document.querySelector("button");
+  const selector = Recorder.buildSelector(el);
+  const step = { type: "click", selector };
+  const controlRef = {
+    selector,
+    tag: "button",
+    controlKind: "button",
+    altSelectors: Recorder._selectorBuilder().buildStableFallbackSelectors(el, selector)
+  };
+
+  assert.equal(/data-wm-/i.test(step.selector), false);
+  assert.equal(/data-wm-/i.test(controlRef.selector), false);
+  assert.equal(controlRef.altSelectors.some((alt) => /data-wm-/i.test(alt)), false);
+});
+
 test("dedupeFieldRuns: conserva primer input si hay otra edicion posterior separada", () => {
   const steps = [
     { type: "navigate", url: "file:///pagina-a.html" },

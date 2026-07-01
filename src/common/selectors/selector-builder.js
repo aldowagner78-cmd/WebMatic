@@ -77,6 +77,14 @@
     return /^mat-(?:input|select|option)-\d+$/i.test(String(value || "").trim());
   }
 
+  function isWebMaticInternalAttributeName(name) {
+    return /^data-wm-/i.test(String(name || "").trim());
+  }
+
+  function isWebMaticInternalSelector(selector) {
+    return /\[\s*data-wm-/i.test(String(selector || ""));
+  }
+
   function buildStableFallbackSelectors(element, primary) {
     if (!element || !(element instanceof Element)) return [];
     const E = escapeAttr;
@@ -139,7 +147,7 @@
       // Atributos internos/temporales de WebMatic (por ejemplo el resaltado
       // visual del grabador/reproductor) no deben quedar grabados como
       // selectores de usuario ni como fallback universal.
-      if (/^data-wm-/i.test(a.name)) return false;
+      if (isWebMaticInternalAttributeName(a.name)) return false;
       if (/data-(v-|reactid|ng-|index$|key$|_)/.test(a.name)) return false;
       if (a.value.length > 80 || a.value === "") return false;
       return true;
@@ -252,6 +260,9 @@
 
     const stableData = Array.from(element.attributes).find((a) => {
       if (!a.name.startsWith("data-")) return false;
+      // Namespace interno de WebMatic: highlight, overlays y pickers visuales.
+      // Nunca es identidad estable de la pagina automatizada.
+      if (isWebMaticInternalAttributeName(a.name)) return false;
       if (/data-(v-|reactid|ng-|index$|key$|_)/.test(a.name)) return false;
       if (a.value.length > 80 || a.value === "") return false;
       return true;
@@ -320,6 +331,8 @@
     selectorResolvesToElement,
     isLikelyDynamicValue,
     isLikelyAngularMaterialDynamicId,
+    isWebMaticInternalAttributeName,
+    isWebMaticInternalSelector,
     buildStableFallbackSelectors,
     buildSelector
   };

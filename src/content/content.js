@@ -25,6 +25,9 @@
 
   function _sanitizeRecorderControlRef(ref) {
     if (!ref || typeof ref !== "object") return ref;
+    if (_isWebMaticTransientSelector(ref.selector)) {
+      delete ref.selector;
+    }
     if (Array.isArray(ref.altSelectors)) {
       const cleaned = _sanitizeRecorderAltSelectors(ref.altSelectors);
       if (cleaned.length > 0) ref.altSelectors = cleaned;
@@ -6524,7 +6527,8 @@
     if (!(el instanceof Element)) return existingRef || null;
     const ref = _sanitizeRecorderControlRef(Object.assign({}, existingRef || {}));
     const tag = String(el.tagName || "").toLowerCase();
-    ref.selector = ref.selector || String(selector || "");
+    const cleanSelector = _isWebMaticTransientSelector(selector) ? "" : String(selector || "");
+    ref.selector = ref.selector || cleanSelector;
     ref.tag = ref.tag || tag;
     let type = "";
     if (el instanceof HTMLInputElement) {
@@ -6566,6 +6570,7 @@
   const _submitIntentCaptureAt = new WeakMap();
   const SENSITIVE_INPUT_MARKER_COOLDOWN_MS = 700;
   const SUBMIT_INTENT_CAPTURE_COOLDOWN_MS = 700;
+  const POINTER_CLICK_FALLBACK_COOLDOWN_MS = 1200;
 
   function _isSubmitIntentTarget(el) {
     if (!(el instanceof Element)) return false;
@@ -6625,6 +6630,59 @@
 
     emitStep({ type: "click", selector, _wmSubmitIntent: true });
     return true;
+  }
+
+  function _pointerClickFallbackTarget(rawTarget) {
+    if (!(rawTarget instanceof Element)) return null;
+    const target = normalizeCaptureTarget(rawTarget);
+    if (!(target instanceof Element)) return null;
+    if (target.hasAttribute && target.getAttribute("aria-disabled") === "true") return null;
+    if (target.disabled === true) return null;
+
+    const tag = String(target.tagName || "").toLowerCase();
+    const role = String(target.getAttribute && target.getAttribute("role") || "").toLowerCase();
+    if (tag === "button") return target;
+    if (tag === "a" && target.hasAttribute && target.hasAttribute("href")) {
+      if (String(target.getAttribute("target") || "").toLowerCase() === "_blank") return null;
+      return target;
+    }
+    if (tag === "input") {
+      const type = String(target.getAttribute("type") || target.type || "").toLowerCase();
+      if (type === "button" || type === "submit" || type === "image" || type === "reset") return target;
+    }
+    if (role === "button" || role === "link") return target;
+    return null;
+  }
+
+  function _recordPointerClickFallback(rawTarget, emitStep, emitStepAndFlash, copiedText, copiedVar, inlineOptions) {
+    const target = _pointerClickFallbackTarget(rawTarget);
+    if (!(target instanceof Element)) return null;
+    if (_isInsideWebMaticUi(target, inlineOptions || undefined)) return null;
+
+    const selector = buildSelector(target);
+    if (!selector) return null;
+    _flushActiveTextInputForRecording(emitStep, copiedText, copiedVar, target);
+    _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selector), emitStep);
+
+    const step = { type: "click", selector, _wmPointerFallback: true };
+    if (_isSubmitIntentTarget(target)) {
+      _submitIntentCaptureAt.set(target, Date.now());
+      step._wmSubmitIntent = true;
+    }
+    const captured = emitStepAndFlash(step, target);
+    if (!captured) return null;
+    _startPostClickObserver(selector, emitStep);
+    return { selector, ts: Date.now() };
+  }
+
+  function _consumeRecentPointerClickFallback(pending, selector) {
+    if (!pending || !selector) return false;
+    return pending.selector === selector && Date.now() - pending.ts <= POINTER_CLICK_FALLBACK_COOLDOWN_MS;
+  }
+
+  function _consumeImmediatePointerCaptureDuplicate(pending, selector) {
+    if (!pending || !selector) return false;
+    return pending.selector === selector && Date.now() - pending.ts <= 80;
   }
 
   function buildSelector(element) {
@@ -6708,6 +6766,7 @@
     const isContentEditable = !!target.isContentEditable;
     if (!isContentEditable && !_isTextEntryCaptureTarget(target)) return false;
     if (target.readOnly || target.disabled) return false;
+    if (!_isInteractableCaptureTarget(target)) return false;
 
     const selector = buildSelector(target);
     if (!selector) return false;
@@ -7014,11 +7073,42 @@
     }
 
     const _lastCheckChangeAt = new WeakMap();
+    const _lastSelectCaptureAt = new WeakMap();
     const _preferClickOnCheckTargetAt = new WeakMap();
+    let pendingPointerClickFallback = null;
+
+    const captureSelectChange = (target) => {
+      if (!(target instanceof HTMLSelectElement)) return false;
+      if (_isInsideWebMaticUi(target)) return true;
+      if (target.disabled) return true;
+      const selected = _selectedOptionSnapshot(target);
+      const key = `${selected.value}\u0000${selected.index}`;
+      const last = _lastSelectCaptureAt.get(target) || null;
+      if (last && last.key === key && Date.now() - last.ts < 250) return true;
+      _lastSelectCaptureAt.set(target, { key, ts: Date.now() });
+      const selSel = buildSelector(target);
+      _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selSel));
+      captureStepAndFlash({ type: "choose_option", selector: selSel, value: selected.value, text: selected.text, index: selected.index }, target);
+      return true;
+    };
 
     const onPointerDown = (event) => {
       const target = event && event.target;
       _previewRecorderInteraction(target);
+      if (!event || (event.type !== "pointerdown" && event.type !== "pointerup")) return;
+      if (event && typeof event.button === "number" && event.button !== 0) return;
+      const fallbackTarget = _pointerClickFallbackTarget(target);
+      if (!(fallbackTarget instanceof Element)) return;
+      const fallbackSelector = buildSelector(fallbackTarget);
+      if (_consumeImmediatePointerCaptureDuplicate(pendingPointerClickFallback, fallbackSelector)) return;
+      if (event.type === "pointerup" && _consumeRecentPointerClickFallback(pendingPointerClickFallback, fallbackSelector)) return;
+      pendingPointerClickFallback = _recordPointerClickFallback(
+        fallbackTarget,
+        captureStep,
+        captureStepAndFlash,
+        recorderRuntime.lastCopiedText,
+        recorderRuntime.lastCopiedVar
+      );
     };
 
     const onClick = (event) => {
@@ -7092,6 +7182,10 @@
       }
       target = normalizeCaptureTarget(target);
       const clickSel = buildSelector(target);
+      if (_consumeRecentPointerClickFallback(pendingPointerClickFallback, clickSel)) {
+        pendingPointerClickFallback = null;
+        return;
+      }
       // If this click is on an element that wasn't present at the previous click,
       // inject a wait_for so playback waits for it to appear.
       _checkAndInjectWaitFor(_waitForSelectorForTarget(target, clickSel));
@@ -7133,10 +7227,7 @@
         return;
       }
       if (target instanceof HTMLSelectElement) {
-        const selSel = buildSelector(target);
-        const selected = _selectedOptionSnapshot(target);
-        _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selSel));
-        captureStepAndFlash({ type: "choose_option", selector: selSel, value: selected.value, text: selected.text, index: selected.index }, target);
+        captureSelectChange(target);
         return;
       }
       // Dynamic copy/paste: if pasted value matches last copied text, use variable reference
@@ -7194,6 +7285,11 @@
       const target = event.target;
       if (!(target instanceof Element)) return;
       if (_isInsideWebMaticUi(target)) {
+        return;
+      }
+
+      if (target instanceof HTMLSelectElement) {
+        captureSelectChange(target);
         return;
       }
 
@@ -7268,7 +7364,10 @@
     };
 
     document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("pointerup", onPointerDown, true);
     document.addEventListener("mousedown", onPointerDown, true);
+    window.addEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("pointerup", onPointerDown, true);
     document.addEventListener("click", onClick, true);
     document.addEventListener("change", onChange, true);
     document.addEventListener("keydown", onKeydown, true);
@@ -7449,7 +7548,10 @@
 
     recorderRuntime.cleanup = () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("pointerup", onPointerDown, true);
       document.removeEventListener("mousedown", onPointerDown, true);
+      window.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("pointerup", onPointerDown, true);
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("change", onChange, true);
       document.removeEventListener("keydown", onKeydown, true);
@@ -7595,6 +7697,7 @@
     let _inlineDragSource = "";
     let lastCopiedText = null, lastCopiedVar = null, varCounter = 0;
     const _lastInlineCheckChangeAt = new WeakMap();
+    const _lastInlineSelectCaptureAt = new WeakMap();
     const _preferInlineClickOnCheckTargetAt = new WeakMap();
 
     function _updateCount() {
@@ -7632,9 +7735,41 @@
       return captured;
     }
 
+    function _captureInlineSelectChange(target) {
+      if (!(target instanceof HTMLSelectElement)) return false;
+      if (_isInsideWebMaticUi(target, { inlinePanelId: INLINE_REC_PANEL_ID, floating: false })) return true;
+      if (target.disabled) return true;
+      const selected = _selectedOptionSnapshot(target);
+      const key = `${selected.value}\u0000${selected.index}`;
+      const last = _lastInlineSelectCaptureAt.get(target) || null;
+      if (last && last.key === key && Date.now() - last.ts < 250) return true;
+      _lastInlineSelectCaptureAt.set(target, { key, ts: Date.now() });
+      const sel = buildSelector(target);
+      _checkAndInjectWaitFor(_waitForSelectorForTarget(target, sel), addStep);
+      addStepAndFlash({ type: "choose_option", selector: sel, value: selected.value, text: selected.text, index: selected.index }, target);
+      return true;
+    }
+
+    let _pendingPointerClickFallback = null;
+
     const _onPointerDown = (e) => {
       const target = e && e.target;
       _previewRecorderInteraction(target, { inlinePanelId: INLINE_REC_PANEL_ID });
+      if (!e || (e.type !== "pointerdown" && e.type !== "pointerup")) return;
+      if (e && typeof e.button === "number" && e.button !== 0) return;
+      const fallbackTarget = _pointerClickFallbackTarget(target);
+      if (!(fallbackTarget instanceof Element)) return;
+      const fallbackSelector = buildSelector(fallbackTarget);
+      if (_consumeImmediatePointerCaptureDuplicate(_pendingPointerClickFallback, fallbackSelector)) return;
+      if (e.type === "pointerup" && _consumeRecentPointerClickFallback(_pendingPointerClickFallback, fallbackSelector)) return;
+      _pendingPointerClickFallback = _recordPointerClickFallback(
+        fallbackTarget,
+        addStep,
+        addStepAndFlash,
+        lastCopiedText,
+        lastCopiedVar,
+        { inlinePanelId: INLINE_REC_PANEL_ID }
+      );
     };
 
     // ── Event handlers (same logic as startRecorderSession but writing to buffer) ──
@@ -7703,6 +7838,10 @@
       }
       t = normalizeCaptureTarget(t);
       const clickSel = buildSelector(t);
+      if (_consumeRecentPointerClickFallback(_pendingPointerClickFallback, clickSel)) {
+        _pendingPointerClickFallback = null;
+        return;
+      }
       _checkAndInjectWaitFor(_waitForSelectorForTarget(t, clickSel), addStep);
       const clickStep = { type: "click", selector: clickSel };
       if (_isSubmitIntentTarget(t)) {
@@ -7735,9 +7874,7 @@
         return;
       }
       if (t instanceof HTMLSelectElement) {
-        const sel = buildSelector(t);
-        _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
-        addStepAndFlash({ type: "choose_option", selector: sel, value: selected.value, text: selected.text, index: selected.index }, t);
+        _captureInlineSelectChange(t);
         return;
       }
       const raw = t.value;
@@ -7857,6 +7994,11 @@
       if (!(t instanceof Element)) return;
       if (_isInsideWebMaticUi(t, { inlinePanelId: INLINE_REC_PANEL_ID })) return;
 
+      if (t instanceof HTMLSelectElement) {
+        _captureInlineSelectChange(t);
+        return;
+      }
+
       // Contenteditable is handled by _onCeInput below.
       if (t.isContentEditable) return;
 
@@ -7965,7 +8107,10 @@
     };
 
     document.addEventListener("pointerdown", _onPointerDown, true);
+    document.addEventListener("pointerup", _onPointerDown, true);
     document.addEventListener("mousedown", _onPointerDown, true);
+    window.addEventListener("pointerdown", _onPointerDown, true);
+    window.addEventListener("pointerup", _onPointerDown, true);
     document.addEventListener("click",     _onClick,    true);
     document.addEventListener("change",    _onChange,   true);
     document.addEventListener("keydown",   _onKeydown,  true);
@@ -7988,7 +8133,12 @@
       if (!frameDoc || _attachedFrameDocs.has(frameDoc)) return;
       try {
         frameDoc.addEventListener("pointerdown", _onPointerDown, true);
+        frameDoc.addEventListener("pointerup", _onPointerDown, true);
         frameDoc.addEventListener("mousedown", _onPointerDown, true);
+        if (frameDoc.defaultView) {
+          frameDoc.defaultView.addEventListener("pointerdown", _onPointerDown, true);
+          frameDoc.defaultView.addEventListener("pointerup", _onPointerDown, true);
+        }
         frameDoc.addEventListener("click",    _onClick,    true);
         frameDoc.addEventListener("change",   _onChange,   true);
         frameDoc.addEventListener("keydown",  _onKeydown,  true);
@@ -8009,7 +8159,12 @@
       if (!frameDoc) return;
       try {
         frameDoc.removeEventListener("pointerdown", _onPointerDown, true);
+        frameDoc.removeEventListener("pointerup", _onPointerDown, true);
         frameDoc.removeEventListener("mousedown", _onPointerDown, true);
+        if (frameDoc.defaultView) {
+          frameDoc.defaultView.removeEventListener("pointerdown", _onPointerDown, true);
+          frameDoc.defaultView.removeEventListener("pointerup", _onPointerDown, true);
+        }
         frameDoc.removeEventListener("click",    _onClick,    true);
         frameDoc.removeEventListener("change",   _onChange,   true);
         frameDoc.removeEventListener("keydown",  _onKeydown,  true);
@@ -8045,7 +8200,10 @@
     // ── Cleanup ──
     function _cleanup() {
       document.removeEventListener("pointerdown", _onPointerDown, true);
+      document.removeEventListener("pointerup", _onPointerDown, true);
       document.removeEventListener("mousedown", _onPointerDown, true);
+      window.removeEventListener("pointerdown", _onPointerDown, true);
+      window.removeEventListener("pointerup", _onPointerDown, true);
       document.removeEventListener("click",     _onClick,    true);
       document.removeEventListener("change",    _onChange,   true);
       document.removeEventListener("keydown",   _onKeydown,  true);
@@ -8095,7 +8253,30 @@
             try { if (typeof onDone === "function") onDone(filtered, null); } catch (e) { console.error("[WebMatic] onDone error:", e); }
             return;
           }
-          const allSteps = (resp && Array.isArray(resp.steps) && resp.steps.length > 0) ? resp.steps : buffer;
+          const backgroundSteps = (resp && Array.isArray(resp.steps)) ? resp.steps : [];
+          const allSteps = backgroundSteps.length > 0 ? backgroundSteps.slice() : buffer.slice();
+          if (buffer.length > 0 && backgroundSteps.length > 0) {
+            const seenLocalKeys = new Set(allSteps.map((step) => JSON.stringify({
+              type: step && step.type,
+              selector: step && step.selector,
+              value: step && step.value,
+              url: step && step.url,
+              ts: step && step._ts
+            })));
+            buffer.forEach((step) => {
+              const key = JSON.stringify({
+                type: step && step.type,
+                selector: step && step.selector,
+                value: step && step.value,
+                url: step && step.url,
+                ts: step && step._ts
+              });
+              if (!seenLocalKeys.has(key)) {
+                allSteps.push(step);
+                seenLocalKeys.add(key);
+              }
+            });
+          }
           const editorCtx = (resp && resp.editorContext) || null;
           const filtered = _cleanupSteps(allSteps);
           try { if (typeof onDone === "function") onDone(filtered, editorCtx); } catch (e) { console.error("[WebMatic] onDone error:", e); }
@@ -8550,9 +8731,42 @@
       }
     }
 
+    const pass4cSkip = new Set();
+    const _sameCapturedValue = (a, b) => String(a == null ? "" : a) === String(b == null ? "" : b);
+    for (let i = 0; i < pass4b.length; i++) {
+      const step = pass4b[i];
+      if (!step || !isTypeLike(step.type) || !step.selector) continue;
+
+      let waitIdx = i - 1;
+      while (waitIdx >= 0 && pass4b[waitIdx].type === "wait") waitIdx -= 1;
+      const waitStep = waitIdx >= 0 ? pass4b[waitIdx] : null;
+      if (!waitStep || waitStep.type !== "wait_for" || waitStep.selector !== step.selector) continue;
+
+      let clickIdx = waitIdx - 1;
+      while (clickIdx >= 0 && pass4b[clickIdx].type === "wait") clickIdx -= 1;
+      const clickStep = clickIdx >= 0 ? pass4b[clickIdx] : null;
+      if (!clickStep || clickStep.type !== "click") continue;
+
+      let duplicateBeforeClick = false;
+      for (let j = clickIdx - 1; j >= 0; j--) {
+        const prev = pass4b[j];
+        if (!prev || prev.type === "navigate") break;
+        if (!isTypeLike(prev.type)) continue;
+        if (prev.selector === step.selector && _sameCapturedValue(prev.value, step.value)) {
+          duplicateBeforeClick = true;
+          break;
+        }
+      }
+      if (duplicateBeforeClick) {
+        pass4cSkip.add(waitIdx);
+        pass4cSkip.add(i);
+      }
+    }
+    const pass4c = pass4b.filter((_step, i) => !pass4cSkip.has(i));
+
     // Pass 5: deduplicate consecutive navigate steps with the same logical URL
     // (SPA nav patch or manual re-triggers can emit duplicate navigates)
-    const pass5 = pass4b.filter((step, i, arr) => {
+    const pass5 = pass4c.filter((step, i, arr) => {
       if (step.type !== "navigate" || !step.url) return true;
       // Remove if the immediately preceding non-wait step is also a navigate to the same logical URL
       for (let j = i - 1; j >= 0; j--) {
@@ -11026,4 +11240,3 @@
 
   console.log("[WebMatic] Bootstrap completado.");
 })(typeof globalThis !== "undefined" ? globalThis : window);
-

@@ -83,6 +83,20 @@ let inlineRecordingTabId = null; // tab donde hay grabación inline activa
 let inlineBuffer = [];           // pasos acumulados entre navegaciones
 let inlineEditorContext = null;  // { macroId, draftSteps } del editor al iniciar grabación
 
+function _canMergeRecordedStep(previous, next) {
+  if (!previous || !next || next._merge !== true) return false;
+  return previous.type === "text" &&
+    next.type === "text" &&
+    previous.selector &&
+    previous.selector === next.selector;
+}
+
+function _cleanMergeStep(step) {
+  const clean = Object.assign({}, step || {});
+  delete clean._merge;
+  return clean;
+}
+
 // Tracks which tabs have the panel open, so it can be restored after page navigation
 const panelOpenTabs = new Set();
 
@@ -750,12 +764,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (isBackgroundMessage("RECORD_STEP")) {
     if (isRecording && message.step) {
       const step = message.step;
-      if (step._merge && recordedSteps.length > 0) {
-        const clean = Object.assign({}, step);
-        delete clean._merge;
-        recordedSteps[recordedSteps.length - 1] = clean;
+      if (step._merge && recordedSteps.length > 0 && _canMergeRecordedStep(recordedSteps[recordedSteps.length - 1], step)) {
+        recordedSteps[recordedSteps.length - 1] = _cleanMergeStep(step);
       } else if (!step._merge) {
         recordedSteps.push(step);
+      } else {
+        recordedSteps.push(_cleanMergeStep(step));
       }
     }
     return false;
@@ -810,12 +824,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (isBackgroundMessage("INLINE_RECORD_STEP")) {
     if (inlineRecordingTabId !== null && message.step) {
       const step = message.step;
-      if (step._merge && inlineBuffer.length > 0) {
-        const clean = Object.assign({}, step);
-        delete clean._merge;
-        inlineBuffer[inlineBuffer.length - 1] = clean;
+      if (step._merge && inlineBuffer.length > 0 && _canMergeRecordedStep(inlineBuffer[inlineBuffer.length - 1], step)) {
+        inlineBuffer[inlineBuffer.length - 1] = _cleanMergeStep(step);
       } else if (!step._merge) {
         inlineBuffer.push(step);
+      } else {
+        inlineBuffer.push(_cleanMergeStep(step));
       }
     }
     return false;

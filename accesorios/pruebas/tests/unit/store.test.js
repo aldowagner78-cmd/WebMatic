@@ -61,6 +61,23 @@ test("Store: DRAFT_RESTORED reemplaza pasos y contador en bloque", () => {
   assert.equal(store.getState().draft.steps[1].selector, "#b");
 });
 
+test("Store: _merge solo reemplaza texto del mismo selector", () => {
+  const store = storeApi.createStore();
+  store.dispatch({ type: contracts.ActionTypes.RECORD_STARTED });
+  store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: { type: "text", selector: "#q", value: "a" } });
+  store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: { type: "text", selector: "#q", value: "ab", _merge: true } });
+  assert.deepEqual(store.getState().draft.steps, [{ type: "text", selector: "#q", value: "ab" }]);
+  assert.equal(store.getState().draft.stepsCount, 1);
+
+  store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: { type: "choose_option", selector: "#specialty", value: "Cardiologia" } });
+  store.dispatch({ type: contracts.ActionTypes.STEP_CAPTURED, payload: { type: "text", selector: "#other", value: "x", _merge: true } });
+
+  assert.equal(store.getState().draft.steps.length, 3);
+  assert.deepEqual(store.getState().draft.steps[1], { type: "choose_option", selector: "#specialty", value: "Cardiologia" });
+  assert.deepEqual(store.getState().draft.steps[2], { type: "text", selector: "#other", value: "x" });
+  assert.equal(store.getState().draft.stepsCount, 3);
+});
+
 test("Store: PLAY_STARTED y PLAY_STOPPED actualizan playback", () => {
   const store = storeApi.createStore();
 
