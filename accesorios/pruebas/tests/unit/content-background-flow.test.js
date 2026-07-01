@@ -137,3 +137,20 @@ test("content recorder: feedback persistente solo para click o navigate con nave
   assert.match(source, /if \(step\._wmSubmitIntent\) return true;/);
   assert.match(source, /return _targetLooksNavigationLike\(target\);/);
 });
+
+test("content recorder: usa el mismo highlight manager del reproductor para el flash", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /function _highlightLikePlayer\(el\)/);
+  assert.match(source, /WebMaticHighlightManager/);
+  assert.match(source, /manager\.highlightElement\(el\)/);
+  assert.match(source, /if \(_highlightLikePlayer\(el\)\) return;/);
+});
+
+test("content recorder: previsualiza interacciones en pointerdown antes de navegacion", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /function _previewRecorderInteraction\(target, options\)/);
+  assert.match(source, /document\.addEventListener\("pointerdown", onPointerDown, true\)/);
+  assert.match(source, /document\.addEventListener\("mousedown", onPointerDown, true\)/);
+  assert.match(source, /document\.addEventListener\("pointerdown", _onPointerDown, true\)/);
+  assert.match(source, /frameDoc\.addEventListener\("pointerdown", _onPointerDown, true\)/);
+});

@@ -1,5 +1,58 @@
 # Cambios realizados
 
+## rc40B-6: feedback de grabación igual al reproductor
+
+Fecha: 2026-07-01
+
+## Archivos modificados
+
+- `src/content/content.js`
+- `accesorios/pruebas/tests/unit/content-background-flow.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+- `README_INSTALACION.txt`
+
+## Qué se cambió
+
+- El grabador ahora usa el mismo resaltado temporal del reproductor (`WebMaticHighlightManager.highlightElement`).
+- Se suma feedback visual anticipado en `pointerdown`/`mousedown` antes de que GeneXus navegue.
+- Se aplica al grabador principal, grabador inline e iframes mismo origen.
+- No se modificó el reproductor.
+- No se modificó `choose_option`.
+- No se modificó `manifest.json`.
+
+## Por qué
+
+En IAPOS/GeneXus los eventos `Detalles` y `Autorizar` se grababan correctamente, pero el usuario no veía el recuadro rojo porque la navegación destruía la página antes de que el flash posterior pudiera percibirse. El reproductor sí mostraba el resaltado de forma confiable porque lo aplica antes de ejecutar la acción. Esta corrección replica esa estrategia visual para grabación.
+
+## Cómo probar
+
+```powershell
+node -c src/content/content.js
+node -c src/modules/recorder/normalizer/recording-normalizer.js
+node --test accesorios/pruebas/tests/unit/content-background-flow.test.js
+npm test
+npm run test:e2e:universal-resolution
+npm run test:e2e:flyer-wizard
+npm run test:e2e:angular-material
+npm run test:e2e:wait-for-navigate
+npm run test:e2e:loop-navigate
+```
+
+Prueba manual IAPOS:
+
+1. Recargar extensión temporal.
+2. Grabar macro mínima: `Detalles`, `Autorizar`, `DETALLE AUTORIZADO`.
+3. Verificar que `Detalles` y `Autorizar` muestran flash visual antes/durante la navegación.
+4. Verificar que el último select mantiene `CHOOSE_OPTION #vERROR value/text/index`.
+5. Verificar que la macro reproduce sin edición manual.
+
+## Cómo revertir
+
+```powershell
+git revert <commit_rc40B_6>
+```
+
 ## rc40B-5: feedback visual de grabación entre navegaciones
 
 Fecha: 2026-07-01

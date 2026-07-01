@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-07-01] rc40B-6 feedback de grabación igual al reproductor
+
+### Corregido
+- `src/content/content.js`: el flash visual del grabador reutiliza `WebMaticHighlightManager.highlightElement`, el mismo resaltado temporal usado por el reproductor.
+- Se agrega previsualización visual en `pointerdown`/`mousedown` para que clicks que navegan inmediatamente, como GeneXus `Detalles` y `Autorizar`, muestren feedback antes de que la página se destruya.
+- Se mantiene el registro real posterior del evento sin tocar reproducción, `choose_option`, player ni normalizador.
+
+### Pruebas
+- Agregados tests de flujo de contenido para verificar que el grabador usa el highlight manager del reproductor y que instala previsualización en `pointerdown` para grabador principal, inline e iframes.
+
+### Validación
+- Sintaxis: `node -c src/content/content.js`.
+- Sintaxis: `node -c src/modules/recorder/normalizer/recording-normalizer.js`.
+- Unitario focal: `node --test accesorios/pruebas/tests/unit/content-background-flow.test.js`.
+
 ## [2026-07-01] rc40B-5 feedback de grabación entre navegaciones
 
 ### Corregido

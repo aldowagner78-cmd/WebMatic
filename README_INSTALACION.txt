@@ -216,3 +216,15 @@ Para validar este parche antes de firmar:
 
 Nota rc40B-4:
 Para validar el grabador GeneXus/IAPOS, cargar la extensión temporal desde `repo-modular\manifest.json`, grabar una macro nueva y verificar que el flash rojo desaparezca solo y que la macro contenga `WAIT_FOR #vAUTORIZAR_0001` antes de `CLICK #vAUTORIZAR_0001`, y `WAIT_FOR #vERROR` antes de `CHOOSE_OPTION #vERROR`.
+
+
+## Nota técnica rc40B-6
+
+Para pruebas de desarrollo en GeneXus/IAPOS, el feedback visual del grabador debe comportarse igual que el resaltado del reproductor: aparecer como flash temporal y limpiarse solo, incluso cuando el click produce navegación inmediata.
+
+Verificación mínima:
+
+```powershell
+node -c src/content/content.js
+node --test accesorios/pruebas/tests/unit/content-background-flow.test.js
+```

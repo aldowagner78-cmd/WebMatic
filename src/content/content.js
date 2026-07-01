@@ -139,10 +139,22 @@
 
   _consumeRecorderFeedbackFromPreviousPage();
 
+  function _highlightLikePlayer(el) {
+    try {
+      const manager = globalScope && globalScope.WebMaticHighlightManager;
+      if (manager && typeof manager.highlightElement === "function") {
+        manager.highlightElement(el);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   function flashElement(el) {
     if (!(el instanceof Element)) return;
     try {
       if (_shouldSuppressRepeatedTextFlash(el)) return;
+      if (_highlightLikePlayer(el)) return;
       const doc = el.ownerDocument;
       const win = doc && doc.defaultView;
       if (!doc || !win) return;
@@ -6936,6 +6948,27 @@
     return captured;
   }
 
+  function _previewRecorderInteraction(target, options) {
+    try {
+      if (!(target instanceof Element) || _isInsideWebMaticUi(target, options || undefined)) return;
+      const selectTarget = _selectFromOptionTarget(target);
+      if (selectTarget instanceof Element && !_isInsideWebMaticUi(selectTarget, options || undefined)) {
+        flashElement(selectTarget);
+        return;
+      }
+      let visualTarget = target;
+      const tag = visualTarget.tagName ? visualTarget.tagName.toLowerCase() : "";
+      if (tag === "img" || (tag === "input" && visualTarget.type === "image" && !visualTarget.id)) {
+        const anchor = visualTarget.closest && visualTarget.closest("a[href]");
+        if (anchor) visualTarget = anchor;
+      }
+      if (typeof normalizeCaptureTarget === "function") {
+        visualTarget = normalizeCaptureTarget(visualTarget);
+      }
+      if (visualTarget instanceof Element) flashElement(visualTarget);
+    } catch (_) {}
+  }
+
   function startRecorderSession() {
     if (recorderRuntime.cleanup) {
       recorderRuntime.cleanup();
@@ -6957,6 +6990,11 @@
 
     const _lastCheckChangeAt = new WeakMap();
     const _preferClickOnCheckTargetAt = new WeakMap();
+
+    const onPointerDown = (event) => {
+      const target = event && event.target;
+      _previewRecorderInteraction(target);
+    };
 
     const onClick = (event) => {
       let target = event.target;
@@ -7204,6 +7242,8 @@
       captureStepAndFlash({ type: "drag_drop", from: src, to }, dropTarget);
     };
 
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("mousedown", onPointerDown, true);
     document.addEventListener("click", onClick, true);
     document.addEventListener("change", onChange, true);
     document.addEventListener("keydown", onKeydown, true);
@@ -7383,6 +7423,8 @@
     window.addEventListener("popstate", _onPopState);
 
     recorderRuntime.cleanup = () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("mousedown", onPointerDown, true);
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("change", onChange, true);
       document.removeEventListener("keydown", onKeydown, true);
@@ -7564,6 +7606,11 @@
       }
       return captured;
     }
+
+    const _onPointerDown = (e) => {
+      const target = e && e.target;
+      _previewRecorderInteraction(target, { inlinePanelId: INLINE_REC_PANEL_ID });
+    };
 
     // ── Event handlers (same logic as startRecorderSession but writing to buffer) ──
     const _onClick = (e) => {
@@ -7892,6 +7939,8 @@
       _scrollTimer = setTimeout(() => { addStep({ type: "scroll_to", selector: buildSelector(scrollEl) }); }, 900);
     };
 
+    document.addEventListener("pointerdown", _onPointerDown, true);
+    document.addEventListener("mousedown", _onPointerDown, true);
     document.addEventListener("click",     _onClick,    true);
     document.addEventListener("change",    _onChange,   true);
     document.addEventListener("keydown",   _onKeydown,  true);
@@ -7913,6 +7962,8 @@
     function _attachToFrameDoc(frameDoc) {
       if (!frameDoc || _attachedFrameDocs.has(frameDoc)) return;
       try {
+        frameDoc.addEventListener("pointerdown", _onPointerDown, true);
+        frameDoc.addEventListener("mousedown", _onPointerDown, true);
         frameDoc.addEventListener("click",    _onClick,    true);
         frameDoc.addEventListener("change",   _onChange,   true);
         frameDoc.addEventListener("keydown",  _onKeydown,  true);
@@ -7932,6 +7983,8 @@
     function _detachFromFrameDoc(frameDoc) {
       if (!frameDoc) return;
       try {
+        frameDoc.removeEventListener("pointerdown", _onPointerDown, true);
+        frameDoc.removeEventListener("mousedown", _onPointerDown, true);
         frameDoc.removeEventListener("click",    _onClick,    true);
         frameDoc.removeEventListener("change",   _onChange,   true);
         frameDoc.removeEventListener("keydown",  _onKeydown,  true);
@@ -7966,6 +8019,8 @@
 
     // ── Cleanup ──
     function _cleanup() {
+      document.removeEventListener("pointerdown", _onPointerDown, true);
+      document.removeEventListener("mousedown", _onPointerDown, true);
       document.removeEventListener("click",     _onClick,    true);
       document.removeEventListener("change",    _onChange,   true);
       document.removeEventListener("keydown",   _onKeydown,  true);
