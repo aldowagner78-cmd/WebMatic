@@ -1,5 +1,101 @@
 # Cambios realizados
 
+## rc40B-3 hotfix: compactación de click option sin duplicar choose_option
+
+Fecha: 2026-07-01
+
+## Archivos modificados
+
+- `src/modules/recorder/normalizer/recording-normalizer.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+
+## Qué se cambió
+
+- Se agregó compactación de `choose_option` redundantes sobre el mismo `select`.
+- Si Firefox/GeneXus emite un `click` sobre `option` después de un `choose_option` real, se conserva la selección rica (`value`, `text`, `index`) y se elimina la duplicada por índice.
+- Se eliminan auto-waits intermedios redundantes asociados a esa duplicación.
+
+## Por qué
+
+El parche rc40B-3 resolvía el click sobre `option`, pero generaba duplicados:
+`WAIT_FOR #pais`, `CHOOSE_OPTION #pais value`, `WAIT_FOR #pais`, `CHOOSE_OPTION #pais index`.
+
+## Cómo probar
+
+```powershell
+node -c src/modules/recorder/normalizer/recording-normalizer.js
+npm test
+npm run test:e2e:universal-resolution
+npm run test:e2e:flyer-wizard
+npm run test:e2e:angular-material
+npm run test:e2e:wait-for-navigate
+npm run test:e2e:loop-navigate
+```
+
+## Cómo revertir
+
+Restaurar desde el backup previo o revertir los tres archivos de este parche.
+
+
+## rc40B-3: grabador visual y selects GeneXus/IAPOS
+
+Fecha: 2026-07-01
+
+## Archivos modificados
+
+- `src/content/content.js`
+- `src/modules/recorder/normalizer/recording-normalizer.js`
+- `accesorios/pruebas/tests/unit/recorder.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+- `README_INSTALACION.txt`
+
+## Qué se cambió
+
+- Se corrigió la grabación de selects nativos cuando Firefox/GeneXus emite click sobre `option` en lugar de `change` confiable.
+- El click sobre `#vERROR option:nth-of-type(2)` ahora se convierte en `choose_option` sobre `#vERROR` con `index: 1`.
+- Se corrigió la captura principal de selects para guardar `value`, `text` visible e `index`.
+- Se reforzó el indicador rojo de evento registrado agregando fallback visual directo sobre el elemento (`outline` y `box-shadow`) además del overlay flotante.
+
+## Por qué
+
+La macro real de IAPOS seguía grabando:
+
+```text
+CLICK #vERROR option:nth-of-type(2)
+```
+
+en vez de:
+
+```text
+CHOOSE_OPTION #vERROR value/text/index
+```
+
+Además, el usuario reportó que el recuadro rojo de evento registrado no aparecía durante la grabación.
+
+## Cómo probar
+
+1. Cargar extensión temporal desde `repo-modular/manifest.json`.
+2. Grabar una macro nueva en IAPOS.
+3. Al elegir `DETALLE AUTORIZADO`, verificar que se registre como `choose_option` sobre `#vERROR`.
+4. Verificar que el indicador rojo aparezca al registrar eventos reales.
+5. Ejecutar:
+
+```powershell
+npm test
+npm run test:e2e:universal-resolution
+npm run test:e2e:flyer-wizard
+npm run test:e2e:angular-material
+npm run test:e2e:wait-for-navigate
+npm run test:e2e:loop-navigate
+```
+
+## Cómo revertir
+
+Revertir los archivos listados arriba al estado del tag `v0.2.3-rc40B-recorder-genexus-2`.
+
+
 ## rc40B-2: grabacion GeneXus/IAPOS reproducible
 
 Fecha: 2026-06-30

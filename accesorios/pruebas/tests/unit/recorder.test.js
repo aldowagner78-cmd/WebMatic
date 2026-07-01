@@ -1188,3 +1188,29 @@ test("normalizeRecordedSteps [J]: waits automaticos siguen limitados a 1s con la
   const autoWaits = out.filter((s) => s.type === "wait" && s._autoWait === true);
   autoWaits.forEach((w) => assert.ok(Number(w.seconds) <= 1, `auto-wait debe ser <= 1s, fue ${w.seconds}`));
 });
+
+
+test("normalizeRecordedSteps: click sobre option nativo se convierte a choose_option por indice", () => {
+  const steps = [
+    {
+      type: "click",
+      selector: "#vERROR option:nth-of-type(2)",
+      controlRef: { selector: "#vERROR option:nth-of-type(2)", tag: "option" },
+      _wmBlockKey: "iapos.test/audaauditar",
+      _wmEventUrl: "https://iapos.test/audaauditar?token"
+    }
+  ];
+
+  const out = Recorder.normalizeRecordedSteps(steps);
+  assert.deepEqual(out, [
+    { type: "wait_for", selector: "#vERROR", timeout: 10000, _autoWait: true },
+    {
+      type: "choose_option",
+      selector: "#vERROR",
+      index: 1,
+      _wmBlockKey: "iapos.test/audaauditar",
+      _wmEventUrl: "https://iapos.test/audaauditar?token",
+      controlRef: { selector: "#vERROR", controlKind: "native-select" }
+    }
+  ]);
+});

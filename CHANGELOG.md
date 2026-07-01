@@ -1,5 +1,28 @@
 # Changelog
 
+## [2026-07-01] rc40B-3 hotfix compactacion select option
+
+### Corregido
+- `recording-normalizer`: evita duplicar `choose_option` cuando un click sobre `option` se convierte a `choose_option` pero ya existía una selección real del mismo `select`.
+- Se eliminan auto-waits intermedios redundantes asociados al click sobre `option`.
+
+### Validación
+- Sintaxis OK con `node -c src/modules/recorder/normalizer/recording-normalizer.js`.
+- Pendiente: correr `npm test` en repo local con dependencias instaladas.
+
+
+## [2026-07-01] rc40B-3 grabador visual y selects GeneXus
+
+### Corregido
+- `src/content/content.js`: el grabador principal e inline ahora captura clicks sobre `option` como `choose_option` del `select` padre, con `value`, `text` e `index`.
+- `src/content/content.js`: se agrega helper compartido para snapshot de opción seleccionada y se corrige la referencia a `selected` no definido en la grabación principal de selects.
+- `src/content/content.js`: el indicador rojo de evento registrado ahora tiene fallback visual por `outline/box-shadow` además del overlay, para que sea visible en páginas antiguas/quirks como GeneXus.
+- `recording-normalizer`: convierte clicks sueltos sobre `option:nth-of-type(...)` a `choose_option` por índice para no dejar macros con click directo sobre option.
+
+### Pruebas
+- Agregado test unitario para convertir `#vERROR option:nth-of-type(2)` en `CHOOSE_OPTION #vERROR INDEX=1`.
+
+
 ## [2026-06-30] rc40B-2 grabacion GeneXus/IAPOS reproducible
 
 ### Agregado

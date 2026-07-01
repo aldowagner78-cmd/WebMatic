@@ -434,6 +434,41 @@
       return new RegExp("^" + escaped + "\\s*>?\\s*option\\b").test(String(childSel));
     };
 
+    const optionClickToChooseOption = (step) => {
+      if (!step || step.type !== "click" || !step.selector) return null;
+      const selector = String(step.selector || "").trim();
+      const match = selector.match(/^(.+?)\s+>?\s*option(?::nth-of-type\((\d+)\))?$/i);
+      if (!match) return null;
+      const parentSelector = match[1].trim();
+      if (!parentSelector) return null;
+      const index = match[2] ? Math.max(0, Number(match[2]) - 1) : undefined;
+      const out = {
+        type: "choose_option",
+        selector: parentSelector
+      };
+      if (Number.isInteger(index)) out.index = index;
+      if (step._wmBlockKey) out._wmBlockKey = step._wmBlockKey;
+      if (step._wmEventUrl) out._wmEventUrl = step._wmEventUrl;
+      if (step.controlRef && step.controlRef.tag === "option") {
+        out.controlRef = {
+          selector: parentSelector,
+          controlKind: "native-select"
+        };
+      }
+      return out;
+    };
+
+    const convertOptionClicksToChooseOption = (arr) => {
+      let changed = false;
+      const out = arr.map((step) => {
+        const converted = optionClickToChooseOption(step);
+        if (!converted) return step;
+        changed = true;
+        return converted;
+      });
+      return changed ? out : arr;
+    };
+
     const compactNativeSelectClicks = (arr) => {
       const remove = new Set();
       for (let i = 0; i < arr.length; i += 1) {
@@ -554,6 +589,81 @@
       return result;
     };
 
+    const isSyntheticOptionChoose = (step) => !!(
+      step &&
+      step.type === "choose_option" &&
+      step.selector &&
+      step.index !== undefined &&
+      step.value === undefined &&
+      step.text === undefined
+    );
+
+    const chooseMetadataScore = (step) => {
+      if (!step || step.type !== "choose_option") return 0;
+      let score = 0;
+      if (step.value !== undefined) score += 4;
+      if (step.text !== undefined) score += 2;
+      if (step.index !== undefined) score += 1;
+      if (step.controlRef) score += 1;
+      return score;
+    };
+
+    const compactRedundantChooseOptions = (arr) => {
+      const result = [];
+      for (const step of arr) {
+        if (!(step && step.type === "choose_option" && step.selector)) {
+          result.push(step);
+          continue;
+        }
+
+        let prevRealIdx = -1;
+        for (let i = result.length - 1; i >= 0; i -= 1) {
+          if (isAutoWait(result[i])) continue;
+          prevRealIdx = i;
+          break;
+        }
+
+        const prevReal = prevRealIdx >= 0 ? result[prevRealIdx] : null;
+        if (
+          prevReal &&
+          prevReal.type === "choose_option" &&
+          prevReal.selector === step.selector &&
+          (
+            isSyntheticOptionChoose(step) ||
+            (
+              prevReal.value !== undefined &&
+              step.value !== undefined &&
+              String(prevReal.value) === String(step.value)
+            ) ||
+            (
+              prevReal.index !== undefined &&
+              step.index !== undefined &&
+              Number(prevReal.index) === Number(step.index) &&
+              (step.value === undefined || prevReal.value === undefined || String(prevReal.value) === String(step.value))
+            )
+          )
+        ) {
+          // El click sobre <option> que emiten Firefox/GeneXus puede llegar luego del
+          // choose_option real. Se descarta junto con auto-waits intermedios para no
+          // reproducir dos selecciones sobre el mismo select.
+          while (result.length > prevRealIdx + 1 && isAutoWait(result[result.length - 1])) {
+            result.pop();
+          }
+
+          if (
+            !isSyntheticOptionChoose(step) &&
+            chooseMetadataScore(step) > chooseMetadataScore(prevReal)
+          ) {
+            result[prevRealIdx] = Object.assign({}, prevReal, step);
+          }
+          continue;
+        }
+
+        result.push(step);
+      }
+      return result;
+    };
+
     const isInteractiveBlockAction = (step) => !!(
       step &&
       step.selector &&
@@ -628,7 +738,7 @@
           insertWaitForAfterNavigate(
             insertWaitForBeforeChooseOption(
               insertWaitForOnBlockChange(
-                compactNativeSelectClicks(inferMissingEnterSelector(out))
+                compactRedundantChooseOptions(compactNativeSelectClicks(convertOptionClicksToChooseOption(inferMissingEnterSelector(out))))
               )
             )
           )

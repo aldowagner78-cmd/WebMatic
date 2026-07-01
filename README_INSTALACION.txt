@@ -197,3 +197,14 @@ Backup estable recomendado:
 C:\Users\usuario\Desktop\WebMatic-dev\backups\WebMatic-Firefox-0.2.2-FIRMADO.xpi
 C:\Users\usuario\Desktop\WebMatic-dev\backups\WebMatic-v0.2.2-firefox.bundle
 ```
+
+## Nota rc40B-3 — prueba de grabación GeneXus/IAPOS
+
+Para validar este parche antes de firmar:
+
+1. Cargar la extensión temporal desde `repo-modular/manifest.json`.
+2. Grabar en IAPOS desde el listado `auauditcabe_ww?M,0`.
+3. Verificar que el indicador rojo aparezca al registrar eventos reales.
+4. Verificar que la selección de motivo se grabe como `CHOOSE_OPTION #vERROR` y no como click directo sobre `#vERROR option:nth-of-type(...)`.
+5. No firmar una nueva versión hasta que la prueba real pase sin editar la macro a mano.
+

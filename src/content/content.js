@@ -36,7 +36,24 @@
       if (!doc || !win) return;
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) return;
-      const root = doc.documentElement || doc.body;
+      const root = doc.body || doc.documentElement;
+      const previousOutline = el.style && el.style.outline;
+      const previousOutlineOffset = el.style && el.style.outlineOffset;
+      const previousBoxShadow = el.style && el.style.boxShadow;
+      try {
+        if (el.style) {
+          el.style.outline = "2px solid #ef4444";
+          el.style.outlineOffset = "2px";
+          el.style.boxShadow = "0 0 0 4px rgba(239,68,68,0.18)";
+          setTimeout(() => {
+            try {
+              el.style.outline = previousOutline || "";
+              el.style.outlineOffset = previousOutlineOffset || "";
+              el.style.boxShadow = previousBoxShadow || "";
+            } catch (_) {}
+          }, 820);
+        }
+      } catch (_) {}
       const ov = doc.createElement("div");
       ov.setAttribute("data-wm-flash", "1");
       Object.assign(ov.style, {
@@ -108,6 +125,32 @@
     }
 
     return attrs.some((entry) => _isSensitiveSelectorText(entry));
+  }
+
+  
+  function _selectedOptionSnapshot(select) {
+    if (!(select instanceof HTMLSelectElement)) {
+      return { value: "", text: "", index: -1 };
+    }
+    const index = Number.isInteger(select.selectedIndex) ? select.selectedIndex : -1;
+    const option = index >= 0 && select.options ? select.options[index] : null;
+    return {
+      value: String(select.value == null ? "" : select.value),
+      text: option ? String(option.text || option.innerText || option.textContent || "").trim() : "",
+      index
+    };
+  }
+
+  function _selectFromOptionTarget(target) {
+    if (!(target instanceof Element)) return null;
+    const option = target.tagName && target.tagName.toLowerCase() === "option"
+      ? target
+      : (target.closest ? target.closest("option") : null);
+    if (!(option instanceof Element)) return null;
+    const parent = option.parentElement;
+    if (parent instanceof HTMLSelectElement) return parent;
+    const closestSelect = option.closest ? option.closest("select") : null;
+    return closestSelect instanceof HTMLSelectElement ? closestSelect : null;
   }
 
   // ── Sub-frame mode: only attach a lightweight recorder ──────────────────
@@ -6799,6 +6842,24 @@
         return;
         }
       }
+      const clickedSelect = _selectFromOptionTarget(target);
+      if (clickedSelect && !_isInsideWebMaticUi(clickedSelect) && !clickedSelect.disabled) {
+        const selSel = buildSelector(clickedSelect);
+        if (selSel) {
+          const selected = _selectedOptionSnapshot(clickedSelect);
+          _checkAndInjectWaitFor(_waitForSelectorForTarget(clickedSelect, selSel));
+          captureStepAndFlash({
+            type: "choose_option",
+            selector: selSel,
+            value: selected.value,
+            text: selected.text,
+            index: selected.index
+          }, clickedSelect);
+          return;
+        }
+      }
+
+
       // For <img> and imageless clicks inside <a>, bubble up to the anchor
       const tag = target.tagName.toLowerCase();
       if (tag === "img" || (tag === "input" && target.type === "image" && !target.id)) {
@@ -6861,8 +6922,9 @@
       }
       if (target instanceof HTMLSelectElement) {
         const selSel = buildSelector(target);
+        const selected = _selectedOptionSnapshot(target);
         _checkAndInjectWaitFor(_waitForSelectorForTarget(target, selSel));
-        captureStepAndFlash({ type: "choose_option", selector: selSel, value: target.value, text: selected.text, index: selected.index }, target);
+        captureStepAndFlash({ type: "choose_option", selector: selSel, value: selected.value, text: selected.text, index: selected.index }, target);
         return;
       }
       // Dynamic copy/paste: if pasted value matches last copied text, use variable reference
@@ -7382,6 +7444,24 @@
         return;
         }
       }
+      const clickedSelect = _selectFromOptionTarget(t);
+      if (clickedSelect && !_isInsideWebMaticUi(clickedSelect, { inlinePanelId: INLINE_REC_PANEL_ID }) && !clickedSelect.disabled) {
+        const sel = buildSelector(clickedSelect);
+        if (sel) {
+          const selected = _selectedOptionSnapshot(clickedSelect);
+          _checkAndInjectWaitFor(_waitForSelectorForTarget(clickedSelect, sel), addStep);
+          addStepAndFlash({
+            type: "choose_option",
+            selector: sel,
+            value: selected.value,
+            text: selected.text,
+            index: selected.index
+          }, clickedSelect);
+          return;
+        }
+      }
+
+
       const tag = t.tagName.toLowerCase();
       if (tag === "img" || (tag === "input" && t.type === "image" && !t.id)) {
         const anchor = t.closest("a[href]"); if (anchor) t = anchor;
@@ -7433,7 +7513,7 @@
       if (t instanceof HTMLSelectElement) {
         const sel = buildSelector(t);
         _checkAndInjectWaitFor(_waitForSelectorForTarget(t, sel), addStep);
-        addStepAndFlash({ type: "choose_option", selector: sel, value: t.value, text: selected.text, index: selected.index }, t);
+        addStepAndFlash({ type: "choose_option", selector: sel, value: selected.value, text: selected.text, index: selected.index }, t);
         return;
       }
       const raw = t.value;
