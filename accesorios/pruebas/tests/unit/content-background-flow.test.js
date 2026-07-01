@@ -154,3 +154,11 @@ test("content recorder: previsualiza interacciones en pointerdown antes de naveg
   assert.match(source, /document\.addEventListener\("pointerdown", _onPointerDown, true\)/);
   assert.match(source, /frameDoc\.addEventListener\("pointerdown", _onPointerDown, true\)/);
 });
+
+
+test("content recorder: limpia selectores internos de highlight en controlRef", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /function _sanitizeRecorderAltSelectors\(alts\)/);
+  assert.match(source, /_isWebMaticTransientSelector\(sel\)/);
+  assert.match(source, /delete ref\.altSelectors/);
+});

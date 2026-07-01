@@ -153,6 +153,16 @@ test("buildStableFallbackSelectors: no usa id dinamico Angular Material como fal
   assert.equal(alts.includes("#mat-input-3"), false);
 });
 
+test("buildStableFallbackSelectors: no graba atributos internos de highlight WebMatic", () => {
+  resetBody('<button id="guardar" data-wm-hl="1" data-testid="accion-guardar">Guardar</button>');
+  const el = win.document.querySelector("button");
+  const selectorApi = Recorder._selectorBuilder();
+  const alts = selectorApi.buildStableFallbackSelectors(el, "#guardar");
+  assert.ok(alts.includes('[data-testid="accion-guardar"]'));
+  assert.equal(alts.includes('[data-wm-hl="1"]'), false);
+  assert.equal(alts.some((selector) => /data-wm-/i.test(selector)), false);
+});
+
 test("dedupeFieldRuns: conserva primer input si hay otra edicion posterior separada", () => {
   const steps = [
     { type: "navigate", url: "file:///pagina-a.html" },

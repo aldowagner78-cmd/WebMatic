@@ -8,6 +8,31 @@
   const WM_RECORDER_NAV_FEEDBACK_KEY = "__webmatic_recorder_nav_feedback_v1";
   const WM_RECORDER_NAV_FEEDBACK_MAX_AGE_MS = 2600;
 
+  function _isWebMaticTransientSelector(selector) {
+    return /\[\s*data-wm-/i.test(String(selector || ""));
+  }
+
+  function _sanitizeRecorderAltSelectors(alts) {
+    if (!Array.isArray(alts)) return [];
+    const out = [];
+    alts.forEach((selector) => {
+      const sel = String(selector || "").trim();
+      if (!sel || _isWebMaticTransientSelector(sel) || out.includes(sel)) return;
+      out.push(sel);
+    });
+    return out;
+  }
+
+  function _sanitizeRecorderControlRef(ref) {
+    if (!ref || typeof ref !== "object") return ref;
+    if (Array.isArray(ref.altSelectors)) {
+      const cleaned = _sanitizeRecorderAltSelectors(ref.altSelectors);
+      if (cleaned.length > 0) ref.altSelectors = cleaned;
+      else delete ref.altSelectors;
+    }
+    return ref;
+  }
+
   function _isWmTextFlashTarget(el) {
     if (!(el instanceof Element)) return false;
     if (el.isContentEditable) return true;
@@ -359,8 +384,8 @@
       const api = _sfSelectorBuilderApi();
       if (api && typeof api.buildStableFallbackSelectors === "function") {
         try {
-          const alts = api.buildStableFallbackSelectors(el, step.selector);
-          if (Array.isArray(alts) && alts.length > 0) ref.altSelectors = alts;
+          const alts = _sanitizeRecorderAltSelectors(api.buildStableFallbackSelectors(el, step.selector));
+          if (alts.length > 0) ref.altSelectors = alts;
         } catch (_e) { /* ignore */ }
       }
       return Object.assign({}, step, { controlRef: ref });
@@ -6497,7 +6522,7 @@
 
   function _controlRefForRecordedTarget(el, selector, existingRef) {
     if (!(el instanceof Element)) return existingRef || null;
-    const ref = Object.assign({}, existingRef || {});
+    const ref = _sanitizeRecorderControlRef(Object.assign({}, existingRef || {}));
     const tag = String(el.tagName || "").toLowerCase();
     ref.selector = ref.selector || String(selector || "");
     ref.tag = ref.tag || tag;
@@ -6520,8 +6545,8 @@
     if ((!Array.isArray(ref.altSelectors) || ref.altSelectors.length === 0) &&
         api && typeof api.buildStableFallbackSelectors === "function") {
       try {
-        const alts = api.buildStableFallbackSelectors(el, selector);
-        if (Array.isArray(alts) && alts.length > 0) ref.altSelectors = alts;
+        const alts = _sanitizeRecorderAltSelectors(api.buildStableFallbackSelectors(el, selector));
+        if (alts.length > 0) ref.altSelectors = alts;
       } catch (_e) { /* ignore */ }
     }
 

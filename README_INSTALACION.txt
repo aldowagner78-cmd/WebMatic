@@ -228,3 +228,9 @@ Verificación mínima:
 node -c src/content/content.js
 node --test accesorios/pruebas/tests/unit/content-background-flow.test.js
 ```
+
+
+Nota rc40B-7:
+- El resaltado visual del grabador/reproductor es temporal y no debe quedar guardado como selector de macro.
+- Al revisar macros nuevas, `controlRef.altSelectors` no debe contener selectores internos como `[data-wm-hl="1"]`.
+

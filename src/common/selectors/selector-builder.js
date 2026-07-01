@@ -136,6 +136,10 @@
 
     const stableData = Array.from(element.attributes || []).find((a) => {
       if (!a.name.startsWith("data-")) return false;
+      // Atributos internos/temporales de WebMatic (por ejemplo el resaltado
+      // visual del grabador/reproductor) no deben quedar grabados como
+      // selectores de usuario ni como fallback universal.
+      if (/^data-wm-/i.test(a.name)) return false;
       if (/data-(v-|reactid|ng-|index$|key$|_)/.test(a.name)) return false;
       if (a.value.length > 80 || a.value === "") return false;
       return true;

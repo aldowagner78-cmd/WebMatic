@@ -1,5 +1,18 @@
 # Changelog
 
+## [2026-07-01] rc40B-7 limpieza de metadata visual
+
+### Corregido
+- `src/common/selectors/selector-builder.js`: los atributos internos `data-wm-*`, incluido `data-wm-hl`, ya no se consideran selectores alternativos estables.
+- `src/content/content.js`: `controlRef.altSelectors` se sanitiza antes de guardar pasos para evitar que el resaltado visual quede persistido en macros.
+- `src/modules/inventory/page-inventory.js`: el inventario también descarta selectores internos temporales de WebMatic.
+
+### Pruebas
+- Agregados tests unitarios para confirmar que `data-wm-hl` no aparece en `altSelectors` de grabador, inventario ni `controlRef`.
+
+### Validación
+- Pendiente de ejecutar en entorno local: `npm test` y e2e principales.
+
 ## [2026-07-01] rc40B-6 feedback de grabación igual al reproductor
 
 ### Corregido

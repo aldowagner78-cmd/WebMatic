@@ -104,6 +104,15 @@ test("captureControl: altSelectors solo incluye selectores que resuelven al mism
   assert.equal(c.altSelectors.includes('#chk-tecnologia input[name="generos"]'), false);
 });
 
+test("captureControl: altSelectors descarta atributos internos temporales WebMatic", () => {
+  resetBody('<button id="guardar" data-wm-hl="1" data-testid="accion-guardar">Guardar</button>');
+  const el = win.document.getElementById("guardar");
+  const c = inv.captureControl(el);
+  assert.ok(Array.isArray(c.altSelectors));
+  assert.equal(c.altSelectors.includes('[data-wm-hl="1"]'), false);
+  assert.equal(c.altSelectors.some((selector) => /data-wm-/i.test(selector)), false);
+});
+
 test("captureControl: Angular Material conserva selector estable y evita id dinamico como alternativa", () => {
   resetBody('<input id="mat-input-3" placeholder="Buscar Nro. de Expediente:" aria-label="Buscar expediente">');
   const el = win.document.getElementById("mat-input-3");

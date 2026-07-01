@@ -67,12 +67,27 @@
     return tag;
   }
 
+  function _isWebMaticInternalSelector(selector) {
+    return /\[\s*data-wm-/i.test(String(selector || ""));
+  }
+
+  function _sanitizeAltSelectors(alts) {
+    if (!Array.isArray(alts)) return [];
+    const out = [];
+    alts.forEach((selector) => {
+      const sel = String(selector || "").trim();
+      if (!sel || _isWebMaticInternalSelector(sel) || out.includes(sel)) return;
+      out.push(sel);
+    });
+    return out;
+  }
+
   /** Lista de selectores alternativos estables (sin duplicar el principal). */
   function _altSelectors(el, primary) {
     const selectorApi = _selectorApi();
     if (selectorApi && typeof selectorApi.buildStableFallbackSelectors === "function") {
       try {
-        return selectorApi.buildStableFallbackSelectors(el, primary);
+        return _sanitizeAltSelectors(selectorApi.buildStableFallbackSelectors(el, primary));
       } catch (_e) { /* fallback local */ }
     }
 
@@ -93,7 +108,7 @@
       }
     };
     const push = (sel) => {
-      if (!sel || sel === primary || alts.includes(sel)) return;
+      if (!sel || sel === primary || _isWebMaticInternalSelector(sel) || alts.includes(sel)) return;
       if (isValidForElement(sel)) alts.push(sel);
     };
     const name = el.getAttribute && el.getAttribute("name");
