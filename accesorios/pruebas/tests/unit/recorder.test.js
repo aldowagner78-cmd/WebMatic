@@ -1082,6 +1082,26 @@ test("normalizeRecordedSteps: no duplica wait_for existente al cambiar de bloque
   assert.equal(out.filter((s) => s.type === "wait_for" && s.selector === "#vAUTORIZAR_0001").length, 1);
 });
 
+test("sanitizePageContextSteps: conserva auto wait_for de preparacion al cambiar de bloque", () => {
+  const steps = [
+    { type: "navigate", url: "https://iapos.test/auauditcabe_ww?M,0", _wmBlockKey: "iapos.test/auauditcabe_ww", _wmBlockStart: true },
+    { type: "wait_for", selector: "#vDETALLES_0001", _wmBlockKey: "iapos.test/auauditcabe_ww" },
+    { type: "click", selector: "#vDETALLES_0001", _wmBlockKey: "iapos.test/auauditcabe_ww" },
+    { type: "wait_for", selector: "#gx_ajax_notification", _wmBlockKey: "iapos.test/auauditcabe_ww" },
+    { type: "wait", seconds: 1 },
+    { type: "wait_for", selector: "#vAUTORIZAR_0001", timeout: 10000, _autoWait: true, _wmBlockKey: "iapos.test/auauditdetalle_ww" },
+    { type: "click", selector: "#vAUTORIZAR_0001", _wmBlockKey: "iapos.test/auauditdetalle_ww" },
+    { type: "wait_for", selector: "#gx_ajax_notification", _wmBlockKey: "iapos.test/auauditdetalle_ww" },
+    { type: "wait", seconds: 1 },
+    { type: "wait_for", selector: "#vERROR", timeout: 10000, _autoWait: true, _wmBlockKey: "iapos.test/audaauditar" },
+    { type: "choose_option", selector: "#vERROR", value: "47", text: "DETALLE AUTORIZADO", index: 1, _wmBlockKey: "iapos.test/audaauditar" }
+  ];
+
+  const out = Recorder._recordingNormalizer().sanitizePageContextSteps(steps);
+  assert.equal(out.filter((s) => s.type === "wait_for" && s.selector === "#vAUTORIZAR_0001").length, 1);
+  assert.equal(out.filter((s) => s.type === "wait_for" && s.selector === "#vERROR").length, 1);
+});
+
 test("normalizeRecordedSteps: choose_option+click option redundante se compacta", () => {
   const steps = [
     { type: "choose_option", selector: "#pais", value: "AR", text: "Argentina", index: 1 },

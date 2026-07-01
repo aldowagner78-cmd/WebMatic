@@ -887,7 +887,22 @@
           break;
         }
         const key = blockKey(step);
-        if (prevBlock && key && key !== prevBlock) continue;
+        let nextReal = null;
+        for (let j = i + 1; j < list.length; j += 1) {
+          const cand = list[j];
+          if (!cand || cand.type === "wait") continue;
+          nextReal = cand;
+          break;
+        }
+        const isBlockChangeReadinessWait = !!(
+          step._autoWait === true &&
+          key &&
+          nextReal &&
+          realTypes.has(nextReal.type) &&
+          blockKey(nextReal) === key &&
+          String(nextReal.selector || "") === String(step.selector || "")
+        );
+        if (prevBlock && key && key !== prevBlock && !isBlockChangeReadinessWait) continue;
       }
 
       if (

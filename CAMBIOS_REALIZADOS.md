@@ -361,3 +361,28 @@ Fecha: 2026-06-29
 ## Cómo revertir
 
 - Restaurar los archivos desde el commit anterior o desde el backup del proyecto.
+
+
+## rc40B-4 — Flash de grabación temporal y waits entre bloques GeneXus
+
+Archivos modificados:
+- `src/content/content.js`
+- `src/modules/recorder/normalizer/recording-normalizer.js`
+- `accesorios/pruebas/tests/unit/recorder.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+- `README_INSTALACION.txt`
+
+Qué cambió:
+- El flash rojo de grabación ahora usa limpieza garantizada por elemento para evitar que el borde quede fijo.
+- Se preservan los `WAIT_FOR` automáticos creados para la primera acción de una nueva pantalla/bloque GeneXus.
+- Se agregó test unitario para evitar que `sanitizePageContextSteps` elimine `WAIT_FOR #vAUTORIZAR_0001` y `WAIT_FOR #vERROR` cuando preparan una acción real del nuevo bloque.
+
+Cómo probar:
+- `node -c src/content/content.js`
+- `node -c src/modules/recorder/normalizer/recording-normalizer.js`
+- `npm test`
+- e2e principales.
+
+Cómo revertir:
+- Restaurar los archivos de este parche desde el ZIP previo o revertir el commit rc40B-4.

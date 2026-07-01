@@ -208,3 +208,7 @@ Para validar este parche antes de firmar:
 4. Verificar que la selección de motivo se grabe como `CHOOSE_OPTION #vERROR` y no como click directo sobre `#vERROR option:nth-of-type(...)`.
 5. No firmar una nueva versión hasta que la prueba real pase sin editar la macro a mano.
 
+
+
+Nota rc40B-4:
+Para validar el grabador GeneXus/IAPOS, cargar la extensión temporal desde `repo-modular\manifest.json`, grabar una macro nueva y verificar que el flash rojo desaparezca solo y que la macro contenga `WAIT_FOR #vAUTORIZAR_0001` antes de `CLICK #vAUTORIZAR_0001`, y `WAIT_FOR #vERROR` antes de `CHOOSE_OPTION #vERROR`.

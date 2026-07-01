@@ -271,3 +271,10 @@
 - El `WAIT_FOR` usa `#busqueda-expediente` antes de escribir `EE-2026-00014539`.
 - La reproduccion empieza antes de que exista el input y escribe solo despues de su creacion.
 - No usa internet, pagina real, login, credenciales ni datos reales.
+
+
+## v0.2.3-rc40B-4-recorder-flash-wait
+- Corrige el flash visual de grabación para que sea temporal y no quede pegado sobre el elemento.
+- Conserva los `WAIT_FOR` automáticos de preparación cuando la grabación cambia de bloque/página GeneXus.
+- Mantiene la grabación robusta de selects nativos con `value`, `text` e `index` sin duplicar `choose_option`.
+- Pendiente: prueba real final completa en IAPOS antes de firmar 0.2.4.

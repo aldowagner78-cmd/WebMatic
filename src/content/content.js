@@ -4,6 +4,8 @@
   // flash it once and do not flash again until focus moves away or another
   // element is recorded. This does not affect recorded steps or playback.
   let _wmLastFlashedTextTarget = null;
+  const _wmActiveFlashByElement = new WeakMap();
+
   function _isWmTextFlashTarget(el) {
     if (!(el instanceof Element)) return false;
     if (el.isContentEditable) return true;
@@ -37,23 +39,57 @@
       const rect = el.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) return;
       const root = doc.body || doc.documentElement;
-      const previousOutline = el.style && el.style.outline;
-      const previousOutlineOffset = el.style && el.style.outlineOffset;
-      const previousBoxShadow = el.style && el.style.boxShadow;
+      const looksLikeWebMaticFlash = (value) => /#ef4444|239\s*,\s*68\s*,\s*68/i.test(String(value || ""));
+      const existing = _wmActiveFlashByElement.get(el);
+      if (existing) {
+        try { clearTimeout(existing.restoreTimer); } catch (_) {}
+        try {
+          if (el.style) {
+            el.style.outline = existing.outline || "";
+            el.style.outlineOffset = existing.outlineOffset || "";
+            el.style.boxShadow = existing.boxShadow || "";
+          }
+        } catch (_) {}
+        _wmActiveFlashByElement.delete(el);
+      }
+
+      const previousOutline = looksLikeWebMaticFlash(el.style && el.style.outline) ? "" : (el.style && el.style.outline);
+      const previousOutlineOffset = looksLikeWebMaticFlash(el.style && el.style.outline) ? "" : (el.style && el.style.outlineOffset);
+      const previousBoxShadow = looksLikeWebMaticFlash(el.style && el.style.boxShadow) ? "" : (el.style && el.style.boxShadow);
+      const flashState = {
+        outline: previousOutline || "",
+        outlineOffset: previousOutlineOffset || "",
+        boxShadow: previousBoxShadow || "",
+        restoreTimer: null
+      };
+
       try {
         if (el.style) {
           el.style.outline = "2px solid #ef4444";
           el.style.outlineOffset = "2px";
           el.style.boxShadow = "0 0 0 4px rgba(239,68,68,0.18)";
-          setTimeout(() => {
+          _wmActiveFlashByElement.set(el, flashState);
+          flashState.restoreTimer = setTimeout(() => {
             try {
-              el.style.outline = previousOutline || "";
-              el.style.outlineOffset = previousOutlineOffset || "";
-              el.style.boxShadow = previousBoxShadow || "";
+              if (_wmActiveFlashByElement.get(el) !== flashState) return;
+              el.style.outline = flashState.outline;
+              el.style.outlineOffset = flashState.outlineOffset;
+              el.style.boxShadow = flashState.boxShadow;
+              _wmActiveFlashByElement.delete(el);
             } catch (_) {}
-          }, 820);
+          }, 560);
         }
       } catch (_) {}
+
+      try {
+        const previousOverlays = root.querySelectorAll && root.querySelectorAll('[data-wm-flash="1"]');
+        if (previousOverlays && previousOverlays.length > 4) {
+          previousOverlays.forEach((node) => {
+            try { if (node && node.parentNode) node.parentNode.removeChild(node); } catch (_) {}
+          });
+        }
+      } catch (_) {}
+
       const ov = doc.createElement("div");
       ov.setAttribute("data-wm-flash", "1");
       Object.assign(ov.style, {
@@ -68,7 +104,7 @@
         zIndex: "2147483647",
         pointerEvents: "none",
         boxSizing: "border-box",
-        transition: "opacity 0.45s ease",
+        transition: "opacity 0.22s ease",
         opacity: "1"
       });
       const badge = doc.createElement("span");
@@ -92,8 +128,8 @@
       badge.textContent = "⚡";
       ov.appendChild(badge);
       root.appendChild(ov);
-      setTimeout(() => { ov.style.opacity = "0"; }, 380);
-      setTimeout(() => { if (ov.parentNode) ov.parentNode.removeChild(ov); }, 820);
+      setTimeout(() => { try { ov.style.opacity = "0"; } catch (_) {} }, 220);
+      setTimeout(() => { try { if (ov.parentNode) ov.parentNode.removeChild(ov); } catch (_) {} }, 560);
     } catch (_) {}
   }
 
