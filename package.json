@@ -1,6 +1,6 @@
 {
   "name": "webmatic",
-  "version": "0.1.0",
+  "version": "0.2.4",
   "private": true,
   "description": "WebMatic V1 scaffold modular para Firefox Windows",
   "scripts": {
