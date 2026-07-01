@@ -1,5 +1,58 @@
 # Cambios realizados
 
+## rc40B-5: feedback visual de grabación entre navegaciones
+
+Fecha: 2026-07-01
+
+## Archivos modificados
+
+- `src/content/content.js`
+- `accesorios/pruebas/tests/unit/content-background-flow.test.js`
+- `CHANGELOG.md`
+- `CAMBIOS_REALIZADOS.md`
+- `README_INSTALACION.txt`
+
+## Qué se cambió
+
+- Se agregó un aviso global corto `WebMatic: CLICK grabado` para eventos aceptados que pueden navegar inmediatamente.
+- El aviso se guarda temporalmente antes de la navegación y se consume en la página siguiente.
+- El flash rojo sobre el elemento sigue funcionando para acciones que no destruyen la página.
+- El aviso global expira rápido para evitar feedback viejo.
+- No se cambió la reproducción.
+- No se modificó `choose_option`.
+- No se tocó `manifest.json`.
+
+## Por qué
+
+En IAPOS/GeneXus, los eventos `Detalles` y `Autorizar` sí quedaban grabados, pero el recuadro rojo no se veía porque la página navegaba inmediatamente. El último campo sí mostraba feedback porque no destruía la página.
+
+## Cómo probar
+
+```powershell
+node -c src/content/content.js
+npm test
+npm run test:e2e:universal-resolution
+npm run test:e2e:flyer-wizard
+npm run test:e2e:angular-material
+npm run test:e2e:wait-for-navigate
+npm run test:e2e:loop-navigate
+```
+
+Prueba manual IAPOS:
+
+1. Cargar extensión temporal.
+2. Grabar macro mínima: Detalles, Autorizar, DETALLE AUTORIZADO.
+3. Verificar que:
+   - `Detalles` muestra aviso visual en la transición.
+   - `Autorizar` muestra aviso visual en la transición.
+   - `DETALLE AUTORIZADO` muestra flash sobre el select.
+   - La macro conserva `WAIT_FOR #vAUTORIZAR_0001` y `WAIT_FOR #vERROR`.
+
+## Cómo revertir
+
+Restaurar desde el ZIP previo `WebMatic-v0.2.3-rc40B-4-flash-wait-genexus.zip` o revertir los archivos modificados por este parche.
+
+
 ## rc40B-3 hotfix: compactación de click option sin duplicar choose_option
 
 Fecha: 2026-07-01

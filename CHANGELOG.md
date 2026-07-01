@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-07-01] rc40B-5 feedback de grabación entre navegaciones
+
+### Corregido
+- `src/content/content.js`: cuando un evento grabado puede provocar navegación inmediata, se guarda un feedback temporal en `sessionStorage` y se muestra en la página siguiente como aviso global corto.
+- El recuadro rojo del elemento se mantiene para acciones sin navegación; el aviso global cubre acciones GeneXus como `Detalles` y `Autorizar`, donde la página se destruye antes de que el overlay pueda verse.
+- El feedback global expira rápido para evitar avisos viejos o engañosos.
+
+### Pruebas
+- Agregados tests de flujo de contenido para confirmar que existe feedback persistente entre navegación y que solo se activa para `navigate` o clicks con navegación probable.
+
+### Validación
+- Sintaxis: `node -c src/content/content.js`.
+- Pendiente en entorno local: suite completa `npm test` y e2e principales.
+
+
 ## [2026-07-01] rc40B-3 hotfix compactacion select option
 
 ### Corregido

@@ -5,6 +5,8 @@
   // element is recorded. This does not affect recorded steps or playback.
   let _wmLastFlashedTextTarget = null;
   const _wmActiveFlashByElement = new WeakMap();
+  const WM_RECORDER_NAV_FEEDBACK_KEY = "__webmatic_recorder_nav_feedback_v1";
+  const WM_RECORDER_NAV_FEEDBACK_MAX_AGE_MS = 2600;
 
   function _isWmTextFlashTarget(el) {
     if (!(el instanceof Element)) return false;
@@ -28,6 +30,114 @@
     } catch (_) { /* ignore */ }
     return false;
   }
+
+  function _safeDocRoot(doc) {
+    try {
+      return doc && (doc.body || doc.documentElement);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function _showRecorderEventToast(payload) {
+    try {
+      const doc = document;
+      const root = _safeDocRoot(doc);
+      if (!root) {
+        try { setTimeout(() => _showRecorderEventToast(payload), 40); } catch (_) {}
+        return;
+      }
+
+      try {
+        const oldNodes = root.querySelectorAll && root.querySelectorAll('[data-wm-recorder-feedback="1"]');
+        if (oldNodes) oldNodes.forEach((node) => { try { node.remove(); } catch (_) {} });
+      } catch (_) {}
+
+      const box = doc.createElement("div");
+      box.setAttribute("data-wm-recorder-feedback", "1");
+      const type = payload && payload.type ? String(payload.type).toUpperCase() : "EVENTO";
+      Object.assign(box.style, {
+        position: "fixed",
+        top: "14px",
+        right: "14px",
+        zIndex: "2147483647",
+        padding: "8px 12px",
+        borderRadius: "999px",
+        border: "2px solid #ef4444",
+        background: "rgba(239,68,68,0.94)",
+        color: "#fff",
+        font: "600 13px/1.2 system-ui, -apple-system, Segoe UI, sans-serif",
+        boxShadow: "0 8px 24px rgba(0,0,0,.28)",
+        pointerEvents: "none",
+        userSelect: "none",
+        opacity: "1",
+        transform: "translateY(0)",
+        transition: "opacity .22s ease, transform .22s ease"
+      });
+      box.textContent = `WebMatic: ${type} grabado`;
+      root.appendChild(box);
+      setTimeout(() => {
+        try {
+          box.style.opacity = "0";
+          box.style.transform = "translateY(-6px)";
+        } catch (_) {}
+      }, 520);
+      setTimeout(() => {
+        try { if (box.parentNode) box.parentNode.removeChild(box); } catch (_) {}
+      }, 980);
+    } catch (_) {}
+  }
+
+  function _rememberRecorderFeedbackForNextPage(step) {
+    try {
+      if (!window.sessionStorage) return;
+      const payload = {
+        ts: Date.now(),
+        type: step && step.type ? String(step.type) : "evento",
+        selector: step && step.selector ? String(step.selector) : ""
+      };
+      window.sessionStorage.setItem(WM_RECORDER_NAV_FEEDBACK_KEY, JSON.stringify(payload));
+    } catch (_) {}
+  }
+
+  function _consumeRecorderFeedbackFromPreviousPage() {
+    try {
+      if (!window.sessionStorage) return;
+      const raw = window.sessionStorage.getItem(WM_RECORDER_NAV_FEEDBACK_KEY);
+      if (!raw) return;
+      window.sessionStorage.removeItem(WM_RECORDER_NAV_FEEDBACK_KEY);
+      let payload = null;
+      try { payload = JSON.parse(raw); } catch (_) { payload = null; }
+      const age = Date.now() - Number(payload && payload.ts || 0);
+      if (!payload || !Number.isFinite(age) || age < 0 || age > WM_RECORDER_NAV_FEEDBACK_MAX_AGE_MS) return;
+      _showRecorderEventToast(payload);
+    } catch (_) {}
+  }
+
+  function _targetLooksNavigationLike(target) {
+    try {
+      if (!(target instanceof Element)) return false;
+      const navTarget = target.closest && target.closest('a[href], button, input[type="submit"], input[type="button"], input[type="image"]');
+      if (!navTarget) return false;
+      if (navTarget.matches && navTarget.matches("a[href]")) return true;
+      const type = String(navTarget.getAttribute("type") || "").toLowerCase();
+      const tag = String(navTarget.tagName || "").toLowerCase();
+      return tag === "button" || type === "submit" || type === "button" || type === "image";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function _shouldPersistRecorderFeedbackForNavigation(step, target) {
+    if (!step || !target) return false;
+    const type = String(step.type || "").toLowerCase();
+    if (type === "navigate") return true;
+    if (type !== "click") return false;
+    if (step._wmSubmitIntent) return true;
+    return _targetLooksNavigationLike(target);
+  }
+
+  _consumeRecorderFeedbackFromPreviousPage();
 
   function flashElement(el) {
     if (!(el instanceof Element)) return;
@@ -6819,6 +6929,9 @@
     const captured = captureStep(step);
     if (captured && target instanceof Element && typeof flashElement === "function") {
       flashElement(target);
+      if (_shouldPersistRecorderFeedbackForNavigation(captured, target)) {
+        _rememberRecorderFeedbackForNextPage(captured);
+      }
     }
     return captured;
   }
@@ -7445,6 +7558,9 @@
       const captured = addStep(step);
       if (captured && target instanceof Element && typeof flashElement === "function") {
         flashElement(target);
+        if (_shouldPersistRecorderFeedbackForNavigation(captured, target)) {
+          _rememberRecorderFeedbackForNextPage(captured);
+        }
       }
       return captured;
     }

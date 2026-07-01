@@ -119,3 +119,21 @@ test("background flow: background.js responde PLAYBACK_NAVIGATE con mock tabs", 
   assert.equal(response && response.ok, true);
   assert.equal(h.tabsMap.get(10).url, "https://destino.test/");
 });
+
+
+test("content recorder: feedback global para eventos que navegan", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /WM_RECORDER_NAV_FEEDBACK_KEY/);
+  assert.match(source, /function _rememberRecorderFeedbackForNextPage\(step\)/);
+  assert.match(source, /function _consumeRecorderFeedbackFromPreviousPage\(\)/);
+  assert.match(source, /function _showRecorderEventToast\(payload\)/);
+  assert.match(source, /_shouldPersistRecorderFeedbackForNavigation\(captured, target\)/);
+});
+
+test("content recorder: feedback persistente solo para click o navigate con navegacion probable", () => {
+  const source = fs.readFileSync(path.join(__dirname, "../../../../src/content/content.js"), "utf8");
+  assert.match(source, /if \(type === "navigate"\) return true;/);
+  assert.match(source, /if \(type !== "click"\) return false;/);
+  assert.match(source, /if \(step\._wmSubmitIntent\) return true;/);
+  assert.match(source, /return _targetLooksNavigationLike\(target\);/);
+});

@@ -68,6 +68,10 @@ Resultado esperado:
 6. Guardar la macro con un nombre claro.
 7. Reproducirla desde la lista de macros.
 
+Durante la grabación, WebMatic muestra feedback visual:
+- si la página no navega, resalta brevemente el elemento;
+- si la acción navega de inmediato, muestra un aviso corto en la página siguiente para confirmar que el evento fue registrado.
+
 ## Bucle
 
 Para repetir una macro:
